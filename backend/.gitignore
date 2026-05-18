@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+seed.js
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Uploaded files (if storing locally)
+public/uploads/
+
+# OS & Editor files
+.vscode/
+.idea/
+.DS_Store
