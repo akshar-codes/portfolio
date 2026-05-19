@@ -5,7 +5,7 @@ import {
   IoLocationOutline,
   IoChevronDown,
 } from "react-icons/io5";
-import { FaLinkedin, FaGithub, FaInstagram } from "react-icons/fa";
+import { FaLinkedin, FaGithub } from "react-icons/fa";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,7 +14,6 @@ export default function Sidebar() {
     <aside className={`sidebar ${isOpen ? "active" : ""}`}>
       <div className="sidebar-info">
         <figure className="avatar-box">
-          {/* Correct path for Vite public folder */}
           <img src="/images/my-avatar.png" alt="Akshar Gupta" width="80" />
         </figure>
 
@@ -97,17 +96,6 @@ export default function Sidebar() {
               <FaGithub />
             </a>
           </li>
-
-          {/* <li className="social-item">
-            <a
-              href="#"
-              className="social-link"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FaInstagram />
-            </a>
-          </li> */}
         </ul>
       </div>
     </aside>

@@ -1,5 +1,4 @@
 import { Outlet, Link } from "react-router-dom";
-import "./admin.css";
 
 export default function AdminLayout() {
   return (
