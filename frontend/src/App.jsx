@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 
 // pages
-import About from "./components/About";
-import Resume from "./components/Resume";
-import Portfolio from "./components/Portfolio";
-import Contact from "./components/Contact";
+import About from "./pages/About";
+import Resume from "./pages/Resume";
+import Portfolio from "./pages/Portfolio";
+import Contact from "./pages/Contact";
 import ErrorPage from "./pages/ErrorPage";
 
 // shared components
@@ -13,7 +13,7 @@ import PrivateRoute from "./components/PrivateRoute";
 
 // admin
 import AdminLogin from "./admin/AdminLogin";
-import AdminLayout from "./admin/AdminLayout";
+import AdminLayout from "./layout/AdminLayout";
 import Dashboard from "./admin/Dashboard";
 import ManageProjects from "./admin/ManageProjects";
 import AddProject from "./admin/AddProject";

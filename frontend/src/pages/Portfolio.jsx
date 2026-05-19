@@ -7,7 +7,6 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch projects from backend
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -24,13 +23,11 @@ export default function Portfolio() {
     fetchProjects();
   }, []);
 
-  // Extract unique categories from DB dynamically
   const categories = [
     "All",
     ...new Set(projects.map((project) => project.category)),
   ];
 
-  // Case-insensitive filtering
   const filteredProjects =
     filter === "All"
       ? projects
@@ -43,15 +40,11 @@ export default function Portfolio() {
       </header>
 
       <section className="projects">
-        {/* Loading State */}
         {loading && <p>Loading projects...</p>}
-
-        {/* Error State */}
         {error && <p style={{ color: "red" }}>{error}</p>}
 
         {!loading && !error && (
           <>
-            {/* Filter Buttons */}
             <ul className="filter-list">
               {categories.map((category) => (
                 <li key={category} className="filter-item">
@@ -65,7 +58,6 @@ export default function Portfolio() {
               ))}
             </ul>
 
-            {/* Project List */}
             <ul className="project-list">
               {filteredProjects.length === 0 ? (
                 <p>No projects found.</p>

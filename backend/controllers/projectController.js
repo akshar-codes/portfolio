@@ -14,7 +14,7 @@ export const getProjects = async (req, res) => {
 // CREATE project
 export const createProject = async (req, res) => {
   try {
-    const { title, description, category, link } = req.body;
+    const { title, description, category, projectUrl } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ message: "Image is required" });
@@ -41,7 +41,7 @@ export const createProject = async (req, res) => {
       title,
       description,
       category,
-      projectUrl: link,
+      projectUrl,
       image: {
         url: result.secure_url,
         public_id: result.public_id,
@@ -64,12 +64,10 @@ export const deleteProject = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // 🔥 Delete image from Cloudinary first
     if (project.image && project.image.public_id) {
       await cloudinary.uploader.destroy(project.image.public_id);
     }
 
-    // Then delete project from MongoDB
     await project.deleteOne();
 
     res.json({ message: "Project and image deleted successfully" });

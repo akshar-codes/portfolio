@@ -9,7 +9,7 @@ export default function AddProject() {
     title: "",
     description: "",
     category: "",
-    link: "",
+    projectUrl: "",
     image: null,
   });
 
@@ -39,22 +39,14 @@ export default function AddProject() {
     formData.append("title", form.title);
     formData.append("description", form.description);
     formData.append("category", form.category);
-    formData.append("link", form.link);
+    formData.append("projectUrl", form.projectUrl);
     formData.append("image", form.image);
 
     try {
-      // const token = localStorage.getItem("token");
-
       await api.post("/projects", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // if (!res.ok) {
-      //   const data = await res.json();
-      //   throw new Error(data.message || "Failed to create project");
-      // }
-
-      // Success → redirect
       navigate("/admin/projects");
     } catch (err) {
       console.error(err);
@@ -116,10 +108,10 @@ export default function AddProject() {
 
         <input
           type="url"
-          name="link"
+          name="projectUrl"
           className="form-input"
           placeholder="Live project URL"
-          value={form.link}
+          value={form.projectUrl}
           onChange={handleChange}
         />
 

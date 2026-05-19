@@ -4,16 +4,34 @@ import api from "../services/api";
 
 export default function ManageProjects() {
   const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchProjects = async () => {
-    const { data } = await api.get("/projects");
-    setProjects(data);
+    try {
+      setLoading(true);
+      setError("");
+
+      const { data } = await api.get("/projects");
+
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Failed to load projects");
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deleteProject = async (id) => {
-    await api.delete(`/projects/${id}`);
-
-    fetchProjects();
+    try {
+      await api.delete(`/projects/${id}`);
+      fetchProjects();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete project");
+    }
   };
 
   useEffect(() => {
@@ -28,6 +46,11 @@ export default function ManageProjects() {
           + Add Project
         </Link>
       </header>
+
+      {loading && <p>Loading projects...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {!loading && projects.length === 0 && !error && <p>No projects found.</p>}
 
       <ul className="admin-list">
         {projects.map((project) => (

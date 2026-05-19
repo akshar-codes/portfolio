@@ -7,7 +7,7 @@ export default function About() {
 
       <section className="about-text">
         <p>
-          I’m a B.Tech Computer Science student at Lovely Professional
+          I'm a B.Tech Computer Science student at Lovely Professional
           University focused on Full-Stack MERN development. I build structured,
           scalable web applications using React.js, Node.js, Express, and
           MongoDB.
@@ -20,14 +20,13 @@ export default function About() {
         </p>
 
         <p>
-          Currently, I’m working on production-style projects including admin
+          Currently, I'm working on production-style projects including admin
           CMS systems, trading platform simulations, and AI-integrated web
           applications to strengthen real-world problem solving and system
           design skills.
         </p>
       </section>
 
-      {/* Service Section */}
       <section className="service">
         <h3 className="h3 service-title">What I'm doing</h3>
 

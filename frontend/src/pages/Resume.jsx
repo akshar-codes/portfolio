@@ -7,7 +7,6 @@ export default function Resume() {
         <h2 className="h2 article-title">Resume</h2>
       </header>
 
-      {/* Education Section */}
       <section className="timeline">
         <div className="title-wrapper">
           <div className="icon-box">
@@ -34,7 +33,6 @@ export default function Resume() {
         </ol>
       </section>
 
-      {/* Skills Section */}
       <section className="timeline">
         <div className="title-wrapper">
           <div className="icon-box">
