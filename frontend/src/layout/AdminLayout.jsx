@@ -1,6 +1,5 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
-import "./admin.css";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
