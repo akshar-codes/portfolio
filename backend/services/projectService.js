@@ -3,7 +3,7 @@ import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 import { ServiceError } from "./errors.js";
 
 /* ---------------------------------------------------------------
-   Fetch all projects, newest first
+   Fetch all projects, newest first.
 --------------------------------------------------------------- */
 export const fetchAllProjects = async () => {
   return Project.find().sort({ createdAt: -1 });
@@ -22,7 +22,7 @@ export const addProject = async ({
 
   const result = await uploadToCloudinary(file);
 
-  const project = await Project.create({
+  return Project.create({
     title,
     description,
     category,
@@ -32,8 +32,6 @@ export const addProject = async ({
       public_id: result.public_id,
     },
   });
-
-  return project;
 };
 
 export const removeProject = async (id) => {

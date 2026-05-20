@@ -11,24 +11,22 @@ function toHttpError(error) {
   }
 
   if (error.name === "MulterError") {
-    if (error.code === "LIMIT_FILE_SIZE") {
-      return { status: 400, message: "File too large. Maximum size is 5 MB." };
-    }
-    if (error.code === "LIMIT_FILE_COUNT") {
-      return {
-        status: 400,
-        message: "Only one file may be uploaded at a time.",
-      };
-    }
-    return { status: 400, message: `Upload error: ${error.message}` };
+    const multerMessages = {
+      LIMIT_FILE_SIZE: "File too large. Maximum size is 5 MB.",
+      LIMIT_FILE_COUNT: "Only one file may be uploaded at a time.",
+    };
+    return {
+      status: 400,
+      message: multerMessages[error.code] ?? `Upload error: ${error.message}`,
+    };
   }
 
-  const knownMessages = [
+  const knownPrefixes = [
     "Invalid file type",
     "File content does not match",
     "No file buffer",
   ];
-  if (knownMessages.some((prefix) => error.message?.startsWith(prefix))) {
+  if (knownPrefixes.some((p) => error.message?.startsWith(p))) {
     return { status: 400, message: error.message };
   }
 
