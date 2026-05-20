@@ -54,7 +54,7 @@ app.use(
 );
 
 /* -------------------- 3–5. Body + Cookie Parsers -------------------- */
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10kb" })); // hard cap on JSON body size
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
@@ -89,12 +89,11 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/messages", messageLimiter, messageRoutes);
 
 /* -------------------- Global Error Handler -------------------- */
+
 app.use((err, req, res, next) => {
   const status = err.status || 500;
   const message =
-    process.env.NODE_ENV === "production"
-      ? "An error occurred" // never leak internals in prod
-      : err.message;
+    process.env.NODE_ENV === "production" ? "An error occurred" : err.message;
   res.status(status).json({ message });
 });
 
