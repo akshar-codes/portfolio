@@ -2,19 +2,22 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
+  withCredentials: true,
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
+api.interceptors.response.use(
+  (response) => response,
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  (error) => {
+    const is401 = error.response?.status === 401;
+    const onLoginPage = window.location.pathname === "/admin/login";
+
+    if (is401 && !onLoginPage) {
+      window.location.href = "/admin/login";
     }
 
-    return config;
+    return Promise.reject(error);
   },
-  (error) => Promise.reject(error),
 );
 
 export default api;
