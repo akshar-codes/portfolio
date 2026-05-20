@@ -1,68 +1,58 @@
-import Message from "../models/Message.js";
 import { validationResult } from "express-validator";
+import { ServiceError } from "../services/errors.js";
+import {
+  createMessage,
+  fetchAllMessages,
+  removeMessage,
+} from "../services/messageService.js";
 
-/* ===============================
-   Send Message (Public)
-================================ */
+/* ---------------------------------------------------------------
+   POST /api/messages  (public)
+--------------------------------------------------------------- */
 export const sendMessage = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
-    // Validation errors check
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        errors: errors.array(),
-      });
-    }
-
-    // Database cap safeguard
-    const totalMessages = await Message.countDocuments();
-    if (totalMessages >= 500) {
-      return res.status(403).json({
-        message: "Message limit reached. Try again later.",
-      });
-    }
-
     const { fullname, email, message } = req.body;
-
-    const newMessage = await Message.create({
-      fullname,
-      email,
-      message,
-    });
-
+    const newMessage = await createMessage({ fullname, email, message });
     res.status(201).json(newMessage);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (error instanceof ServiceError) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    console.error("[sendMessage]", error);
+    res.status(500).json({ message: "Failed to send message." });
   }
 };
 
-/* ===============================
-   Get All Messages (Admin)
-================================ */
+/* ---------------------------------------------------------------
+   GET /api/messages  (admin)
+--------------------------------------------------------------- */
 export const getMessages = async (req, res) => {
   try {
-    const messages = await Message.find().sort({ createdAt: -1 });
+    const messages = await fetchAllMessages();
     res.json(messages);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("[getMessages]", error);
+    res.status(500).json({ message: "Failed to fetch messages." });
   }
 };
 
-/* ===============================
-   Delete Message (Admin)
-================================ */
+/* ---------------------------------------------------------------
+   DELETE /api/messages/:id  (admin)
+--------------------------------------------------------------- */
 export const deleteMessage = async (req, res) => {
   try {
-    const message = await Message.findById(req.params.id);
-
-    if (!message) {
-      return res.status(404).json({ message: "Message not found" });
-    }
-
-    await message.deleteOne();
-
-    res.json({ message: "Message deleted successfully" });
+    await removeMessage(req.params.id);
+    res.json({ message: "Message deleted successfully." });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (error instanceof ServiceError) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    console.error("[deleteMessage]", error);
+    res.status(500).json({ message: "Failed to delete message." });
   }
 };
