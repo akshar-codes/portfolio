@@ -3,21 +3,78 @@ import axios from "axios";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
+
+  timeout: 10_000,
 });
 
-api.interceptors.response.use(
-  (response) => response,
+let isRedirectingToLogin = false;
 
-  (error) => {
-    const is401 = error.response?.status === 401;
-    const onLoginPage = window.location.pathname === "/admin/login";
+function redirectToLogin() {
+  if (isRedirectingToLogin) return;
+  if (window.location.pathname === "/admin/login") return;
 
-    if (is401 && !onLoginPage) {
-      window.location.href = "/admin/login";
+  isRedirectingToLogin = true;
+  window.location.href = "/admin/login";
+
+  setTimeout(() => {
+    isRedirectingToLogin = false;
+  }, 3_000);
+}
+
+function normalizeError(error) {
+  if (error._normalized) return error;
+  error._normalized = true;
+
+  if (error.code === "ECONNABORTED" || error.code === "ERR_CANCELED") {
+    error.message = "Request timed out — please try again.";
+    error.isTimeout = true;
+    return error;
+  }
+
+  if (error.request && !error.response) {
+    error.message =
+      "Network error — please check your connection and try again.";
+    error.isNetwork = true;
+    return error;
+  }
+
+  /* -- Server responded with an error status ---------------------- */
+  if (error.response) {
+    const { status, data } = error.response;
+
+    error.statusCode = status;
+
+    if (data?.message && typeof data.message === "string") {
+      error.message = data.message;
     }
 
-    return Promise.reject(error);
+    if (status === 401) {
+      redirectToLogin();
+    }
+  }
+
+  return error;
+}
+
+api.interceptors.request.use(
+  (config) => config,
+
+  (error) => Promise.reject(normalizeError(error)),
+);
+
+api.interceptors.response.use(
+  (response) => {
+    const body = response.data;
+
+    if (body && typeof body === "object" && "success" in body) {
+      response.envelope = body;
+      response.data = body.data ?? null;
+    }
+
+    return response;
   },
+
+  (error) => Promise.reject(normalizeError(error)),
 );
 
 export default api;

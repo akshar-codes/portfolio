@@ -1,58 +1,41 @@
 import { validationResult } from "express-validator";
-import { ServiceError } from "../services/errors.js";
+import AppError from "../utils/AppError.js";
 import {
   createMessage,
   fetchAllMessages,
   removeMessage,
 } from "../services/messageService.js";
+import { sendSuccess } from "../utils/response.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 /* ---------------------------------------------------------------
    POST /api/messages  (public)
 --------------------------------------------------------------- */
-export const sendMessage = async (req, res) => {
+export const sendMessage = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    // Throw so errorMiddleware handles formatting — consistent with
+    // every other 400 in the codebase
+    throw new AppError(errors.array()[0].msg, 400);
   }
 
-  try {
-    const { fullname, email, message } = req.body;
-    const newMessage = await createMessage({ fullname, email, message });
-    res.status(201).json(newMessage);
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      return res.status(error.status).json({ message: error.message });
-    }
-    console.error("[sendMessage]", error);
-    res.status(500).json({ message: "Failed to send message." });
-  }
-};
+  const { fullname, email, message } = req.body;
+  const newMessage = await createMessage({ fullname, email, message });
+  return sendSuccess(res, newMessage, "Message sent successfully", 201);
+});
 
 /* ---------------------------------------------------------------
    GET /api/messages  (admin)
 --------------------------------------------------------------- */
-export const getMessages = async (req, res) => {
-  try {
-    const messages = await fetchAllMessages();
-    res.json(messages);
-  } catch (error) {
-    console.error("[getMessages]", error);
-    res.status(500).json({ message: "Failed to fetch messages." });
-  }
-};
+export const getMessages = asyncHandler(async (req, res) => {
+  const messages = await fetchAllMessages();
+  return sendSuccess(res, messages, "Messages retrieved successfully");
+});
 
 /* ---------------------------------------------------------------
    DELETE /api/messages/:id  (admin)
 --------------------------------------------------------------- */
-export const deleteMessage = async (req, res) => {
-  try {
-    await removeMessage(req.params.id);
-    res.json({ message: "Message deleted successfully." });
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      return res.status(error.status).json({ message: error.message });
-    }
-    console.error("[deleteMessage]", error);
-    res.status(500).json({ message: "Failed to delete message." });
-  }
-};
+export const deleteMessage = asyncHandler(async (req, res) => {
+  await removeMessage(req.params.id);
+  return sendSuccess(res, null, "Message deleted successfully");
+});

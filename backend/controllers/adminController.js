@@ -4,34 +4,27 @@ import {
   getCookieOptions,
   getClearCookieOptions,
   COOKIE_NAME,
-  ServiceError,
 } from "../services/authService.js";
+import { sendSuccess } from "../utils/response.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 /* ---------------------------------------------------------------
    POST /api/admin/login
 --------------------------------------------------------------- */
-export const loginAdmin = async (req, res) => {
-  try {
-    const { username, password } = req.body;
+export const loginAdmin = asyncHandler(async (req, res) => {
+  const { username, password } = req.body;
 
-    const token = await attemptLogin(username, password);
+  const token = await attemptLogin(username, password);
 
-    res.cookie(COOKIE_NAME, token, getCookieOptions());
-    return res.json({ message: "Login successful" });
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      return res.status(error.status).json({ message: error.message });
-    }
-    console.error("[loginAdmin]", error);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
+  res.cookie(COOKIE_NAME, token, getCookieOptions());
+  return sendSuccess(res, null, "Login successful");
+});
 
 /* ---------------------------------------------------------------
    GET /api/admin/verify
 --------------------------------------------------------------- */
 export const verifyAdmin = (req, res) => {
-  return res.json(getVerifiedPayload(req.admin));
+  return sendSuccess(res, getVerifiedPayload(req.admin), "Authenticated");
 };
 
 /* ---------------------------------------------------------------
@@ -39,5 +32,5 @@ export const verifyAdmin = (req, res) => {
 --------------------------------------------------------------- */
 export const logoutAdmin = (req, res) => {
   res.clearCookie(COOKIE_NAME, getClearCookieOptions());
-  return res.json({ message: "Logged out successfully" });
+  return sendSuccess(res, null, "Logged out successfully");
 };
