@@ -11,6 +11,7 @@ import adminRoutes from "./routes/adminRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
+import healthRoutes from "./routes/healthRoutes.js";
 
 const app = express();
 
@@ -104,6 +105,7 @@ const messageLimiter = rateLimit({
  * 8. Routes
  * ------------------------------------------------------------------ */
 
+app.use("/health", healthRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/messages", messageLimiter, messageRoutes);
