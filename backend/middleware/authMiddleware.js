@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
+import AppError from "../utils/AppError.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const COOKIE_NAME = "admin_token";
 
@@ -18,46 +20,29 @@ function extractToken(req) {
   return null;
 }
 
-export const protect = async (req, res, next) => {
+export const protect = asyncHandler(async (req, res, next) => {
   if (!process.env.JWT_SECRET) {
-    console.error("[protect] FATAL: JWT_SECRET is not set");
-    return res.status(500).json({ message: "Server configuration error" });
+    throw new Error("JWT_SECRET is not configured.");
   }
 
   const token = extractToken(req);
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Not authorized — no token provided" });
+    throw new AppError("Not authorized — no token provided.", 401);
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!decoded?.id) {
-      return res
-        .status(401)
-        .json({ message: "Not authorized — malformed token payload" });
-    }
-
-    const admin = await Admin.findById(decoded.id).select("-password");
-
-    if (!admin) {
-      return res
-        .status(401)
-        .json({ message: "Not authorized — account not found" });
-    }
-
-    req.admin = admin;
-    return next();
-  } catch (error) {
-    if (error.name === "TokenExpiredError") {
-      return res
-        .status(401)
-        .json({ message: "Not authorized — token expired" });
-    }
-
-    return res.status(401).json({ message: "Not authorized — token invalid" });
+  if (!decoded?.id) {
+    throw new AppError("Not authorized — malformed token payload.", 401);
   }
-};
+
+  const admin = await Admin.findById(decoded.id).select("-password");
+
+  if (!admin) {
+    throw new AppError("Not authorized — account not found.", 401);
+  }
+
+  req.admin = admin;
+  next();
+});

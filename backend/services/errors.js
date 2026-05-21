@@ -1,7 +1,8 @@
-export class ServiceError extends Error {
+import AppError from "../utils/AppError.js";
+
+export class ServiceError extends AppError {
   constructor(message, status = 500) {
-    super(message);
+    super(message, status);
     this.name = "ServiceError";
-    this.status = status;
   }
 }
