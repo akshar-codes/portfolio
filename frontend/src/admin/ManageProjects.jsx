@@ -12,7 +12,7 @@ export default function ManageProjects() {
       setLoading(true);
       setError("");
       const { data } = await api.get("/projects");
-      setProjects(data ?? []);
+      setProjects(data.projects ?? []);
     } catch (err) {
       setError(err.message);
     } finally {

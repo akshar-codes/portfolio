@@ -11,7 +11,8 @@ export default function Messages() {
       setLoading(true);
       setError("");
       const { data } = await api.get("/messages");
-      setMessages(data ?? []);
+      console.log(data);
+      setMessages(data.messages ?? []);
     } catch (err) {
       setError(err.message);
     } finally {

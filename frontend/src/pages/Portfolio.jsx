@@ -11,7 +11,7 @@ export default function Portfolio() {
     const fetchProjects = async () => {
       try {
         const { data } = await api.get("/projects");
-        setProjects(data ?? []);
+        setProjects(data.projects ?? []);
       } catch (err) {
         setError(err.message);
       } finally {
