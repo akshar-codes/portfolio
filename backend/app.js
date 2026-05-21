@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import morgan from "morgan";
 import mongoSanitize from "./middleware/sanitizeMiddleware.js";
 import rateLimit from "express-rate-limit";
 
+import logger, { morganStream } from "./utils/logger.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
@@ -19,8 +21,8 @@ const app = express();
 const { ALLOWED_ORIGIN, NODE_ENV } = process.env;
 
 if (!ALLOWED_ORIGIN) {
-  console.error(
-    "FATAL: ALLOWED_ORIGIN is not set in environment variables.\n" +
+  logger.error(
+    "FATAL: ALLOWED_ORIGIN is not set in environment variables. " +
       "Set it to your frontend URL (e.g. https://yoursite.com) and restart.",
   );
   process.exit(1);
@@ -44,7 +46,15 @@ app.use(
 );
 
 /* ------------------------------------------------------------------ *
- * 3. CORS
+ * 3. HTTP request logging (morgan → winston)
+ * ------------------------------------------------------------------ */
+
+const morganFormat = NODE_ENV === "production" ? "combined" : "dev";
+
+app.use(morgan(morganFormat, { stream: morganStream }));
+
+/* ------------------------------------------------------------------ *
+ * 4. CORS
  * ------------------------------------------------------------------ */
 
 app.use(
@@ -63,7 +73,7 @@ app.use(
 );
 
 /* ------------------------------------------------------------------ *
- * 4. Body parsers + cookie parser
+ * 5. Body parsers + cookie parser
  * ------------------------------------------------------------------ */
 
 app.use(express.json({ limit: "10kb" }));
@@ -71,16 +81,15 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
 /* ------------------------------------------------------------------ *
- * 5. MongoDB injection sanitizer
+ * 6. MongoDB injection sanitizer
  * ------------------------------------------------------------------ */
 
 app.use(mongoSanitize);
 
 /* ------------------------------------------------------------------ *
- * 6. Rate limiters
+ * 7. Rate limiters
  * ------------------------------------------------------------------ */
 
-// Scoped to the public message submission endpoint only
 const messageLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -92,7 +101,7 @@ const messageLimiter = rateLimit({
 });
 
 /* ------------------------------------------------------------------ *
- * 7. Routes
+ * 8. Routes
  * ------------------------------------------------------------------ */
 
 app.use("/api/admin", adminRoutes);

@@ -1,4 +1,5 @@
 import AppError from "../utils/AppError.js";
+import logger from "../utils/logger.js";
 import { sendError } from "../utils/response.js";
 
 const handleMongoValidation = (err) => {
@@ -64,12 +65,19 @@ const errorMiddleware = (err, req, res, next) => {
   const isOperational = error.isOperational === true;
   const statusCode = error.statusCode || 500;
 
-  if (!isOperational) {
-    console.error("[Unhandled Error]", {
+  if (isOperational) {
+    logger.warn("Operational error", {
+      message: error.message,
+      status: statusCode,
+      method: req.method,
+      url: req.originalUrl,
+    });
+  } else {
+    logger.error("Unhandled error", {
       message: err.message,
       stack: err.stack,
-      url: req.originalUrl,
       method: req.method,
+      url: req.originalUrl,
     });
   }
 
