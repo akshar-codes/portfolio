@@ -2,9 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
+const PROJECT_CATEGORIES = [
+  "Full Stack (MERN)",
+  "Frontend (React)",
+  "Backend / APIs",
+  "AI / ML",
+];
+
 export default function AddProject() {
   const navigate = useNavigate();
-
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -12,7 +18,6 @@ export default function AddProject() {
     projectUrl: "",
     image: null,
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -26,7 +31,6 @@ export default function AddProject() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!form.image) {
       setError("Image is required");
       return;
@@ -46,22 +50,13 @@ export default function AddProject() {
       await api.post("/projects", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       navigate("/admin/projects");
     } catch (err) {
-      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-
-  const PROJECT_CATEGORIES = [
-    "Full Stack (MERN)",
-    "Frontend (React)",
-    "Backend / APIs",
-    "AI / ML",
-  ];
 
   return (
     <article className="admin">

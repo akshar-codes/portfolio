@@ -11,14 +11,10 @@ export default function ManageProjects() {
     try {
       setLoading(true);
       setError("");
-
       const { data } = await api.get("/projects");
-
-      setProjects(Array.isArray(data) ? data : []);
+      setProjects(data ?? []);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Failed to load projects");
-      setProjects([]);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -29,8 +25,7 @@ export default function ManageProjects() {
       await api.delete(`/projects/${id}`);
       fetchProjects();
     } catch (err) {
-      console.error("Delete error:", err);
-      alert("Failed to delete project");
+      alert(err.message);
     }
   };
 
@@ -49,7 +44,6 @@ export default function ManageProjects() {
 
       {loading && <p>Loading projects...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
-
       {!loading && projects.length === 0 && !error && <p>No projects found.</p>}
 
       <ul className="admin-list">
@@ -60,14 +54,12 @@ export default function ManageProjects() {
               src={project.image.url}
               alt={project.title}
             />
-
             <div className="admin-project-content">
               <h4 className="admin-title">{project.title}</h4>
               <p className="admin-description">
                 {project.description.slice(0, 80)}...
               </p>
             </div>
-
             <button
               className="danger-btn"
               onClick={() => deleteProject(project._id)}

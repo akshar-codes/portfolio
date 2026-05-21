@@ -7,7 +7,6 @@ export default function Contact() {
     email: "",
     message: "",
   });
-
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -17,30 +16,23 @@ export default function Contact() {
     formData.email.trim() !== "" &&
     formData.message.trim() !== "";
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!isFormValid) return;
 
+    setLoading(true);
+    setSuccessMsg("");
+    setErrorMsg("");
+
     try {
-      setLoading(true);
-      setSuccessMsg("");
-      setErrorMsg("");
-
       await api.post("/messages", formData);
-
       setSuccessMsg("Message sent successfully!");
       setFormData({ fullname: "", email: "", message: "" });
-    } catch (error) {
-      console.error(error);
-      setErrorMsg("Something went wrong. Try again.");
+    } catch (err) {
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +58,6 @@ export default function Contact() {
               onChange={handleChange}
               required
             />
-
             <input
               type="email"
               name="email"

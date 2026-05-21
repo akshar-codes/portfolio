@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const intendedDestination =
+    location.state?.from?.pathname ?? "/admin/dashboard";
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -28,15 +32,9 @@ export default function AdminLogin() {
     try {
       await api.post("/admin/login", form);
 
-      navigate("/admin/dashboard");
+      navigate(intendedDestination, { replace: true });
     } catch (err) {
-      if (err.response?.status === 401) {
-        setError("Invalid username or password.");
-      } else if (err.response?.status === 429) {
-        setError("Too many login attempts. Please wait 15 minutes.");
-      } else {
-        setError("Server error. Please try again later.");
-      }
+      setError(err.message);
     } finally {
       setLoading(false);
     }

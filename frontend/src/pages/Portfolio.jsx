@@ -11,27 +11,20 @@ export default function Portfolio() {
     const fetchProjects = async () => {
       try {
         const { data } = await api.get("/projects");
-        setProjects(data);
+        setProjects(data ?? []);
       } catch (err) {
-        console.error("Error fetching projects:", err);
-        setError(err.response?.data?.message || "Failed to load projects");
+        // err.message is always a clean string after normalization
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-
     fetchProjects();
   }, []);
 
-  const categories = [
-    "All",
-    ...new Set(projects.map((project) => project.category)),
-  ];
-
+  const categories = ["All", ...new Set(projects.map((p) => p.category))];
   const filteredProjects =
-    filter === "All"
-      ? projects
-      : projects.filter((project) => project.category === filter);
+    filter === "All" ? projects : projects.filter((p) => p.category === filter);
 
   return (
     <article className="portfolio active">
@@ -76,9 +69,7 @@ export default function Portfolio() {
                           loading="lazy"
                         />
                       </figure>
-
                       <h3 className="project-title">{project.title}</h3>
-
                       <p className="project-category">{project.category}</p>
                     </a>
                   </li>

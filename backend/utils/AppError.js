@@ -1,84 +1,12 @@
-import AppError from "../utils/AppError.js";
-import { sendError } from "../utils/response.js";
+class AppError extends Error {
+  constructor(message, statusCode = 500) {
+    super(message);
+    this.name = "AppError";
+    this.statusCode = statusCode;
+    this.isOperational = true; // flag read by the error middleware
 
-const handleMongoValidation = (err) => {
-  const message = Object.values(err.errors)
-    .map((e) => e.message)
-    .join(". ");
-  return new AppError(message, 400);
-};
-
-const handleMongoCast = (err) =>
-  new AppError(`Invalid value for field "${err.path}".`, 400);
-
-const handleMongoDuplicate = (err) => {
-  const field = Object.keys(err.keyValue ?? {})[0] ?? "field";
-  return new AppError(
-    `"${field}" already exists. Please use a different value.`,
-    409,
-  );
-};
-
-const handleJWTInvalid = () =>
-  new AppError("Not authorized — invalid token.", 401);
-
-const handleJWTExpired = () =>
-  new AppError("Not authorized — token expired. Please log in again.", 401);
-
-const MULTER_MESSAGES = {
-  LIMIT_FILE_SIZE: "File too large. Maximum allowed size is 5 MB.",
-  LIMIT_FILE_COUNT: "Only one file may be uploaded at a time.",
-  LIMIT_UNEXPECTED_FILE: "Unexpected file field received.",
-};
-
-const handleMulter = (err) =>
-  new AppError(
-    MULTER_MESSAGES[err.code] ?? `Upload error: ${err.message}`,
-    400,
-  );
-
-const SAFE_MESSAGE_PREFIXES = [
-  "Invalid file type",
-  "File content does not match",
-  "No file buffer",
-];
-
-const isSafeUtilityError = (err) =>
-  SAFE_MESSAGE_PREFIXES.some((prefix) => err.message?.startsWith(prefix));
-
-/* ------------------------------------------------------------------ *
- * Central error middleware
- * ------------------------------------------------------------------ */
-
-const errorMiddleware = (err, req, res, next) => {
-  let error = err;
-
-  if (err.name === "ValidationError") error = handleMongoValidation(err);
-  else if (err.name === "CastError") error = handleMongoCast(err);
-  else if (err.code === 11000) error = handleMongoDuplicate(err);
-  else if (err.name === "JsonWebTokenError") error = handleJWTInvalid();
-  else if (err.name === "TokenExpiredError") error = handleJWTExpired();
-  else if (err.name === "MulterError") error = handleMulter(err);
-  else if (isSafeUtilityError(err)) error = new AppError(err.message, 400);
-
-  const isOperational = error.isOperational === true;
-  const statusCode = error.statusCode || 500;
-
-  if (!isOperational) {
-    console.error("[Unhandled Error]", {
-      message: err.message,
-      stack: err.stack,
-      url: req.originalUrl,
-      method: req.method,
-    });
+    Error.captureStackTrace(this, this.constructor);
   }
+}
 
-  const message =
-    isOperational || process.env.NODE_ENV !== "production"
-      ? error.message
-      : "An unexpected error occurred. Please try again later.";
-
-  return sendError(res, message, statusCode);
-};
-
-export default errorMiddleware;
+export default AppError;

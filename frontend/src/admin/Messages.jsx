@@ -10,18 +10,10 @@ export default function Messages() {
     try {
       setLoading(true);
       setError("");
-
       const { data } = await api.get("/messages");
-
-      if (Array.isArray(data)) {
-        setMessages(data);
-      } else {
-        setMessages([]);
-      }
+      setMessages(data ?? []);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Failed to load messages");
-      setMessages([]);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -30,12 +22,9 @@ export default function Messages() {
   const deleteMessage = async (id) => {
     try {
       await api.delete(`/messages/${id}`);
-
-      // Refresh after delete
       fetchMessages();
     } catch (err) {
-      console.error("Delete error:", err);
-      alert("Failed to delete message");
+      alert(err.message);
     }
   };
 
@@ -51,7 +40,6 @@ export default function Messages() {
 
       {loading && <p>Loading messages...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
-
       {!loading && messages.length === 0 && !error && <p>No messages found.</p>}
 
       <ul className="admin-list">
@@ -62,17 +50,14 @@ export default function Messages() {
                 <h4 className="admin-title">{msg.fullname}</h4>
                 <span className="admin-email">{msg.email}</span>
               </div>
-
               <p className="admin-message-text">
                 {msg.message?.slice(0, 120)}
                 {msg.message?.length > 120 && "..."}
               </p>
-
               <small className="admin-date">
                 {msg.createdAt ? new Date(msg.createdAt).toDateString() : ""}
               </small>
             </div>
-
             <button
               className="danger-btn"
               onClick={() => deleteMessage(msg._id)}
