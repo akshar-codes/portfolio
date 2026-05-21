@@ -13,7 +13,6 @@ export default function Portfolio() {
         const { data } = await api.get("/projects");
         setProjects(data ?? []);
       } catch (err) {
-        // err.message is always a clean string after normalization
         setError(err.message);
       } finally {
         setLoading(false);
@@ -38,12 +37,17 @@ export default function Portfolio() {
 
         {!loading && !error && (
           <>
-            <ul className="filter-list">
+            <ul
+              className="filter-list"
+              role="list"
+              aria-label="Filter projects by category"
+            >
               {categories.map((category) => (
                 <li key={category} className="filter-item">
                   <button
                     className={filter === category ? "active" : ""}
                     onClick={() => setFilter(category)}
+                    aria-pressed={filter === category}
                   >
                     {category}
                   </button>
@@ -51,7 +55,28 @@ export default function Portfolio() {
               ))}
             </ul>
 
-            <ul className="project-list">
+            {/* Mobile dropdown — keep in sync with the active filter */}
+            <div className="filter-select-box">
+              <select
+                className="filter-select form-input"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                aria-label="Filter projects by category"
+              >
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <ul
+              className="project-list"
+              role="list"
+              aria-live="polite"
+              aria-label="Portfolio projects"
+            >
               {filteredProjects.length === 0 ? (
                 <p>No projects found.</p>
               ) : (
@@ -61,6 +86,7 @@ export default function Portfolio() {
                       href={project.projectUrl || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`${project.title} — ${project.category}. Opens in new tab`}
                     >
                       <figure className="project-img">
                         <img
