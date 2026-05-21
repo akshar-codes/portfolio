@@ -20,7 +20,12 @@ export default function ManageProjects() {
     }
   };
 
-  const deleteProject = async (id) => {
+  const deleteProject = async (id, title) => {
+    const confirmed = window.confirm(
+      `Delete "${title}"?\n\nThis will permanently remove the project and its image. This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
     try {
       await api.delete(`/projects/${id}`);
       fetchProjects();
@@ -62,7 +67,7 @@ export default function ManageProjects() {
             </div>
             <button
               className="danger-btn"
-              onClick={() => deleteProject(project._id)}
+              onClick={() => deleteProject(project._id, project.title)}
             >
               Delete
             </button>

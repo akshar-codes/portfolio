@@ -19,7 +19,12 @@ export default function Messages() {
     }
   };
 
-  const deleteMessage = async (id) => {
+  const deleteMessage = async (id, fullname) => {
+    const confirmed = window.confirm(
+      `Delete message from "${fullname}"?\n\nThis action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
     try {
       await api.delete(`/messages/${id}`);
       fetchMessages();
@@ -60,7 +65,7 @@ export default function Messages() {
             </div>
             <button
               className="danger-btn"
-              onClick={() => deleteMessage(msg._id)}
+              onClick={() => deleteMessage(msg._id, msg.fullname)}
             >
               Delete
             </button>
