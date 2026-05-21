@@ -4,17 +4,30 @@ const adminSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      required: true,
+      required: [true, "Username is required"],
       unique: true,
       trim: true,
+      minlength: [3, "Username must be at least 3 characters"],
+      maxlength: [50, "Username must not exceed 50 characters"],
+      match: [
+        /^[a-zA-Z0-9_-]+$/,
+        "Username may only contain letters, numbers, underscores, and hyphens",
+      ],
     },
     password: {
-      type: String, // will store hashed password
-      required: true,
+      type: String,
+      required: [true, "Password is required"],
+
+      minlength: [60, "Password must be a bcrypt hash (60 characters)"],
+      maxlength: [60, "Password must be a bcrypt hash (60 characters)"],
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
+
+adminSchema.index({ username: 1 }, { unique: true, name: "username_unique" });
 
 const Admin = mongoose.model("Admin", adminSchema);
 
