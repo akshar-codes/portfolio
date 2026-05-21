@@ -1,16 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
-const PROJECT_CATEGORIES = [
-  "Full Stack (MERN)",
-  "Frontend (React)",
-  "Backend / APIs",
-  "AI / ML",
-];
-
 export default function AddProject() {
   const navigate = useNavigate();
+
+  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -20,6 +15,16 @@ export default function AddProject() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [categoriesError, setCategoriesError] = useState(null);
+
+  useEffect(() => {
+    api
+      .get("/projects/categories")
+      .then(({ data }) => setCategories(data ?? []))
+      .catch(() =>
+        setCategoriesError("Could not load categories. Please refresh."),
+      );
+  }, []);
 
   const handleChange = (e) => {
     if (e.target.name === "image") {
@@ -84,22 +89,31 @@ export default function AddProject() {
           value={form.description}
           onChange={handleChange}
           required
-        ></textarea>
+        />
 
-        <select
-          name="category"
-          className="form-input"
-          value={form.category}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select category</option>
-          {PROJECT_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+        {categoriesError ? (
+          <p style={{ color: "red" }}>{categoriesError}</p>
+        ) : (
+          <select
+            name="category"
+            className="form-input"
+            value={form.category}
+            onChange={handleChange}
+            required
+            disabled={categories.length === 0}
+          >
+            <option value="">
+              {categories.length === 0
+                ? "Loading categories…"
+                : "Select category"}
             </option>
-          ))}
-        </select>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        )}
 
         <input
           type="url"

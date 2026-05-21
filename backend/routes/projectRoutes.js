@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  getCategories,
   getProjects,
   createProject,
   deleteProject,
@@ -9,13 +10,14 @@ import { upload } from "../utils/cloudinary.js";
 
 const router = express.Router();
 
-// Get all projects
-router.get("/", getProjects);
+// ── Public ───────────────────────────────────────────────────────────
+router.get("/categories", getCategories);
 
-// Create project (with image upload)
+router.get("/", getProjects);
+// ── Protected ────────────────────────────────────────────────────────
+
 router.post("/", protect, upload.single("image"), createProject);
 
-// Delete project (protected)
 router.delete("/:id", protect, deleteProject);
 
 export default router;

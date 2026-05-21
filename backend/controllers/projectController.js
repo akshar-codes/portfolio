@@ -3,10 +3,25 @@ import {
   addProject,
   removeProject,
 } from "../services/projectService.js";
+import { PROJECT_CATEGORIES } from "../models/Project.js";
 import AppError from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
+/* ------------------------------------------------------------------ *
+ * GET /api/projects/categories  (public)
+ * ------------------------------------------------------------------ */
+export const getCategories = (_req, res) => {
+  return sendSuccess(
+    res,
+    PROJECT_CATEGORIES,
+    "Categories retrieved successfully",
+  );
+};
+
+/* ------------------------------------------------------------------ *
+ * GET /api/projects
+ * ------------------------------------------------------------------ */
 export const getProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 9;
