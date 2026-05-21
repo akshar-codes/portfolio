@@ -2,11 +2,38 @@ import Project from "../models/Project.js";
 import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 import { ServiceError } from "./errors.js";
 
-/* ---------------------------------------------------------------
-   Fetch all projects, newest first.
---------------------------------------------------------------- */
-export const fetchAllProjects = async () => {
-  return Project.find().sort({ createdAt: -1 });
+/* ------------------------------------------------------------------ *
+ * fetchAllProjects
+ *
+ * @param {number} page     - 1-based page number  (default: 1)
+ * @param {number} limit    - documents per page    (default: 9, max: 50)
+ * @param {string} category - optional filter value (default: "All" / "")
+ *
+ * Returns { projects, total, page, limit, totalPages }
+ * ------------------------------------------------------------------ */
+export const fetchAllProjects = async ({
+  page = 1,
+  limit = 9, // 3-column grid lands on a complete row by default
+  category = "",
+} = {}) => {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.min(Math.max(1, limit), 50); // clamp: 1–50
+  const skip = (safePage - 1) * safeLimit;
+
+  const filter = category && category !== "All" ? { category } : {};
+
+  const [projects, total] = await Promise.all([
+    Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
+    Project.countDocuments(filter),
+  ]);
+
+  return {
+    projects,
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit),
+  };
 };
 
 export const addProject = async ({
