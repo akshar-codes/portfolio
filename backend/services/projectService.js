@@ -1,25 +1,42 @@
 import Project from "../models/Project.js";
 import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 import { ServiceError } from "./errors.js";
+import cache from "../utils/cache.js";
 
 /* ------------------------------------------------------------------ *
- * fetchAllProjects
- *
- * @param {number} page     - 1-based page number  (default: 1)
- * @param {number} limit    - documents per page    (default: 9, max: 50)
- * @param {string} category - optional filter value (default: "All" / "")
- *
- * Returns { projects, total, page, limit, totalPages }
+ * Cache configuration
  * ------------------------------------------------------------------ */
+
+const CACHE_TTL_MS = 60_000; // 60 seconds
+const CACHE_PREFIX = "projects:";
+
+function buildCacheKey(page, limit, category) {
+  return `${CACHE_PREFIX}page=${page}:limit=${limit}:category=${category}`;
+}
+
+/** Wipe every cached project list (call after any write). */
+export function invalidateProjectsCache() {
+  cache.delByPrefix(CACHE_PREFIX);
+}
+
 export const fetchAllProjects = async ({
   page = 1,
-  limit = 9, // 3-column grid lands on a complete row by default
+  limit = 9,
   category = "",
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), 50); // clamp: 1–50
   const skip = (safePage - 1) * safeLimit;
 
+  const cacheKey = buildCacheKey(safePage, safeLimit, category);
+
+  // ── Cache hit ─────────────────────────────────────────────────────
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // ── Cache miss → query DB ─────────────────────────────────────────
   const filter = category && category !== "All" ? { category } : {};
 
   const [projects, total] = await Promise.all([
@@ -27,15 +44,22 @@ export const fetchAllProjects = async ({
     Project.countDocuments(filter),
   ]);
 
-  return {
+  const result = {
     projects,
     total,
     page: safePage,
     limit: safeLimit,
     totalPages: Math.ceil(total / safeLimit),
   };
+
+  cache.set(cacheKey, result, CACHE_TTL_MS);
+
+  return result;
 };
 
+/* ------------------------------------------------------------------ *
+ * addProject
+ * ------------------------------------------------------------------ */
 export const addProject = async ({
   title,
   description,
@@ -49,7 +73,7 @@ export const addProject = async ({
 
   const result = await uploadToCloudinary(file);
 
-  return Project.create({
+  const project = await Project.create({
     title,
     description,
     category,
@@ -59,8 +83,15 @@ export const addProject = async ({
       public_id: result.public_id,
     },
   });
+
+  invalidateProjectsCache();
+
+  return project;
 };
 
+/* ------------------------------------------------------------------ *
+ * removeProject
+ * ------------------------------------------------------------------ */
 export const removeProject = async (id) => {
   const project = await Project.findById(id);
 
@@ -73,4 +104,6 @@ export const removeProject = async (id) => {
   }
 
   await project.deleteOne();
+
+  invalidateProjectsCache();
 };
