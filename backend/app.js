@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
+import mongoSanitize from "./middleware/sanitizeMiddleware.js";
 import rateLimit from "express-rate-limit";
 
 import adminRoutes from "./routes/adminRoutes.js";
@@ -74,16 +74,7 @@ app.use(cookieParser());
  * 5. MongoDB injection sanitizer
  * ------------------------------------------------------------------ */
 
-app.use(
-  mongoSanitize({
-    replaceWith: "_",
-    onSanitize: ({ req, key }) => {
-      console.warn(
-        `[mongoSanitize] Sanitized key "${key}" on ${req.method} ${req.path}`,
-      );
-    },
-  }),
-);
+app.use(mongoSanitize);
 
 /* ------------------------------------------------------------------ *
  * 6. Rate limiters
