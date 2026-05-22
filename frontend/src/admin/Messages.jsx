@@ -1,31 +1,63 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
+import {
+  AdminSkeleton,
+  AdminEmpty,
+  AdminError,
+} from "../components/AdminStatus";
+
+/** Returns the first letter(s) of a name for the avatar */
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+/** Simple relative time — "2 days ago", "just now", etc. */
+function relativeTime(dateStr) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function Messages() {
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
+    setStatus("loading");
+    setError("");
     try {
-      setLoading(true);
-      setError("");
       const { data } = await api.get("/messages");
-      console.log(data);
       setMessages(data.messages ?? []);
+      setStatus("ready");
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
+      setStatus("error");
     }
-  };
+  }, []);
 
   const deleteMessage = async (id, fullname) => {
     const confirmed = window.confirm(
       `Delete message from "${fullname}"?\n\nThis action cannot be undone.`,
     );
     if (!confirmed) return;
-
     try {
       await api.delete(`/messages/${id}`);
       fetchMessages();
@@ -36,43 +68,98 @@ export default function Messages() {
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [fetchMessages]);
 
   return (
-    <article className="admin active">
-      <header>
-        <h2 className="h2 article-title">Messages</h2>
-      </header>
+    <div className="admin-page">
+      {/* Header */}
+      <div className="admin-page__header">
+        <h2 className="admin-page__title">Messages</h2>
+        {status === "ready" && messages.length > 0 && (
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--a-text-muted)",
+              background: "var(--a-surface)",
+              border: "1px solid var(--a-border)",
+              borderRadius: 100,
+              padding: "4px 12px",
+            }}
+          >
+            {messages.length} total
+          </span>
+        )}
+      </div>
 
-      {loading && <p>Loading messages...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {!loading && messages.length === 0 && !error && <p>No messages found.</p>}
+      {/* States */}
+      {status === "loading" && <AdminSkeleton rows={5} />}
 
-      <ul className="admin-list">
-        {messages.map((msg) => (
-          <li key={msg._id} className="admin-list-item">
-            <div className="admin-project-content">
-              <div className="admin-message-header">
-                <h4 className="admin-title">{msg.fullname}</h4>
-                <span className="admin-email">{msg.email}</span>
+      {status === "error" && (
+        <AdminError message={error} onRetry={fetchMessages} />
+      )}
+
+      {status === "ready" && messages.length === 0 && (
+        <AdminEmpty
+          icon="💬"
+          title="No messages yet"
+          sub="Messages submitted via the contact form will appear here."
+        />
+      )}
+
+      {/* List */}
+      {status === "ready" && messages.length > 0 && (
+        <ul className="admin-list" aria-label="Contact messages">
+          {messages.map((msg) => (
+            <li key={msg._id} className="admin-item">
+              {/* Avatar */}
+              <div
+                className="admin-item__avatar"
+                aria-hidden="true"
+                title={msg.fullname}
+              >
+                {getInitials(msg.fullname)}
               </div>
-              <p className="admin-message-text">
-                {msg.message?.slice(0, 120)}
-                {msg.message?.length > 120 && "..."}
-              </p>
-              <small className="admin-date">
-                {msg.createdAt ? new Date(msg.createdAt).toDateString() : ""}
-              </small>
-            </div>
-            <button
-              className="danger-btn"
-              onClick={() => deleteMessage(msg._id, msg.fullname)}
-            >
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </article>
+
+              {/* Body */}
+              <div className="admin-item__body">
+                <span className="admin-item__name">{msg.fullname}</span>
+                <div className="admin-item__meta">
+                  <a
+                    href={`mailto:${msg.email}`}
+                    style={{
+                      color: "var(--a-text-muted)",
+                      textDecoration: "none",
+                      fontSize: 12,
+                    }}
+                  >
+                    {msg.email}
+                  </a>
+                  <span style={{ color: "var(--a-text-dim)" }}>·</span>
+                  <span className="admin-item__date">
+                    {relativeTime(msg.createdAt)}
+                  </span>
+                </div>
+                <span className="admin-item__preview">
+                  {msg.message?.slice(0, 110)}
+                  {msg.message?.length > 110 && "…"}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="admin-item__actions">
+                <button
+                  className="btn btn--danger"
+                  onClick={() => deleteMessage(msg._id, msg.fullname)}
+                  aria-label={`Delete message from ${msg.fullname}`}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

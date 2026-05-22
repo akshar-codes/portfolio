@@ -5,9 +5,7 @@ import api from "../services/api";
 export default function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const intendedDestination =
-    location.state?.from?.pathname ?? "/admin/dashboard";
+  const dest = location.state?.from?.pathname ?? "/admin/dashboard";
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -15,24 +13,20 @@ export default function AdminLogin() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
+    if (error) setError("");
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     if (!form.username || !form.password) {
       setError("Username and password are required.");
       return;
     }
-
     setLoading(true);
     setError("");
-
     try {
       await api.post("/admin/login", form);
-
-      navigate(intendedDestination, { replace: true });
+      navigate(dest, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -41,54 +35,73 @@ export default function AdminLogin() {
   };
 
   return (
-    <article className="admin active">
-      <header>
-        <h2 className="h2 article-title">Admin Login</h2>
-      </header>
-
-      <form onSubmit={handleLogin} className="form admin-form">
-        <div className="input-wrapper">
-          <input
-            type="text"
-            name="username"
-            className="form-input"
-            placeholder="Username"
-            value={form.username}
-            onChange={handleChange}
-            autoComplete="username"
-            required
-          />
-        </div>
-
-        <div className="input-wrapper">
-          <input
-            type="password"
-            name="password"
-            className="form-input"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            autoComplete="current-password"
-            required
-          />
-        </div>
-
-        {/* Inline error — replaces window.alert() from previous version */}
-        {error && (
-          <p
-            style={{
-              color: "var(--bittersweet-shimmer)",
-              marginBottom: "12px",
-            }}
-          >
-            {error}
+    <div className="admin-login-wrap">
+      <div className="admin-login-card">
+        {/* Logo + heading */}
+        <div className="admin-login-card__header">
+          <div className="admin-login-card__logo" aria-hidden="true">
+            🔐
+          </div>
+          <h2 className="admin-login-card__title">Admin Login</h2>
+          <p className="admin-login-card__sub">
+            Sign in to manage your portfolio
           </p>
-        )}
+        </div>
 
-        <button type="submit" className="form-btn" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-    </article>
+        <div className="admin-divider" />
+
+        {/* Form */}
+        <form className="admin-form" onSubmit={handleLogin} noValidate>
+          <div className="admin-form__field">
+            <label className="admin-form__label" htmlFor="username">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              name="username"
+              className="form-input"
+              placeholder="Enter your username"
+              value={form.username}
+              onChange={handleChange}
+              autoComplete="username"
+              required
+            />
+          </div>
+
+          <div className="admin-form__field">
+            <label className="admin-form__label" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              className="form-input"
+              placeholder="Enter your password"
+              value={form.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="admin-form__error" role="alert">
+              <span>⚠</span> {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn--primary btn--block"
+            style={{ padding: "13px 20px", fontSize: 14 }}
+            disabled={loading}
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
