@@ -67,6 +67,7 @@ const errorMiddleware = (err, req, res, next) => {
 
   if (isOperational) {
     logger.warn("Operational error", {
+      reqId: req.id,
       message: error.message,
       status: statusCode,
       method: req.method,
@@ -74,6 +75,7 @@ const errorMiddleware = (err, req, res, next) => {
     });
   } else {
     logger.error("Unhandled error", {
+      reqId: req.id,
       message: err.message,
       stack: err.stack,
       method: req.method,
@@ -81,8 +83,9 @@ const errorMiddleware = (err, req, res, next) => {
     });
   }
 
+  const isDev = process.env.NODE_ENV === "development";
   const message =
-    isOperational || process.env.NODE_ENV !== "production"
+    isOperational || isDev
       ? error.message
       : "An unexpected error occurred. Please try again later.";
 

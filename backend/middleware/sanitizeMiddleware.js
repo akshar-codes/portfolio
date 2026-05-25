@@ -1,3 +1,5 @@
+import logger from "../utils/logger.js";
+
 const DANGEROUS_KEY = /^\$|\./;
 const REPLACE_WITH = "_";
 
@@ -14,9 +16,10 @@ function sanitize(value) {
           : key;
 
         if (safeKey !== key) {
-          console.warn(
-            `[mongoSanitize] Replaced dangerous key "${key}" → "${safeKey}"`,
-          );
+          logger.warn("[mongoSanitize] Replaced dangerous key", {
+            original: key,
+            replacement: safeKey,
+          });
         }
 
         return [safeKey, sanitize(val)];
@@ -27,13 +30,17 @@ function sanitize(value) {
   return value;
 }
 
-const mongoSanitize = (req, res, next) => {
+const mongoSanitize = (req, _res, next) => {
   if (req.body && typeof req.body === "object") {
     req.body = sanitize(req.body);
   }
 
   if (req.params && typeof req.params === "object") {
     req.params = sanitize(req.params);
+  }
+
+  if (req.query && typeof req.query === "object") {
+    req.query = sanitize(req.query);
   }
 
   next();

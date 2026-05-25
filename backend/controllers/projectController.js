@@ -5,7 +5,7 @@ import {
 } from "../services/projectService.js";
 import { PROJECT_CATEGORIES } from "../models/Project.js";
 import AppError from "../utils/AppError.js";
-import { sendSuccess } from "../utils/response.js";
+import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 /* ------------------------------------------------------------------ *
@@ -25,7 +25,14 @@ export const getCategories = (_req, res) => {
 export const getProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 9;
-  const category = req.query.category?.trim() ?? "";
+
+  /*
+   * Explicit string guard: if the query parser turned `?category[$regex]=.*`
+   * into an object, reject it rather than passing it to Mongoose.
+   * express-mongo-sanitize handles this too, but defense-in-depth.
+   */
+  const category =
+    typeof req.query.category === "string" ? req.query.category.trim() : "";
 
   if (page < 1) throw new AppError("page must be a positive integer.", 400);
   if (limit < 1) throw new AppError("limit must be a positive integer.", 400);
@@ -56,5 +63,5 @@ export const createProject = asyncHandler(async (req, res) => {
  * ------------------------------------------------------------------ */
 export const deleteProject = asyncHandler(async (req, res) => {
   await removeProject(req.params.id);
-  return sendSuccess(res, null, "Project deleted successfully");
+  return sendNoContent(res); // 204 — REST standard for successful delete
 });
