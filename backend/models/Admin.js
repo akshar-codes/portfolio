@@ -18,8 +18,13 @@ const adminSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
 
-      minlength: [60, "Password must be a bcrypt hash (60 characters)"],
-      maxlength: [60, "Password must be a bcrypt hash (60 characters)"],
+      minlength: [60, "Expected a bcrypt hash (60 chars)"],
+      maxlength: [100, "Password hash too long"],
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 0,
     },
   },
   {

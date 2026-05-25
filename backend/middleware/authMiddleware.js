@@ -2,8 +2,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "../utils/asyncHandler.js";
-
-const COOKIE_NAME = "admin_token";
+import { COOKIE_NAME } from "../services/authService.js"; // single source of truth
 
 function extractToken(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
@@ -41,6 +40,10 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   if (!admin) {
     throw new AppError("Not authorized — account not found.", 401);
+  }
+
+  if ((decoded.tokenVersion ?? 0) !== (admin.tokenVersion ?? 0)) {
+    throw new AppError("Not authorized — session has been invalidated.", 401);
   }
 
   req.admin = admin;
