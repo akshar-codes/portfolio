@@ -2988,46 +2988,24 @@ select.form-input option {
   border-color: hsla(45, 100%, 72%, 0.5);
 }
 
-/* ================================
-   ERROR PAGE
-================================ */
-
-.error-page {
-  min-height: 100vh;
+/* ============================================================
+PAGINATION  (shared by Portfolio, ManageProjects, Messages)
+============================================================ */
+.pagination {
   display: flex;
-  flex-direction: column;
-  justify-content: center; /* vertical center */
-  align-items: center; /* horizontal center */
-  text-align: center;
-  background-color: #000; /* remove if your site already has dark bg */
-  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
 }
-
-.error-page h1 {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.error-page h2 {
-  margin-bottom: 1rem;
-  font-weight: 400;
-}
-
-.error-page p {
-  max-width: 500px;
-  opacity: 0.8;
-}
-
-.error-page a {
-  margin-top: 1.5rem;
-  padding: 10px 20px;
-  border: 1px solid #fff;
-  text-decoration: none;
-  color: #fff;
-  transition: 0.3s ease;
-}
-
-.error-page a:hover {
-  background: #fff;
-  color: #000;
+/* ============================================================
+ADMIN LOGIN WRAP
+============================================================ */
+.admin-login-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--smoky-black);
 }
