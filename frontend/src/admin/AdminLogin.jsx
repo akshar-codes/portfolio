@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const dest = location.state?.from?.pathname ?? "/admin/dashboard";
 
+  const { authState, login } = useAuth();
+
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (authState === "authenticated") {
+      navigate(dest, { replace: true });
+    }
+  }, [authState, navigate, dest]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -26,6 +35,7 @@ export default function AdminLogin() {
     setError("");
     try {
       await api.post("/admin/login", form);
+      login(); // update AuthContext — PrivateRoute will now allow access
       navigate(dest, { replace: true });
     } catch (err) {
       setError(err.message);
@@ -34,10 +44,20 @@ export default function AdminLogin() {
     }
   };
 
+  // Don't flash the form while an auth check is still pending
+  if (authState === "pending" || authState === "authenticated") {
+    return (
+      <div className="admin-login-wrap">
+        <div className="admin-shell__loading">
+          <div className="a-spinner" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-login-wrap">
       <div className="admin-login-card">
-        {/* Logo + heading */}
         <div className="admin-login-card__header">
           <div className="admin-login-card__logo" aria-hidden="true">
             🔐
@@ -50,7 +70,6 @@ export default function AdminLogin() {
 
         <div className="admin-divider" />
 
-        {/* Form */}
         <form className="admin-form" onSubmit={handleLogin} noValidate>
           <div className="admin-form__field">
             <label className="admin-form__label" htmlFor="username">

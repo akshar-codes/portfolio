@@ -1,42 +1,11 @@
-import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import api from "../services/api";
-
-const AUTH_STATE = {
-  PENDING: "pending",
-  ALLOWED: "allowed",
-  DENIED: "denied",
-  ERROR: "error",
-};
+import { useAuth } from "../context/AuthContext";
 
 export default function PrivateRoute({ children }) {
-  const [authState, setAuthState] = useState(AUTH_STATE.PENDING);
+  const { authState, verify } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    api
-      .get("/admin/verify")
-      .then(() => {
-        if (!cancelled) setAuthState(AUTH_STATE.ALLOWED);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-
-        if (err.statusCode === 401) {
-          setAuthState(AUTH_STATE.DENIED);
-        } else {
-          setAuthState(AUTH_STATE.ERROR);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (authState === AUTH_STATE.PENDING) {
+  if (authState === "pending") {
     return (
       <p style={{ padding: "40px", color: "var(--light-gray)" }}>
         Verifying session…
@@ -44,16 +13,16 @@ export default function PrivateRoute({ children }) {
     );
   }
 
-  if (authState === AUTH_STATE.DENIED) {
+  if (authState === "unauthenticated") {
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
-  if (authState === AUTH_STATE.ERROR) {
+  if (authState === "error") {
     return (
       <p style={{ padding: "40px", color: "var(--bittersweet-shimmer)" }}>
         Could not verify your session. Please check your connection and{" "}
         <button
-          onClick={() => setAuthState(AUTH_STATE.PENDING)}
+          onClick={verify}
           style={{
             color: "var(--orange-yellow-crayola)",
             background: "none",

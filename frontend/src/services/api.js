@@ -3,23 +3,8 @@ import axios from "axios";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
-
   timeout: 10_000,
 });
-
-let isRedirectingToLogin = false;
-
-function redirectToLogin() {
-  if (isRedirectingToLogin) return;
-  if (window.location.pathname === "/admin/login") return;
-
-  isRedirectingToLogin = true;
-  window.location.href = "/admin/login";
-
-  setTimeout(() => {
-    isRedirectingToLogin = false;
-  }, 3_000);
-}
 
 function normalizeError(error) {
   if (error._normalized) return error;
@@ -38,10 +23,8 @@ function normalizeError(error) {
     return error;
   }
 
-  /* -- Server responded with an error status ---------------------- */
   if (error.response) {
     const { status, data } = error.response;
-
     error.statusCode = status;
 
     if (data?.message && typeof data.message === "string") {
@@ -49,7 +32,7 @@ function normalizeError(error) {
     }
 
     if (status === 401) {
-      redirectToLogin();
+      window.dispatchEvent(new Event("auth:unauthorized"));
     }
   }
 
@@ -58,22 +41,18 @@ function normalizeError(error) {
 
 api.interceptors.request.use(
   (config) => config,
-
   (error) => Promise.reject(normalizeError(error)),
 );
 
 api.interceptors.response.use(
   (response) => {
     const body = response.data;
-
     if (body && typeof body === "object" && "success" in body) {
       response.envelope = body;
       response.data = body.data ?? null;
     }
-
     return response;
   },
-
   (error) => Promise.reject(normalizeError(error)),
 );
 

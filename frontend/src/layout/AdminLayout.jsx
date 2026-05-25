@@ -1,12 +1,15 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
       await api.post("/admin/logout");
+      logout(); // invalidate AuthContext so PrivateRoute redirects immediately
       navigate("/admin/login");
     } catch {
       alert("Logout failed. Please try again.");
@@ -14,12 +17,7 @@ export default function AdminLayout() {
   };
 
   return (
-    /*
-     * admin-shell fills the full viewport independently.
-     * No public <main>, <Sidebar>, or <Navbar> ever wraps this.
-     */
     <div className="admin-shell">
-      {/* ── Sticky top bar ───────────────────────────────────── */}
       <header className="admin-shell__topbar">
         <span className="admin-shell__brand">Admin Panel</span>
         <button
@@ -31,7 +29,6 @@ export default function AdminLayout() {
         </button>
       </header>
 
-      {/* ── Section sub-navigation ──────────────────────────── */}
       <nav className="admin-shell__subnav" aria-label="Admin sections">
         <NavLink
           to="/admin/dashboard"
@@ -59,7 +56,6 @@ export default function AdminLayout() {
         </NavLink>
       </nav>
 
-      {/* ── Scrollable content body ─────────────────────────── */}
       <main className="admin-shell__body">
         <div className="admin-shell__inner">
           <Outlet />
