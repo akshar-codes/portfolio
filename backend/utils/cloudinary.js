@@ -88,10 +88,7 @@ export async function uploadToCloudinary(file) {
       {
         resource_type: "image",
         folder: "portfolio/projects",
-
         allowed_formats: ["jpg", "jpeg", "png", "webp", "gif"],
-
-        invalidate: true,
       },
       (error, result) => {
         if (error) {

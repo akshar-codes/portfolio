@@ -14,33 +14,36 @@ function buildCacheKey(page, limit, category) {
   return `${CACHE_PREFIX}page=${page}:limit=${limit}:category=${category}`;
 }
 
-/** Wipe every cached project list (call after any write). */
 export function invalidateProjectsCache() {
   cache.delByPrefix(CACHE_PREFIX);
 }
 
+/* ------------------------------------------------------------------ *
+ * fetchAllProjects  (public)
+ * ------------------------------------------------------------------ */
 export const fetchAllProjects = async ({
   page = 1,
   limit = 9,
   category = "",
 } = {}) => {
   const safePage = Math.max(1, page);
-  const safeLimit = Math.min(Math.max(1, limit), 50); // clamp: 1–50
+  const safeLimit = Math.min(Math.max(1, limit), 50);
   const skip = (safePage - 1) * safeLimit;
 
   const cacheKey = buildCacheKey(safePage, safeLimit, category);
 
-  // ── Cache hit ─────────────────────────────────────────────────────
   const cached = cache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
-  // ── Cache miss → query DB ─────────────────────────────────────────
   const filter = category && category !== "All" ? { category } : {};
 
   const [projects, total] = await Promise.all([
-    Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
+    Project.find(filter)
+      .select("-image.public_id") // never expose the Cloudinary public_id publicly
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .lean(), // plain JS objects — faster serialization, lower memory
     Project.countDocuments(filter),
   ]);
 
@@ -53,7 +56,6 @@ export const fetchAllProjects = async ({
   };
 
   cache.set(cacheKey, result, CACHE_TTL_MS);
-
   return result;
 };
 
@@ -67,9 +69,7 @@ export const addProject = async ({
   projectUrl,
   file,
 }) => {
-  if (!file) {
-    throw new ServiceError("Image is required.", 400);
-  }
+  if (!file) throw new ServiceError("Image is required.", 400);
 
   const result = await uploadToCloudinary(file);
 
@@ -85,7 +85,6 @@ export const addProject = async ({
   });
 
   invalidateProjectsCache();
-
   return project;
 };
 
@@ -95,15 +94,12 @@ export const addProject = async ({
 export const removeProject = async (id) => {
   const project = await Project.findById(id);
 
-  if (!project) {
-    throw new ServiceError("Project not found.", 404);
-  }
+  if (!project) throw new ServiceError("Project not found.", 404);
 
   if (project.image?.public_id) {
     await cloudinary.uploader.destroy(project.image.public_id);
   }
 
   await project.deleteOne();
-
   invalidateProjectsCache();
 };
