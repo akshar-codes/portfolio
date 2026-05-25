@@ -6,7 +6,8 @@ import {
   AdminError,
 } from "../components/AdminStatus";
 
-/** Returns the first letter(s) of a name for the avatar */
+const PAGE_SIZE = 10;
+
 function getInitials(name = "") {
   return name
     .trim()
@@ -17,7 +18,6 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
-/** Simple relative time — "2 days ago", "just now", etc. */
 function relativeTime(dateStr) {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -39,13 +39,21 @@ export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (targetPage = 1) => {
     setStatus("loading");
     setError("");
     try {
-      const { data } = await api.get("/messages");
+      const { data } = await api.get("/messages", {
+        params: { page: targetPage, limit: PAGE_SIZE },
+      });
       setMessages(data.messages ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
+      setPage(targetPage);
       setStatus("ready");
     } catch (err) {
       setError(err.message);
@@ -60,22 +68,21 @@ export default function Messages() {
     if (!confirmed) return;
     try {
       await api.delete(`/messages/${id}`);
-      fetchMessages();
+      fetchMessages(page);
     } catch (err) {
       alert(err.message);
     }
   };
 
   useEffect(() => {
-    fetchMessages();
+    fetchMessages(1);
   }, [fetchMessages]);
 
   return (
     <div className="admin-page">
-      {/* Header */}
       <div className="admin-page__header">
         <h2 className="admin-page__title">Messages</h2>
-        {status === "ready" && messages.length > 0 && (
+        {status === "ready" && total > 0 && (
           <span
             style={{
               fontSize: 12,
@@ -87,16 +94,15 @@ export default function Messages() {
               padding: "4px 12px",
             }}
           >
-            {messages.length} total
+            {total} total
           </span>
         )}
       </div>
 
-      {/* States */}
       {status === "loading" && <AdminSkeleton rows={5} />}
 
       {status === "error" && (
-        <AdminError message={error} onRetry={fetchMessages} />
+        <AdminError message={error} onRetry={() => fetchMessages(page)} />
       )}
 
       {status === "ready" && messages.length === 0 && (
@@ -107,58 +113,85 @@ export default function Messages() {
         />
       )}
 
-      {/* List */}
       {status === "ready" && messages.length > 0 && (
-        <ul className="admin-list" aria-label="Contact messages">
-          {messages.map((msg) => (
-            <li key={msg._id} className="admin-item">
-              {/* Avatar */}
-              <div
-                className="admin-item__avatar"
-                aria-hidden="true"
-                title={msg.fullname}
-              >
-                {getInitials(msg.fullname)}
-              </div>
+        <>
+          <ul className="admin-list" aria-label="Contact messages">
+            {messages.map((msg) => (
+              <li key={msg._id} className="admin-item">
+                <div
+                  className="admin-item__avatar"
+                  aria-hidden="true"
+                  title={msg.fullname}
+                >
+                  {getInitials(msg.fullname)}
+                </div>
 
-              {/* Body */}
-              <div className="admin-item__body">
-                <span className="admin-item__name">{msg.fullname}</span>
-                <div className="admin-item__meta">
-                  <a
-                    href={`mailto:${msg.email}`}
-                    style={{
-                      color: "var(--a-text-muted)",
-                      textDecoration: "none",
-                      fontSize: 12,
-                    }}
-                  >
-                    {msg.email}
-                  </a>
-                  <span style={{ color: "var(--a-text-dim)" }}>·</span>
-                  <span className="admin-item__date">
-                    {relativeTime(msg.createdAt)}
+                <div className="admin-item__body">
+                  <span className="admin-item__name">{msg.fullname}</span>
+                  <div className="admin-item__meta">
+                    <a
+                      href={`mailto:${msg.email}`}
+                      style={{
+                        color: "var(--a-text-muted)",
+                        textDecoration: "none",
+                        fontSize: 12,
+                      }}
+                    >
+                      {msg.email}
+                    </a>
+                    <span style={{ color: "var(--a-text-dim)" }}>·</span>
+                    <span className="admin-item__date">
+                      {relativeTime(msg.createdAt)}
+                    </span>
+                  </div>
+                  <span className="admin-item__preview">
+                    {msg.message?.slice(0, 110)}
+                    {msg.message?.length > 110 && "…"}
                   </span>
                 </div>
-                <span className="admin-item__preview">
-                  {msg.message?.slice(0, 110)}
-                  {msg.message?.length > 110 && "…"}
-                </span>
-              </div>
 
-              {/* Actions */}
-              <div className="admin-item__actions">
-                <button
-                  className="btn btn--danger"
-                  onClick={() => deleteMessage(msg._id, msg.fullname)}
-                  aria-label={`Delete message from ${msg.fullname}`}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="admin-item__actions">
+                  <button
+                    className="btn btn--danger"
+                    onClick={() => deleteMessage(msg._id, msg.fullname)}
+                    aria-label={`Delete message from ${msg.fullname}`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 8,
+              }}
+            >
+              <button
+                className="btn btn--ghost"
+                onClick={() => fetchMessages(page - 1)}
+                disabled={page === 1}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: 13, color: "var(--a-text-muted)" }}>
+                {page} / {totalPages}
+              </span>
+              <button
+                className="btn btn--ghost"
+                onClick={() => fetchMessages(page + 1)}
+                disabled={page === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

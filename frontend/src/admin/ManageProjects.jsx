@@ -7,17 +7,25 @@ import {
   AdminError,
 } from "../components/AdminStatus";
 
+const PAGE_SIZE = 10;
+
 export default function ManageProjects() {
   const [projects, setProjects] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = useCallback(async (targetPage = 1) => {
     setStatus("loading");
     setError("");
     try {
-      const { data } = await api.get("/projects");
+      const { data } = await api.get("/projects", {
+        params: { page: targetPage, limit: PAGE_SIZE },
+      });
       setProjects(data.projects ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setPage(targetPage);
       setStatus("ready");
     } catch (err) {
       setError(err.message);
@@ -32,19 +40,19 @@ export default function ManageProjects() {
     if (!confirmed) return;
     try {
       await api.delete(`/projects/${id}`);
-      fetchProjects();
+      // Stay on current page; if it's now empty fall back to previous page
+      fetchProjects(page);
     } catch (err) {
       alert(err.message);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
+    fetchProjects(1);
   }, [fetchProjects]);
 
   return (
     <div className="admin-page">
-      {/* Header row */}
       <div className="admin-page__header">
         <h2 className="admin-page__title">Projects</h2>
         <Link to="/admin/projects/new" className="btn btn--primary">
@@ -52,11 +60,10 @@ export default function ManageProjects() {
         </Link>
       </div>
 
-      {/* States */}
       {status === "loading" && <AdminSkeleton rows={4} />}
 
       {status === "error" && (
-        <AdminError message={error} onRetry={fetchProjects} />
+        <AdminError message={error} onRetry={() => fetchProjects(page)} />
       )}
 
       {status === "ready" && projects.length === 0 && (
@@ -67,41 +74,71 @@ export default function ManageProjects() {
         />
       )}
 
-      {/* List */}
       {status === "ready" && projects.length > 0 && (
-        <ul className="admin-list" aria-label="Portfolio projects">
-          {projects.map((project) => (
-            <li key={project._id} className="admin-item">
-              <img
-                className="admin-item__thumb"
-                src={project.image?.url || "/images/placeholder.png"}
-                alt={project.title}
-                loading="lazy"
-              />
-
-              <div className="admin-item__body">
-                <span className="admin-item__name">{project.title}</span>
-                <div className="admin-item__meta">
-                  <span className="admin-item__badge">{project.category}</span>
+        <>
+          <ul className="admin-list" aria-label="Portfolio projects">
+            {projects.map((project) => (
+              <li key={project._id} className="admin-item">
+                <img
+                  className="admin-item__thumb"
+                  src={project.image?.url || "/images/placeholder.png"}
+                  alt={project.title}
+                  loading="lazy"
+                />
+                <div className="admin-item__body">
+                  <span className="admin-item__name">{project.title}</span>
+                  <div className="admin-item__meta">
+                    <span className="admin-item__badge">
+                      {project.category}
+                    </span>
+                  </div>
+                  <span className="admin-item__preview">
+                    {project.description?.slice(0, 90)}
+                    {project.description?.length > 90 && "…"}
+                  </span>
                 </div>
-                <span className="admin-item__preview">
-                  {project.description?.slice(0, 90)}
-                  {project.description?.length > 90 && "…"}
-                </span>
-              </div>
+                <div className="admin-item__actions">
+                  <button
+                    className="btn btn--danger"
+                    onClick={() => deleteProject(project._id, project.title)}
+                    aria-label={`Delete project ${project.title}`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
 
-              <div className="admin-item__actions">
-                <button
-                  className="btn btn--danger"
-                  onClick={() => deleteProject(project._id, project.title)}
-                  aria-label={`Delete project ${project.title}`}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 8,
+              }}
+            >
+              <button
+                className="btn btn--ghost"
+                onClick={() => fetchProjects(page - 1)}
+                disabled={page === 1}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: 13, color: "var(--a-text-muted)" }}>
+                {page} / {totalPages}
+              </span>
+              <button
+                className="btn btn--ghost"
+                onClick={() => fetchProjects(page + 1)}
+                disabled={page === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
