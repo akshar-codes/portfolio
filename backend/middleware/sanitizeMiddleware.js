@@ -30,7 +30,33 @@ function sanitize(value) {
   return value;
 }
 
+/**
+ * Mutates an object's keys/values in-place.
+ * Used for req.query in Express 5 where the property is a read-only getter
+ * — direct reassignment (req.query = ...) throws a TypeError.
+ */
+function sanitizeInPlace(obj) {
+  for (const key of Object.keys(obj)) {
+    const safeKey = DANGEROUS_KEY.test(key)
+      ? key.replace(/^\$+/, REPLACE_WITH).replace(/\./g, REPLACE_WITH)
+      : key;
+
+    const safeVal = sanitize(obj[key]);
+
+    if (safeKey !== key) {
+      logger.warn("[mongoSanitize] Replaced dangerous key", {
+        original: key,
+        replacement: safeKey,
+      });
+      delete obj[key];
+    }
+
+    obj[safeKey] = safeVal;
+  }
+}
+
 const mongoSanitize = (req, _res, next) => {
+  // req.body and req.params can be reassigned normally
   if (req.body && typeof req.body === "object") {
     req.body = sanitize(req.body);
   }
@@ -39,8 +65,10 @@ const mongoSanitize = (req, _res, next) => {
     req.params = sanitize(req.params);
   }
 
+  // Express 5: req.query is a read-only getter — cannot reassign.
+  // Mutate the existing parsed object in-place instead.
   if (req.query && typeof req.query === "object") {
-    req.query = sanitize(req.query);
+    sanitizeInPlace(req.query);
   }
 
   next();
