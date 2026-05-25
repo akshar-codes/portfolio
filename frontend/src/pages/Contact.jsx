@@ -6,6 +6,7 @@ export default function Contact() {
     fullname: "",
     email: "",
     message: "",
+    website: "",
   });
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -30,7 +31,7 @@ export default function Contact() {
     try {
       await api.post("/messages", formData);
       setSuccessMsg("Message sent successfully!");
-      setFormData({ fullname: "", email: "", message: "" });
+      setFormData({ fullname: "", email: "", message: "", website: "" });
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -76,7 +77,25 @@ export default function Contact() {
             value={formData.message}
             onChange={handleChange}
             required
-          ></textarea>
+          />
+
+          <input
+            type="text"
+            name="website"
+            value={formData.website}
+            onChange={handleChange}
+            aria-hidden="true"
+            tabIndex={-1}
+            autoComplete="off"
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              width: "1px",
+              height: "1px",
+              opacity: 0,
+              pointerEvents: "none",
+            }}
+          />
 
           <button
             className="form-btn"
