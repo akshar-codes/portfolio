@@ -33,6 +33,8 @@ router.post(
       .withMessage("Message cannot be empty")
       .isLength({ min: 10 })
       .withMessage("Message must be at least 10 characters"),
+
+    body("website").optional().equals("").withMessage("Bot detected"),
   ],
   sendMessage,
 );

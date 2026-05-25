@@ -14,7 +14,7 @@ const messageSchema = new mongoose.Schema(
       required: [true, "Email is required"],
       trim: true,
       lowercase: true,
-      maxlength: [254, "Email must not exceed 254 characters"], // RFC 5321 limit
+      maxlength: [254, "Email must not exceed 254 characters"],
       match: [
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         "Please provide a valid email address",
@@ -26,10 +26,6 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       minlength: [10, "Message must be at least 10 characters"],
       maxlength: [2000, "Message must not exceed 2000 characters"],
-    },
-    isRead: {
-      type: Boolean,
-      default: false,
     },
   },
   {

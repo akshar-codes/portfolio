@@ -5,13 +5,17 @@ import {
   fetchAllMessages,
   removeMessage,
 } from "../services/messageService.js";
-import { sendSuccess } from "../utils/response.js";
+import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 /* ------------------------------------------------------------------ *
  * POST /api/messages  (public)
  * ------------------------------------------------------------------ */
 export const sendMessage = asyncHandler(async (req, res) => {
+  if (req.body.website) {
+    return sendSuccess(res, null, "Message sent successfully", 201);
+  }
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw new AppError(errors.array()[0].msg, 400);
@@ -22,6 +26,9 @@ export const sendMessage = asyncHandler(async (req, res) => {
   return sendSuccess(res, newMessage, "Message sent successfully", 201);
 });
 
+/* ------------------------------------------------------------------ *
+ * GET /api/messages  (admin)
+ * ------------------------------------------------------------------ */
 export const getMessages = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
@@ -38,5 +45,5 @@ export const getMessages = asyncHandler(async (req, res) => {
  * ------------------------------------------------------------------ */
 export const deleteMessage = asyncHandler(async (req, res) => {
   await removeMessage(req.params.id);
-  return sendSuccess(res, null, "Message deleted successfully");
+  return sendNoContent(res); // 204 — REST standard for successful delete
 });
