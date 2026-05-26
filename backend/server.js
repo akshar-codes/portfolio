@@ -5,8 +5,7 @@ import connectDB from "./config/db.js";
 import logger from "./utils/logger.js";
 
 const PORT = process.env.PORT || 5000;
-
-const SHUTDOWN_TIMEOUT_MS = 10_000; // 10 s — adjust to your SLA
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 function shutdown(server, signal) {
   logger.info(`${signal} received — starting graceful shutdown`);
@@ -28,7 +27,6 @@ function shutdown(server, signal) {
 
     logger.info("HTTP server closed");
 
-    // 2. Close the MongoDB connection.
     try {
       await mongoose.connection.close();
       logger.info("MongoDB connection closed");
@@ -59,7 +57,6 @@ const start = async () => {
   });
 
   process.on("SIGTERM", () => shutdown(server, "SIGTERM"));
-
   process.on("SIGINT", () => shutdown(server, "SIGINT"));
 
   process.on("unhandledRejection", (reason) => {
