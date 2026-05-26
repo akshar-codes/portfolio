@@ -40,7 +40,6 @@ export default function ManageProjects() {
     if (!confirmed) return;
     try {
       await api.delete(`/projects/${id}`);
-      // Stay on current page; if it's now empty fall back to previous page
       fetchProjects(page);
     } catch (err) {
       alert(err.message);
@@ -88,8 +87,9 @@ export default function ManageProjects() {
                 <div className="admin-item__body">
                   <span className="admin-item__name">{project.title}</span>
                   <div className="admin-item__meta">
+                    {/* category is now a populated { name, slug } object */}
                     <span className="admin-item__badge">
-                      {project.category}
+                      {project.category?.name ?? "—"}
                     </span>
                   </div>
                   <span className="admin-item__preview">

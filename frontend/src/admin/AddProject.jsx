@@ -7,6 +7,7 @@ export default function AddProject() {
 
   const [categories, setCategories] = useState([]);
   const [categoriesError, setCategoriesError] = useState("");
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -17,9 +18,10 @@ export default function AddProject() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Fetch all categories (admin endpoint — includes unused ones)
   useEffect(() => {
     api
-      .get("/projects/categories")
+      .get("/admin/categories")
       .then(({ data }) => setCategories(data ?? []))
       .catch(() =>
         setCategoriesError("Could not load categories. Please refresh."),
@@ -28,26 +30,32 @@ export default function AddProject() {
 
   const handleChange = (e) => {
     if (e.target.name === "image") {
-      setForm({ ...form, image: e.target.files[0] });
+      setForm((prev) => ({ ...prev, image: e.target.files[0] }));
     } else {
-      setForm({ ...form, [e.target.name]: e.target.value });
+      setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     }
     if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.image) {
       setError("Please upload a project image.");
+      return;
+    }
+    if (!form.category) {
+      setError("Please select a category.");
       return;
     }
 
     setLoading(true);
     setError("");
+
     const fd = new FormData();
     fd.append("title", form.title);
     fd.append("description", form.description);
-    fd.append("category", form.category);
+    fd.append("category", form.category); // ObjectId string
     fd.append("projectUrl", form.projectUrl);
     fd.append("image", form.image);
 
@@ -119,6 +127,7 @@ export default function AddProject() {
             <label className="admin-form__label" htmlFor="proj-cat">
               Category <span style={{ color: "var(--a-danger)" }}>*</span>
             </label>
+
             {categoriesError ? (
               <p className="admin-form__error">{categoriesError}</p>
             ) : (
@@ -134,9 +143,10 @@ export default function AddProject() {
                 <option value="">
                   {categories.length === 0 ? "Loading…" : "Select category"}
                 </option>
+                {/* Value is the ObjectId — name is display text */}
                 {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -181,7 +191,6 @@ export default function AddProject() {
               accept="image/*"
               onChange={handleChange}
               className="file-input"
-              required
             />
           </label>
           <p style={{ fontSize: 11, color: "var(--a-text-dim)", marginTop: 6 }}>
