@@ -1,17 +1,20 @@
+import mongoose from "mongoose";
 import Project from "../models/Project.js";
+import Category from "../models/Category.js";
 import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 import { ServiceError } from "./errors.js";
 import cache from "../utils/cache.js";
+import { invalidateCategoryCache } from "./categoryService.js";
 
 /* ------------------------------------------------------------------ *
- * Cache configuration
+ * Project cache
  * ------------------------------------------------------------------ */
 
-const CACHE_TTL_MS = 60_000; // 60 seconds
+const CACHE_TTL_MS = 60_000;
 const CACHE_PREFIX = "projects:";
 
 function buildCacheKey(page, limit, category) {
-  return `${CACHE_PREFIX}page=${page}:limit=${limit}:category=${category}`;
+  return `${CACHE_PREFIX}page=${page}:limit=${limit}:cat=${category}`;
 }
 
 export function invalidateProjectsCache() {
@@ -19,8 +22,28 @@ export function invalidateProjectsCache() {
 }
 
 /* ------------------------------------------------------------------ *
+ * Category resolution helper
+ * ------------------------------------------------------------------ */
+
+async function resolveCategoryFilter(category) {
+  if (!category || category === "All") return {};
+
+  let cat;
+
+  if (mongoose.Types.ObjectId.isValid(category)) {
+    cat = await Category.findById(category).lean();
+  } else {
+    // Treat as slug (the standard frontend usage)
+    cat = await Category.findOne({ slug: category.toLowerCase() }).lean();
+  }
+
+  return cat ? { category: cat._id } : null;
+}
+
+/* ------------------------------------------------------------------ *
  * fetchAllProjects  (public)
  * ------------------------------------------------------------------ */
+
 export const fetchAllProjects = async ({
   page = 1,
   limit = 9,
@@ -31,19 +54,30 @@ export const fetchAllProjects = async ({
   const skip = (safePage - 1) * safeLimit;
 
   const cacheKey = buildCacheKey(safePage, safeLimit, category);
-
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const filter = category && category !== "All" ? { category } : {};
+  const filter = await resolveCategoryFilter(category);
+
+  // Unknown category — return empty set (not a 404, just no results)
+  if (filter === null) {
+    return {
+      projects: [],
+      total: 0,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: 0,
+    };
+  }
 
   const [projects, total] = await Promise.all([
     Project.find(filter)
-      .select("-image.public_id") // never expose the Cloudinary public_id publicly
+      .select("-image.public_id") // never expose Cloudinary internal ID publicly
+      .populate("category", "name slug") // embed { name, slug } in the response
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
-      .lean(), // plain JS objects — faster serialization, lower memory
+      .lean(),
     Project.countDocuments(filter),
   ]);
 
@@ -62,38 +96,44 @@ export const fetchAllProjects = async ({
 /* ------------------------------------------------------------------ *
  * addProject
  * ------------------------------------------------------------------ */
+
 export const addProject = async ({
   title,
   description,
-  category,
+  categoryId,
   projectUrl,
   file,
 }) => {
   if (!file) throw new ServiceError("Image is required.", 400);
 
-  const result = await uploadToCloudinary(file);
+  // Validate the category exists before uploading to Cloudinary
+  const category = await Category.findById(categoryId).lean();
+  if (!category) throw new ServiceError("Invalid category — not found.", 400);
+
+  const uploadResult = await uploadToCloudinary(file);
 
   const project = await Project.create({
     title,
     description,
-    category,
+    category: category._id,
     projectUrl,
     image: {
-      url: result.secure_url,
-      public_id: result.public_id,
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
     },
   });
 
   invalidateProjectsCache();
+  invalidateCategoryCache(); // per-category project count changed
   return project;
 };
 
 /* ------------------------------------------------------------------ *
  * removeProject
  * ------------------------------------------------------------------ */
+
 export const removeProject = async (id) => {
   const project = await Project.findById(id);
-
   if (!project) throw new ServiceError("Project not found.", 404);
 
   if (project.image?.public_id) {
@@ -102,4 +142,5 @@ export const removeProject = async (id) => {
 
   await project.deleteOne();
   invalidateProjectsCache();
+  invalidateCategoryCache(); // per-category project count changed
 };

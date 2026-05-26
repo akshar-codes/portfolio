@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 
-const CATEGORIES = [
-  "Full Stack (MERN)",
-  "Frontend (React)",
-  "Backend / APIs",
-  "AI / ML",
-];
-
+/**
+ * BREAKING CHANGE: `category` is now a ref to the Category collection.
+ *
+ * Existing documents with a string value are converted to ObjectId refs
+ * by backend/utils/migration.js, which runs automatically on server
+ * startup (after connectDB).  Do NOT revert to an enum — categories are
+ * now user-managed through the admin dashboard.
+ */
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -24,12 +25,9 @@ const projectSchema = new mongoose.Schema(
       maxlength: [1000, "Description must not exceed 1000 characters"],
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: [true, "Category is required"],
-      enum: {
-        values: CATEGORIES,
-        message: `Category must be one of: ${CATEGORIES.join(", ")}`,
-      },
     },
     image: {
       url: {
@@ -57,15 +55,10 @@ const projectSchema = new mongoose.Schema(
       ],
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
 projectSchema.index({ createdAt: -1 });
-
 projectSchema.index({ category: 1 });
-
-export const PROJECT_CATEGORIES = CATEGORIES;
 
 export default mongoose.model("Project", projectSchema);
