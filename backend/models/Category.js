@@ -27,11 +27,10 @@ const categorySchema = new mongoose.Schema(
 categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
 
-categorySchema.pre("save", function (next) {
+categorySchema.pre("save", async function () {
   if (!this.slug && this.name) {
     this.slug = generateSlug(this.name);
   }
-  next();
 });
 
 export default mongoose.model("Category", categorySchema);
