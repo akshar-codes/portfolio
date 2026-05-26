@@ -5,43 +5,59 @@ const PAGE_SIZE = 9;
 
 export default function Portfolio() {
   const [filter, setFilter] = useState("All");
-  const [categories, setCategories] = useState(["All"]);
+
+  // Each entry: { _id, name, slug, projectCount }
+  const [categories, setCategories] = useState([]);
+
   const [projects, setProjects] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Fetch non-empty categories once on mount
   useEffect(() => {
     api
-      .get("/projects/categories")
-      .then(({ data }) => setCategories(["All", ...(data ?? [])]))
-      .catch(() => {});
+      .get("/categories")
+      .then(({ data }) => setCategories(data ?? []))
+      .catch(() => {
+        // Non-fatal — the filter bar simply won't show specific categories
+      });
   }, []);
 
+  // Fetch projects whenever filter or page changes
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProjects = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const params = { page, limit: PAGE_SIZE };
-        if (filter !== "All") params.category = filter;
+        if (filter !== "All") params.category = filter; // send slug
 
-        const { data } = await api.get("/projects", { params });
+        const { data } = await api.get("/projects", {
+          params,
+          signal: controller.signal,
+        });
+
         setProjects(data.projects ?? []);
         setTotalPages(data.totalPages ?? 1);
       } catch (err) {
-        setError(err.message);
+        if (err.code !== "ERR_CANCELED") setError(err.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProjects();
+    return () => controller.abort();
   }, [filter, page]);
 
-  const handleFilterChange = (category) => {
-    setFilter(category);
-    setPage(1); // reset to first page on filter change
+  const handleFilterChange = (slug) => {
+    setFilter(slug);
+    setPage(1); // always reset to page 1 on filter change
   };
 
   return (
@@ -51,26 +67,36 @@ export default function Portfolio() {
       </header>
 
       <section className="projects">
-        {/* Category filter — desktop list */}
+        {/* ── Category filter — desktop list ───────────────────── */}
         <ul
           className="filter-list"
           role="list"
           aria-label="Filter projects by category"
         >
-          {categories.map((category) => (
-            <li key={category} className="filter-item">
+          <li className="filter-item">
+            <button
+              className={filter === "All" ? "active" : ""}
+              onClick={() => handleFilterChange("All")}
+              aria-pressed={filter === "All"}
+            >
+              All
+            </button>
+          </li>
+
+          {categories.map((cat) => (
+            <li key={cat._id} className="filter-item">
               <button
-                className={filter === category ? "active" : ""}
-                onClick={() => handleFilterChange(category)}
-                aria-pressed={filter === category}
+                className={filter === cat.slug ? "active" : ""}
+                onClick={() => handleFilterChange(cat.slug)}
+                aria-pressed={filter === cat.slug}
               >
-                {category}
+                {cat.name}
               </button>
             </li>
           ))}
         </ul>
 
-        {/* Category filter — mobile dropdown */}
+        {/* ── Category filter — mobile dropdown ───────────────── */}
         <div className="filter-select-box">
           <select
             className="filter-select form-input"
@@ -78,21 +104,25 @@ export default function Portfolio() {
             onChange={(e) => handleFilterChange(e.target.value)}
             aria-label="Filter projects by category"
           >
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            <option value="All">All</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat.slug}>
+                {cat.name}
               </option>
             ))}
           </select>
         </div>
 
+        {/* ── States ──────────────────────────────────────────── */}
         {loading && (
           <p style={{ color: "var(--light-gray)" }}>Loading projects…</p>
         )}
-        {error && (
+
+        {!loading && error && (
           <p style={{ color: "var(--bittersweet-shimmer)" }}>{error}</p>
         )}
 
+        {/* ── Project grid ──────────────────────────────────── */}
         {!loading && !error && (
           <>
             <ul
@@ -110,7 +140,7 @@ export default function Portfolio() {
                       href={project.projectUrl || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={`${project.title} — ${project.category}. Opens in new tab`}
+                      aria-label={`${project.title} — ${project.category?.name ?? ""}. Opens in new tab`}
                     >
                       <figure className="project-img">
                         <img
@@ -120,14 +150,17 @@ export default function Portfolio() {
                         />
                       </figure>
                       <h3 className="project-title">{project.title}</h3>
-                      <p className="project-category">{project.category}</p>
+                      {/* category is now a populated object */}
+                      <p className="project-category">
+                        {project.category?.name ?? ""}
+                      </p>
                     </a>
                   </li>
                 ))
               )}
             </ul>
 
-            {/* Pagination */}
+            {/* ── Pagination ──────────────────────────────────── */}
             {totalPages > 1 && (
               <div
                 className="pagination"
