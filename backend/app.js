@@ -13,12 +13,13 @@ import logger, { morganStream } from "./utils/logger.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import adminCategoryRoutes from "./routes/adminCategoryRoutes.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import healthRoutes from "./routes/healthRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
- *    else. Calls process.exit(1) with a clear list if any are missing.
  * ------------------------------------------------------------------ */
 validateEnv();
 
@@ -28,9 +29,6 @@ const { ALLOWED_ORIGIN, NODE_ENV } = process.env;
 
 /* ------------------------------------------------------------------ *
  * 2. Request correlation IDs
- *    Every request gets a unique ID attached to req.id so that
- *    multi-step log lines (upload → Cloudinary → DB → response) can be
- *    traced back to a single request without timestamp matching.
  * ------------------------------------------------------------------ */
 app.use((req, _res, next) => {
   req.id = randomUUID();
@@ -86,17 +84,12 @@ app.use(cookieParser());
 
 /* ------------------------------------------------------------------ *
  * 7. MongoDB injection sanitizer
- *    Now covers req.body, req.params, AND req.query.
- *    Note: express-mongo-sanitize is listed as a dependency but was
- *    never wired up; the fixed custom middleware is the active defence.
  * ------------------------------------------------------------------ */
 app.use(mongoSanitize);
 
 /* ------------------------------------------------------------------ *
  * 8. Rate limiters
  * ------------------------------------------------------------------ */
-
-// Global backstop — catches any endpoint not individually rate-limited
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -128,6 +121,8 @@ app.use(globalLimiter);
  * ------------------------------------------------------------------ */
 app.use("/health", healthRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/categories", adminCategoryRoutes); // ← new
+app.use("/api/categories", categoryRoutes); // ← new (public)
 app.use("/api/projects", projectRoutes);
 app.use("/api/messages", messageLimiter, messageRoutes);
 
