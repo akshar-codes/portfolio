@@ -9,7 +9,7 @@ export default function AdminLayout() {
   const handleLogout = async () => {
     try {
       await api.post("/admin/logout");
-      logout(); // invalidate AuthContext so PrivateRoute redirects immediately
+      logout();
       navigate("/admin/login");
     } catch {
       alert("Logout failed. Please try again.");
@@ -45,6 +45,14 @@ export default function AdminLayout() {
           }
         >
           Projects
+        </NavLink>
+        <NavLink
+          to="/admin/categories"
+          className={({ isActive }) =>
+            `admin-subnav__link${isActive ? " active" : ""}`
+          }
+        >
+          Categories
         </NavLink>
         <NavLink
           to="/admin/messages"

@@ -8,6 +8,12 @@ const ACTIONS = [
     desc: "Add, view, or delete portfolio projects and their images.",
   },
   {
+    to: "/admin/categories",
+    icon: "🏷️",
+    title: "Manage Categories",
+    desc: "Create or remove project categories. Unused categories can be deleted.",
+  },
+  {
     to: "/admin/messages",
     icon: "💬",
     title: "Messages",
@@ -25,7 +31,7 @@ export default function Dashboard() {
 
       {/* Welcome */}
       <p style={{ fontSize: 14, color: "var(--a-text-muted)", marginTop: -8 }}>
-        Welcome back. Here's what you can manage today.
+        Welcome back. Here&apos;s what you can manage today.
       </p>
 
       {/* Cards */}

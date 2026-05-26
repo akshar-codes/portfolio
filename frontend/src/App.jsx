@@ -16,6 +16,7 @@ const AdminLayout = lazy(() => import("./layout/AdminLayout"));
 const Dashboard = lazy(() => import("./admin/Dashboard"));
 const ManageProjects = lazy(() => import("./admin/ManageProjects"));
 const AddProject = lazy(() => import("./admin/AddProject"));
+const ManageCategories = lazy(() => import("./admin/ManageCategories"));
 const Messages = lazy(() => import("./admin/Messages"));
 
 const Fallback = () => (
@@ -30,7 +31,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* ── PUBLIC ROUTES ─────────────────────────────── */}
+            {/* ── PUBLIC ─────────────────────────────────────────── */}
             <Route element={<Layout />}>
               <Route path="/" element={<About />} />
               <Route path="/resume" element={<Resume />} />
@@ -39,7 +40,7 @@ export default function App() {
               <Route path="*" element={<ErrorPage />} />
             </Route>
 
-            {/* ── ADMIN LOGIN ───────────────────────────────── */}
+            {/* ── ADMIN LOGIN ────────────────────────────────────── */}
             <Route
               path="/admin/login"
               element={
@@ -49,7 +50,7 @@ export default function App() {
               }
             />
 
-            {/* ── PROTECTED ADMIN ROUTES ────────────────────── */}
+            {/* ── PROTECTED ADMIN ────────────────────────────────── */}
             <Route
               path="/admin"
               element={
@@ -81,6 +82,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<Fallback />}>
                     <AddProject />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="categories"
+                element={
+                  <Suspense fallback={<Fallback />}>
+                    <ManageCategories />
                   </Suspense>
                 }
               />
