@@ -2,6 +2,8 @@ import AppError from "../utils/AppError.js";
 import logger from "../utils/logger.js";
 import { sendError } from "../utils/response.js";
 
+/* ── Converters ────────────────────────────────────────────────────── */
+
 const handleMongoValidation = (err) => {
   const message = Object.values(err.errors)
     .map((e) => e.message)
@@ -47,13 +49,12 @@ const SAFE_MESSAGE_PREFIXES = [
 const isSafeUtilityError = (err) =>
   SAFE_MESSAGE_PREFIXES.some((prefix) => err.message?.startsWith(prefix));
 
-/* ------------------------------------------------------------------ *
- * Central error middleware
- * ------------------------------------------------------------------ */
+/* ── Central handler ───────────────────────────────────────────────── */
 
 const errorMiddleware = (err, req, res, next) => {
   let error = err;
 
+  // Normalise known error types into AppError
   if (err.name === "ValidationError") error = handleMongoValidation(err);
   else if (err.name === "CastError") error = handleMongoCast(err);
   else if (err.code === 11000) error = handleMongoDuplicate(err);
@@ -65,11 +66,15 @@ const errorMiddleware = (err, req, res, next) => {
   const isOperational = error.isOperational === true;
   const statusCode = error.statusCode || 500;
 
+  // Preserve errorCode set by ServiceError; converters above don't set one.
+  const errorCode = error.errorCode ?? null;
+
   if (isOperational) {
     logger.warn("Operational error", {
       reqId: req.id,
       message: error.message,
       status: statusCode,
+      errorCode,
       method: req.method,
       url: req.originalUrl,
     });
@@ -89,7 +94,7 @@ const errorMiddleware = (err, req, res, next) => {
       ? error.message
       : "An unexpected error occurred. Please try again later.";
 
-  return sendError(res, message, statusCode);
+  return sendError(res, message, statusCode, errorCode);
 };
 
 export default errorMiddleware;
