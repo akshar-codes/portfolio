@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import api from "../services/api";
 
 export default function Contact() {
@@ -9,8 +10,6 @@ export default function Contact() {
     website: "",
   });
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
 
   const isFormValid =
     formData.fullname.trim() !== "" &&
@@ -25,15 +24,13 @@ export default function Contact() {
     if (!isFormValid) return;
 
     setLoading(true);
-    setSuccessMsg("");
-    setErrorMsg("");
 
     try {
       await api.post("/messages", formData);
-      setSuccessMsg("Message sent successfully!");
+      toast.success("Message sent successfully!");
       setFormData({ fullname: "", email: "", message: "", website: "" });
     } catch (err) {
-      setErrorMsg(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -79,6 +76,7 @@ export default function Contact() {
             required
           />
 
+          {/* Honeypot — hidden from real users, catches bots */}
           <input
             type="text"
             name="website"
@@ -104,9 +102,6 @@ export default function Contact() {
           >
             {loading ? "Sending..." : "Send Message"}
           </button>
-
-          {successMsg && <p className="success-msg">{successMsg}</p>}
-          {errorMsg && <p className="error-msg">{errorMsg}</p>}
         </form>
       </section>
     </article>

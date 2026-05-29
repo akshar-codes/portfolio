@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import api from "../services/api";
 
 const PAGE_SIZE = 9;
@@ -13,7 +14,6 @@ export default function Portfolio() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Fetch non-empty categories once on mount
   useEffect(() => {
@@ -31,7 +31,6 @@ export default function Portfolio() {
 
     const fetchProjects = async () => {
       setLoading(true);
-      setError(null);
 
       try {
         const params = { page, limit: PAGE_SIZE };
@@ -45,7 +44,10 @@ export default function Portfolio() {
         setProjects(data.projects ?? []);
         setTotalPages(data.totalPages ?? 1);
       } catch (err) {
-        if (err.code !== "ERR_CANCELED") setError(err.message);
+        // Ignore abort errors (normal on filter/page change)
+        if (err.code !== "ERR_CANCELED") {
+          toast.error(err.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -57,7 +59,7 @@ export default function Portfolio() {
 
   const handleFilterChange = (slug) => {
     setFilter(slug);
-    setPage(1); // always reset to page 1 on filter change
+    setPage(1);
   };
 
   return (
@@ -113,17 +115,13 @@ export default function Portfolio() {
           </select>
         </div>
 
-        {/* ── States ──────────────────────────────────────────── */}
+        {/* ── Loading state ──────────────────────────────────── */}
         {loading && (
           <p style={{ color: "var(--light-gray)" }}>Loading projects…</p>
         )}
 
-        {!loading && error && (
-          <p style={{ color: "var(--bittersweet-shimmer)" }}>{error}</p>
-        )}
-
         {/* ── Project grid ──────────────────────────────────── */}
-        {!loading && !error && (
+        {!loading && (
           <>
             <ul
               className="project-list"
@@ -150,7 +148,6 @@ export default function Portfolio() {
                         />
                       </figure>
                       <h3 className="project-title">{project.title}</h3>
-                      {/* category is now a populated object */}
                       <p className="project-category">
                         {project.category?.name ?? ""}
                       </p>

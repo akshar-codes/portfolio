@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -12,7 +13,6 @@ export default function AdminLogin() {
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (authState === "authenticated") {
@@ -22,23 +22,21 @@ export default function AdminLogin() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    if (error) setError("");
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!form.username || !form.password) {
-      setError("Username and password are required.");
+      toast.error("Username and password are required.");
       return;
     }
     setLoading(true);
-    setError("");
     try {
       await api.post("/admin/login", form);
-      login(); // update AuthContext — PrivateRoute will now allow access
+      login();
       navigate(dest, { replace: true });
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -104,12 +102,6 @@ export default function AdminLogin() {
               required
             />
           </div>
-
-          {error && (
-            <div className="admin-form__error" role="alert">
-              <span>⚠</span> {error}
-            </div>
-          )}
 
           <button
             type="submit"

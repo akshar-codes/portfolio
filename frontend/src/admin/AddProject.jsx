@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import api from "../services/api";
 
 export default function AddProject() {
@@ -16,16 +17,13 @@ export default function AddProject() {
     image: null,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   // Fetch all categories (admin endpoint — includes unused ones)
   useEffect(() => {
     api
       .get("/admin/categories")
       .then(({ data }) => setCategories(data ?? []))
-      .catch(() =>
-        setCategoriesError("Could not load categories. Please refresh."),
-      );
+      .catch((err) => setCategoriesError(err.message));
   }, []);
 
   const handleChange = (e) => {
@@ -34,28 +32,26 @@ export default function AddProject() {
     } else {
       setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     }
-    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.image) {
-      setError("Please upload a project image.");
+      toast.error("Please upload a project image.");
       return;
     }
     if (!form.category) {
-      setError("Please select a category.");
+      toast.error("Please select a category.");
       return;
     }
 
     setLoading(true);
-    setError("");
 
     const fd = new FormData();
     fd.append("title", form.title);
     fd.append("description", form.description);
-    fd.append("category", form.category); // ObjectId string
+    fd.append("category", form.category);
     fd.append("projectUrl", form.projectUrl);
     fd.append("image", form.image);
 
@@ -63,9 +59,10 @@ export default function AddProject() {
       await api.post("/projects", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      toast.success("Project published successfully.");
       navigate("/admin/projects");
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -129,7 +126,12 @@ export default function AddProject() {
             </label>
 
             {categoriesError ? (
-              <p className="admin-form__error">{categoriesError}</p>
+              <p
+                className="admin-form__error"
+                style={{ margin: 0, padding: "10px 14px" }}
+              >
+                ⚠ {categoriesError}
+              </p>
             ) : (
               <select
                 id="proj-cat"
@@ -143,7 +145,6 @@ export default function AddProject() {
                 <option value="">
                   {categories.length === 0 ? "Loading…" : "Select category"}
                 </option>
-                {/* Value is the ObjectId — name is display text */}
                 {categories.map((cat) => (
                   <option key={cat._id} value={cat._id}>
                     {cat.name}
@@ -197,13 +198,6 @@ export default function AddProject() {
             Max 5 MB. Accepted formats: JPG, PNG, WEBP, GIF
           </p>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="admin-form__error" role="alert">
-            <span>⚠</span> {error}
-          </div>
-        )}
 
         {/* Actions */}
         <div
