@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -30,6 +31,17 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <BrowserRouter>
+          {/* Single Toaster instance for the entire app.*/}
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            toastOptions={{
+              style: { fontFamily: "var(--ff-poppins)", fontSize: "14px" },
+              duration: 4000,
+            }}
+          />
+
           <Routes>
             {/* ── PUBLIC ─────────────────────────────────────────── */}
             <Route element={<Layout />}>

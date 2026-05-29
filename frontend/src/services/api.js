@@ -26,6 +26,8 @@ function normalizeError(error) {
   if (error.response) {
     const { status, data } = error.response;
     error.statusCode = status;
+    // Capture the machine-readable code so components can branch on it
+    error.errorCode = data?.errorCode ?? null;
 
     if (data?.message && typeof data.message === "string") {
       error.message = data.message;
