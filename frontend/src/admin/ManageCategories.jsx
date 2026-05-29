@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import api from "../services/api";
 import {
   AdminSkeleton,
@@ -11,13 +12,11 @@ export default function ManageCategories() {
   const [status, setStatus] = useState("loading");
   const [fetchError, setFetchError] = useState("");
 
-  // Add-form state
+  // Add-form state — only tracks the input value and submit state now
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [addSuccess, setAddSuccess] = useState("");
 
-  // Track which category is currently being deleted
+  // Track which category row is being deleted for optimistic spinner
   const [deletingId, setDeletingId] = useState(null);
 
   const nameInputRef = useRef(null);
@@ -47,17 +46,14 @@ export default function ManageCategories() {
     if (!trimmed) return;
 
     setAdding(true);
-    setAddError("");
-    setAddSuccess("");
-
     try {
       await api.post("/admin/categories", { name: trimmed });
       setNewName("");
-      setAddSuccess("Category created successfully.");
+      toast.success("Category created successfully.");
       fetchCategories();
       nameInputRef.current?.focus();
     } catch (err) {
-      setAddError(err.message);
+      toast.error(err.message);
     } finally {
       setAdding(false);
     }
@@ -65,7 +61,13 @@ export default function ManageCategories() {
 
   /* ── Delete ─────────────────────────────────────────────────────── */
   const handleDelete = async (id, name, projectCount) => {
-    if (projectCount > 0) return; // guard (button is also disabled)
+    // Button is disabled when in-use, but guard for race conditions
+    if (projectCount > 0) {
+      toast.warning(
+        `"${name}" is in use by ${projectCount} project${projectCount === 1 ? "" : "s"} and cannot be deleted.`,
+      );
+      return;
+    }
 
     const confirmed = window.confirm(
       `Delete category "${name}"?\n\nThis action cannot be undone.`,
@@ -75,11 +77,11 @@ export default function ManageCategories() {
     setDeletingId(id);
     try {
       await api.delete(`/admin/categories/${id}`);
+      toast.success(`Category "${name}" deleted.`);
       fetchCategories();
     } catch (err) {
-      // Surface inline error — the most common case is a race condition
-      // where a project was added between the UI render and the delete.
-      alert(`Could not delete "${name}": ${err.message}`);
+      // err.errorCode === "CATEGORY_IN_USE" arrives here on race conditions
+      toast.error(err.message);
     } finally {
       setDeletingId(null);
     }
@@ -138,11 +140,7 @@ export default function ManageCategories() {
               placeholder="e.g. Mobile Development"
               value={newName}
               maxLength={80}
-              onChange={(e) => {
-                setNewName(e.target.value);
-                setAddError("");
-                setAddSuccess("");
-              }}
+              onChange={(e) => setNewName(e.target.value)}
               required
               style={{ flex: 1 }}
             />
@@ -155,26 +153,6 @@ export default function ManageCategories() {
               {adding ? "Adding…" : "Add"}
             </button>
           </div>
-
-          {addError && (
-            <div
-              className="admin-form__error"
-              role="alert"
-              style={{ marginTop: 10 }}
-            >
-              <span>⚠</span> {addError}
-            </div>
-          )}
-
-          {addSuccess && (
-            <div
-              className="admin-form__success"
-              role="status"
-              style={{ marginTop: 10 }}
-            >
-              <span>✓</span> {addSuccess}
-            </div>
-          )}
         </form>
       </div>
 
@@ -205,7 +183,6 @@ export default function ManageCategories() {
                   <span className="admin-item__name">{cat.name}</span>
 
                   <div className="admin-item__meta">
-                    {/* Slug chip */}
                     <code
                       style={{
                         fontSize: 11,
@@ -221,7 +198,6 @@ export default function ManageCategories() {
 
                     <span style={{ color: "var(--a-text-dim)" }}>·</span>
 
-                    {/* Project count badge */}
                     <span
                       className="admin-item__badge"
                       style={

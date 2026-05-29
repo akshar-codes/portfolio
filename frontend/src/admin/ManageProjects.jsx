@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import api from "../services/api";
 import {
   AdminSkeleton,
@@ -38,11 +39,13 @@ export default function ManageProjects() {
       `Delete "${title}"?\n\nThis will permanently remove the project and its image.`,
     );
     if (!confirmed) return;
+
     try {
       await api.delete(`/projects/${id}`);
+      toast.success(`"${title}" deleted successfully.`);
       fetchProjects(page);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -87,7 +90,6 @@ export default function ManageProjects() {
                 <div className="admin-item__body">
                   <span className="admin-item__name">{project.title}</span>
                   <div className="admin-item__meta">
-                    {/* category is now a populated { name, slug } object */}
                     <span className="admin-item__badge">
                       {project.category?.name ?? "—"}
                     </span>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import api from "../services/api";
 import {
   AdminSkeleton,
@@ -66,11 +67,13 @@ export default function Messages() {
       `Delete message from "${fullname}"?\n\nThis action cannot be undone.`,
     );
     if (!confirmed) return;
+
     try {
       await api.delete(`/messages/${id}`);
+      toast.success(`Message from "${fullname}" deleted.`);
       fetchMessages(page);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
