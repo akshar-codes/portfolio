@@ -6,9 +6,7 @@ import { ServiceError } from "./errors.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
 
-/* ------------------------------------------------------------------ *
- * Project cache
- * ------------------------------------------------------------------ */
+/* ── Cache ─────────────────────────────────────────────────────────── */
 
 const CACHE_TTL_MS = 60_000;
 const CACHE_PREFIX = "projects:";
@@ -21,28 +19,22 @@ export function invalidateProjectsCache() {
   cache.delByPrefix(CACHE_PREFIX);
 }
 
-/* ------------------------------------------------------------------ *
- * Category resolution helper
- * ------------------------------------------------------------------ */
+/* ── Category resolution ───────────────────────────────────────────── */
 
 async function resolveCategoryFilter(category) {
   if (!category || category === "All") return {};
 
   let cat;
-
   if (mongoose.Types.ObjectId.isValid(category)) {
     cat = await Category.findById(category).lean();
   } else {
-    // Treat as slug (the standard frontend usage)
     cat = await Category.findOne({ slug: category.toLowerCase() }).lean();
   }
 
   return cat ? { category: cat._id } : null;
 }
 
-/* ------------------------------------------------------------------ *
- * fetchAllProjects  (public)
- * ------------------------------------------------------------------ */
+/* ── fetchAllProjects ──────────────────────────────────────────────── */
 
 export const fetchAllProjects = async ({
   page = 1,
@@ -59,7 +51,6 @@ export const fetchAllProjects = async ({
 
   const filter = await resolveCategoryFilter(category);
 
-  // Unknown category — return empty set (not a 404, just no results)
   if (filter === null) {
     return {
       projects: [],
@@ -72,8 +63,8 @@ export const fetchAllProjects = async ({
 
   const [projects, total] = await Promise.all([
     Project.find(filter)
-      .select("-image.public_id") // never expose Cloudinary internal ID publicly
-      .populate("category", "name slug") // embed { name, slug } in the response
+      .select("-image.public_id")
+      .populate("category", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
@@ -88,14 +79,11 @@ export const fetchAllProjects = async ({
     limit: safeLimit,
     totalPages: Math.ceil(total / safeLimit),
   };
-
   cache.set(cacheKey, result, CACHE_TTL_MS);
   return result;
 };
 
-/* ------------------------------------------------------------------ *
- * addProject
- * ------------------------------------------------------------------ */
+/* ── addProject ────────────────────────────────────────────────────── */
 
 export const addProject = async ({
   title,
@@ -104,11 +92,18 @@ export const addProject = async ({
   projectUrl,
   file,
 }) => {
-  if (!file) throw new ServiceError("Image is required.", 400);
+  if (!file) {
+    throw new ServiceError("Image is required.", 400, "PROJECT_IMAGE_REQUIRED");
+  }
 
-  // Validate the category exists before uploading to Cloudinary
   const category = await Category.findById(categoryId).lean();
-  if (!category) throw new ServiceError("Invalid category — not found.", 400);
+  if (!category) {
+    throw new ServiceError(
+      "Invalid category — not found.",
+      400,
+      "PROJECT_INVALID_CATEGORY",
+    );
+  }
 
   const uploadResult = await uploadToCloudinary(file);
 
@@ -124,17 +119,17 @@ export const addProject = async ({
   });
 
   invalidateProjectsCache();
-  invalidateCategoryCache(); // per-category project count changed
+  invalidateCategoryCache();
   return project;
 };
 
-/* ------------------------------------------------------------------ *
- * removeProject
- * ------------------------------------------------------------------ */
+/* ── removeProject ─────────────────────────────────────────────────── */
 
 export const removeProject = async (id) => {
   const project = await Project.findById(id);
-  if (!project) throw new ServiceError("Project not found.", 404);
+  if (!project) {
+    throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
+  }
 
   if (project.image?.public_id) {
     await cloudinary.uploader.destroy(project.image.public_id);
@@ -142,5 +137,5 @@ export const removeProject = async (id) => {
 
   await project.deleteOne();
   invalidateProjectsCache();
-  invalidateCategoryCache(); // per-category project count changed
+  invalidateCategoryCache();
 };

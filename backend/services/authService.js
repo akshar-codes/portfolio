@@ -11,7 +11,7 @@ export const getCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
-  maxAge: 24 * 60 * 60 * 1000, // 1 day — matches JWT expiry
+  maxAge: 24 * 60 * 60 * 1000,
   path: "/",
 });
 
@@ -20,7 +20,7 @@ export const getClearCookieOptions = () => ({
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
   path: "/",
-  expires: new Date(0), // force immediate deletion in all browsers
+  expires: new Date(0),
 });
 
 const DUMMY_HASH =
@@ -28,7 +28,11 @@ const DUMMY_HASH =
 
 export const attemptLogin = async (username, password) => {
   if (!username || !password) {
-    throw new ServiceError("Username and password are required", 400);
+    throw new ServiceError(
+      "Username and password are required",
+      400,
+      "AUTH_CREDENTIALS_REQUIRED",
+    );
   }
 
   const admin = await Admin.findOne({ username });
@@ -38,11 +42,19 @@ export const attemptLogin = async (username, password) => {
 
   if (!admin || !isMatch) {
     logger.warn("Failed admin login attempt", { username });
-    throw new ServiceError("Invalid credentials", 401);
+    throw new ServiceError(
+      "Invalid credentials",
+      401,
+      "AUTH_INVALID_CREDENTIALS",
+    );
   }
 
   if (!process.env.JWT_SECRET) {
-    throw new ServiceError("Server configuration error", 500);
+    throw new ServiceError(
+      "Server configuration error",
+      500,
+      "AUTH_SERVER_CONFIG_ERROR",
+    );
   }
 
   const token = jwt.sign(
