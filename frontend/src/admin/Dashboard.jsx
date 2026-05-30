@@ -8,6 +8,12 @@ const ACTIONS = [
     desc: "Update your name, contact details, avatar, and social links.",
   },
   {
+    to: "/admin/about",
+    icon: "📋",
+    title: "Edit About",
+    desc: "Manage your bio paragraphs and service cards displayed on the About page.",
+  },
+  {
     to: "/admin/projects",
     icon: "🗂️",
     title: "Manage Projects",
@@ -20,16 +26,16 @@ const ACTIONS = [
     desc: "Create or remove project categories. Unused categories can be deleted.",
   },
   {
-    to: "/admin/messages",
-    icon: "💬",
-    title: "Messages",
-    desc: "Read and manage contact form submissions from visitors.",
-  },
-  {
     to: "/admin/resume",
     icon: "📄",
     title: "Edit Resume",
     desc: "Update education history and technical skills displayed on your resume page.",
+  },
+  {
+    to: "/admin/messages",
+    icon: "💬",
+    title: "Messages",
+    desc: "Read and manage contact form submissions from visitors.",
   },
 ];
 
