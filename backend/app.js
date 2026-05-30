@@ -19,6 +19,8 @@ import errorMiddleware from "./middleware/errorMiddleware.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import adminResumeRoutes from "./routes/adminResumeRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
+import adminProfileRoutes from "./routes/adminProfileRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -72,7 +74,7 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -129,6 +131,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/messages", messageLimiter, messageRoutes);
 app.use("/api/resume", resumeRoutes); // public GET
 app.use("/api/admin/resume", adminResumeRoutes); // protected GET + PATCH
+app.use("/api/profile", profileRoutes); // public GET
+app.use("/api/admin/profile", adminProfileRoutes);
 
 /* ------------------------------------------------------------------ *
  * 10. Central error handler

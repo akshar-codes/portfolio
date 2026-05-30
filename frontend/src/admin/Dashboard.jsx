@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 
 const ACTIONS = [
   {
+    to: "/admin/profile",
+    icon: "👤",
+    title: "Edit Profile",
+    desc: "Update your name, contact details, avatar, and social links.",
+  },
+  {
     to: "/admin/projects",
     icon: "🗂️",
     title: "Manage Projects",

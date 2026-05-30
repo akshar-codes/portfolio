@@ -39,6 +39,14 @@ export default function AdminLayout() {
           Dashboard
         </NavLink>
         <NavLink
+          to="/admin/profile"
+          className={({ isActive }) =>
+            `admin-subnav__link${isActive ? " active" : ""}`
+          }
+        >
+          Profile
+        </NavLink>
+        <NavLink
           to="/admin/projects"
           className={({ isActive }) =>
             `admin-subnav__link${isActive ? " active" : ""}`

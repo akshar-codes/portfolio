@@ -1,30 +1,121 @@
 import { useState } from "react";
 import {
+  IoChevronDown,
   IoMailOutline,
   IoPhonePortraitOutline,
   IoLocationOutline,
-  IoChevronDown,
 } from "react-icons/io5";
-import { FaLinkedin, FaGithub } from "react-icons/fa";
+import { useProfile } from "../hooks/useProfile";
+import { resolveIcon } from "../utils/iconMap";
+
+/* ─────────────────────────────────────────────────────────────────── *
+ * Shimmer skeleton block — reuses the a-shimmer keyframe already
+ * defined in index.css.
+ * ─────────────────────────────────────────────────────────────────── */
+function Skeleton({ width, height, style = {} }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width,
+        height,
+        borderRadius: 4,
+        background: "var(--jet)",
+        position: "relative",
+        overflow: "hidden",
+        flexShrink: 0,
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(90deg, transparent 0%, hsla(0,0%,100%,0.045) 50%, transparent 100%)",
+          backgroundSize: "200% 100%",
+          animation: "a-shimmer 1.5s ease-in-out infinite",
+        }}
+      />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────── *
+ * ContactItem — always rendered; shows a skeleton while loading.
+ * Keeping all three rows in the DOM at all times means the expanded
+ * sidebar height is stable from first paint.
+ * ─────────────────────────────────────────────────────────────────── */
+function ContactItem({ icon: Icon, title, loading, children }) {
+  return (
+    <li className="contact-item">
+      <div className="icon-box" aria-hidden="true">
+        <Icon />
+      </div>
+      <div className="contact-info">
+        <p className="contact-title">{title}</p>
+        {loading ? (
+          <Skeleton width={120} height={13} style={{ marginTop: 2 }} />
+        ) : (
+          children
+        )}
+      </div>
+    </li>
+  );
+}
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { data: profile, isLoading } = useProfile();
 
+  // Always derive — fall back to empty strings so branches stay predictable.
+  const name = profile?.name ?? "";
+  const title = profile?.title ?? "";
+  const email = profile?.email ?? "";
+  const phone = profile?.phone ?? "";
+  const location = profile?.location ?? "";
+  const avatar = profile?.avatar || "/images/my-avatar.png";
+  const links = profile?.socialLinks ?? [];
+
+  // Never return null — the sidebar must always occupy its layout space.
   return (
     <aside
       className={`sidebar ${isOpen ? "active" : ""}`}
       aria-label="Profile and contact information"
     >
+      {/* ── Top info row ────────────────────────────────────────── */}
       <div className="sidebar-info">
+        {/*
+         * Avatar box: explicit width + height on the <figure> so the
+         * layout box is reserved before the image has loaded.
+         */}
         <figure className="avatar-box">
-          <img src="/images/my-avatar.png" alt="Akshar Gupta" width="80" />
+          {isLoading ? (
+            <div className="avatar-skeleton">
+              <Skeleton width="100%" height="100%" />
+            </div>
+          ) : (
+            <img src={avatar} alt={name} width="80" />
+          )}
         </figure>
 
-        <div className="info-content">
-          <h1 className="name" title="Akshar Gupta">
-            Akshar Gupta
-          </h1>
-          <p className="title">Web Developer</p>
+        {/* Name + title */}
+        <div className="info-content" style={{ minWidth: 0 }}>
+          {isLoading ? (
+            <>
+              {/* Matches --fs-3 (17 px line) + 10 px margin-bottom */}
+              <Skeleton width={140} height={18} style={{ marginBottom: 10 }} />
+              {/* Matches .title badge height (~22 px incl. padding) */}
+              <Skeleton width={90} height={22} style={{ borderRadius: 8 }} />
+            </>
+          ) : (
+            <>
+              <h1 className="name" title={name}>
+                {name}
+              </h1>
+              <p className="title">{title}</p>
+            </>
+          )}
         </div>
 
         <button
@@ -38,6 +129,11 @@ export default function Sidebar() {
         </button>
       </div>
 
+      {/* ── Expandable contact section ───────────────────────────── *
+       * Always in the DOM — CSS opacity/visibility handles show/hide. *
+       * This prevents the max-height animation from resizing the      *
+       * document flow while data is still being fetched.             *
+       * ─────────────────────────────────────────────────────────── */}
       <div
         id="sidebar-contacts"
         className="sidebar-info_more"
@@ -45,76 +141,117 @@ export default function Sidebar() {
       >
         <div className="separator" role="separator" />
 
+        {/*
+         * All three contact rows are ALWAYS rendered.
+         * Conditional rendering of rows was the main source of CLS —
+         * absent rows made the list shorter, which shifted content below.
+         */}
         <ul className="contacts-list" role="list">
-          <li className="contact-item">
-            <div className="icon-box" aria-hidden="true">
-              <IoMailOutline />
-            </div>
-            <div className="contact-info">
-              <p className="contact-title">Email</p>
+          <ContactItem icon={IoMailOutline} title="Email" loading={isLoading}>
+            {email ? (
               <a
-                href="mailto:akshargupta2006@gmail.com"
+                href={`mailto:${email}`}
                 className="contact-link"
-                aria-label="Send email to akshargupta2006@gmail.com"
+                aria-label={`Send email to ${email}`}
               >
-                akshargupta2006 <br /> @gmail.com
+                {email.includes("@") ? (
+                  <>
+                    {email.split("@")[0]}
+                    <br />@{email.split("@")[1]}
+                  </>
+                ) : (
+                  email
+                )}
               </a>
-            </div>
-          </li>
+            ) : (
+              <span className="contact-link" style={{ opacity: 0.4 }}>
+                —
+              </span>
+            )}
+          </ContactItem>
 
-          <li className="contact-item">
-            <div className="icon-box" aria-hidden="true">
-              <IoPhonePortraitOutline />
-            </div>
-            <div className="contact-info">
-              <p className="contact-title">Phone</p>
+          <ContactItem
+            icon={IoPhonePortraitOutline}
+            title="Phone"
+            loading={isLoading}
+          >
+            {phone ? (
               <a
-                href="tel:+919258887187"
+                href={`tel:${phone.replace(/\s/g, "")}`}
                 className="contact-link"
-                aria-label="Call +91 92588 87187"
+                aria-label={`Call ${phone}`}
               >
-                +91 9258887187
+                {phone}
               </a>
-            </div>
-          </li>
+            ) : (
+              <span className="contact-link" style={{ opacity: 0.4 }}>
+                —
+              </span>
+            )}
+          </ContactItem>
 
-          <li className="contact-item">
-            <div className="icon-box" aria-hidden="true">
-              <IoLocationOutline />
-            </div>
-            <div className="contact-info">
-              <p className="contact-title">Location</p>
-              <address>Meerut, Uttar Pradesh, India</address>
-            </div>
-          </li>
+          <ContactItem
+            icon={IoLocationOutline}
+            title="Location"
+            loading={isLoading}
+          >
+            {location ? (
+              <address>{location}</address>
+            ) : (
+              <address style={{ opacity: 0.4 }}>—</address>
+            )}
+          </ContactItem>
         </ul>
 
+        {/*
+         * Social links separator + list are always rendered so the
+         * vertical space is always reserved.
+         * While loading: 2 skeleton circles (typical count).
+         * After load: real icon links, or an empty list if none exist.
+         */}
         <div className="separator" role="separator" />
 
-        <ul className="social-list" role="list" aria-label="Social media links">
-          <li className="social-item">
-            <a
-              href="https://www.linkedin.com/in/akshar-gupta"
-              className="social-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Akshar Gupta on LinkedIn — opens in new tab"
-            >
-              <FaLinkedin aria-hidden="true" />
-            </a>
-          </li>
-
-          <li className="social-item">
-            <a
-              href="https://github.com/gupta-akshar"
-              className="social-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Akshar Gupta on GitHub — opens in new tab"
-            >
-              <FaGithub aria-hidden="true" />
-            </a>
-          </li>
+        <ul
+          className="social-list"
+          role="list"
+          aria-label="Social media links"
+          style={{ minHeight: 26 /* reserves one icon row */ }}
+        >
+          {isLoading ? (
+            <>
+              <li className="social-item">
+                <Skeleton
+                  width={18}
+                  height={18}
+                  style={{ borderRadius: "50%" }}
+                />
+              </li>
+              <li className="social-item">
+                <Skeleton
+                  width={18}
+                  height={18}
+                  style={{ borderRadius: "50%" }}
+                />
+              </li>
+            </>
+          ) : (
+            links.map((link) => {
+              const Icon = resolveIcon(link.icon);
+              return (
+                <li key={link._id} className="social-item">
+                  <a
+                    href={link.url}
+                    className="social-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${link.label} — opens in new tab`}
+                  >
+                    <Icon aria-hidden="true" />
+                  </a>
+                </li>
+              );
+            })
+          )}
         </ul>
       </div>
     </aside>
