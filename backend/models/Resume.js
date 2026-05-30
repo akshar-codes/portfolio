@@ -1,201 +1,116 @@
-import { useState, useEffect } from "react";
-import { IoBookOutline } from "react-icons/io5";
-import api from "../services/api";
-
-function ResumeSkeleton() {
-  return (
-    <article className="resume active">
-      <header>
-        <h2 className="h2 article-title">Resume</h2>
-      </header>
-
-      {[1, 2].map((n) => (
-        <section key={n} className="timeline" style={{ marginBottom: 30 }}>
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <div
-              style={{
-                height: 20,
-                width: 160,
-                background: "var(--jet)",
-                borderRadius: 6,
-                animation: "a-shimmer 1.5s ease-in-out infinite",
-              }}
-            />
-          </div>
-
-          <ol className="timeline-list">
-            {[1, 2, 3].map((i) => (
-              <li
-                key={i}
-                className="timeline-item"
-                style={{ marginBottom: 20 }}
-              >
-                <div
-                  style={{
-                    height: 16,
-                    width: "60%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                    marginBottom: 8,
-                  }}
-                />
-                <div
-                  style={{
-                    height: 13,
-                    width: "30%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                    marginBottom: 8,
-                  }}
-                />
-                <div
-                  style={{
-                    height: 13,
-                    width: "90%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                  }}
-                />
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
-    </article>
-  );
-}
+import mongoose from "mongoose";
 
 /* ------------------------------------------------------------------ *
- * Main component
+ * Sub-schemas
  * ------------------------------------------------------------------ */
-export default function Resume() {
-  const [resume, setResume] = useState(null);
-  const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
-  const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+const educationEntrySchema = new mongoose.Schema(
+  {
+    institution: {
+      type: String,
+      required: [true, "Institution name is required"],
+      trim: true,
+      minlength: [2, "Institution must be at least 2 characters"],
+      maxlength: [200, "Institution must not exceed 200 characters"],
+    },
+    duration: {
+      type: String,
+      required: [true, "Duration is required"],
+      trim: true,
+      maxlength: [80, "Duration must not exceed 80 characters"],
+    },
+    description: {
+      type: String,
+      required: [true, "Description is required"],
+      trim: true,
+      minlength: [10, "Description must be at least 10 characters"],
+      maxlength: [1000, "Description must not exceed 1000 characters"],
+    },
+  },
+  { _id: true },
+);
 
-    const load = async () => {
-      setStatus("loading");
-      try {
-        const { data } = await api.get("/resume");
-        if (!cancelled) {
-          setResume(data);
-          setStatus("ready");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setErrorMsg(err.message || "Failed to load resume data.");
-          setStatus("error");
-        }
-      }
-    };
+const skillCategorySchema = new mongoose.Schema(
+  {
+    category: {
+      type: String,
+      required: [true, "Category name is required"],
+      trim: true,
+      minlength: [2, "Category name must be at least 2 characters"],
+      maxlength: [80, "Category name must not exceed 80 characters"],
+    },
+    items: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          minlength: [1, "Skill item cannot be empty"],
+          maxlength: [100, "Skill item must not exceed 100 characters"],
+        },
+      ],
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length <= 30,
+        message: "Skills list must not exceed 30 items",
+      },
+      default: [],
+    },
+  },
+  { _id: true },
+);
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+/* ------------------------------------------------------------------ *
+ * Root schema — ONE document per portfolio (singleton pattern)
+ * ------------------------------------------------------------------ */
 
-  /* ── Loading state ──────────────────────────────────────────── */
-  if (status === "loading") return <ResumeSkeleton />;
+const resumeSchema = new mongoose.Schema(
+  {
+    /**
+     * Singleton guard — we store exactly one resume document.
+     * A sparse unique index on `owner` (always "default") prevents
+     * accidental duplicates while allowing future extension if needed.
+     */
+    owner: {
+      type: String,
+      default: "default",
+      immutable: true,
+      match: [/^[a-z0-9_-]+$/, "Invalid owner value"],
+    },
 
-  /* ── Error state ────────────────────────────────────────────── */
-  if (status === "error") {
-    return (
-      <article className="resume active">
-        <header>
-          <h2 className="h2 article-title">Resume</h2>
-        </header>
-        <p
-          style={{
-            color: "var(--bittersweet-shimmer)",
-            fontSize: "var(--fs-6)",
-            marginTop: 20,
-          }}
-        >
-          Could not load resume data: {errorMsg}
-        </p>
-      </article>
-    );
+    education: {
+      type: [educationEntrySchema],
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length <= 20,
+        message: "Education list must not exceed 20 entries",
+      },
+      default: [],
+    },
+
+    skills: {
+      type: [skillCategorySchema],
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length <= 15,
+        message: "Skills must not exceed 15 categories",
+      },
+      default: [],
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+resumeSchema.index({ owner: 1 }, { unique: true, sparse: true });
+
+/* ------------------------------------------------------------------ *
+ * Static helper — always returns the singleton, creating it if absent
+ * ------------------------------------------------------------------ */
+resumeSchema.statics.getSingleton = async function () {
+  let doc = await this.findOne({ owner: "default" }).lean();
+  if (!doc) {
+    doc = await this.create({ owner: "default" });
+    doc = doc.toObject();
   }
+  return doc;
+};
 
-  /* ── Empty state ────────────────────────────────────────────── */
-  const hasEducation = resume?.education?.length > 0;
-  const hasSkills = resume?.skills?.length > 0;
-
-  if (!hasEducation && !hasSkills) {
-    return (
-      <article className="resume active">
-        <header>
-          <h2 className="h2 article-title">Resume</h2>
-        </header>
-        <p
-          style={{
-            color: "var(--light-gray)",
-            fontSize: "var(--fs-6)",
-            marginTop: 20,
-          }}
-        >
-          Resume content coming soon.
-        </p>
-      </article>
-    );
-  }
-
-  /* ── Ready state ────────────────────────────────────────────── */
-  return (
-    <article className="resume active">
-      <header>
-        <h2 className="h2 article-title">Resume</h2>
-      </header>
-
-      {/* ── Education ─────────────────────────────────────────── */}
-      {hasEducation && (
-        <section className="timeline">
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <h3 className="h3">Education</h3>
-          </div>
-
-          <ol className="timeline-list">
-            {resume.education.map((entry) => (
-              <li key={entry._id} className="timeline-item">
-                <h4 className="h4 timeline-item-title">{entry.institution}</h4>
-                <span>{entry.duration}</span>
-                <p className="timeline-text">{entry.description}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      {/* ── Technical Skills ──────────────────────────────────── */}
-      {hasSkills && (
-        <section className="timeline">
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <h3 className="h3">Technical Skills</h3>
-          </div>
-
-          <ol className="timeline-list">
-            {resume.skills.map((group) => (
-              <li key={group._id} className="timeline-item">
-                <h4 className="h4 timeline-item-title">{group.category}</h4>
-                <p className="timeline-text">{group.items.join(", ")}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-    </article>
-  );
-}
+export default mongoose.model("Resume", resumeSchema);

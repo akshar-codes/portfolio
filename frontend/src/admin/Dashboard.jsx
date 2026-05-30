@@ -19,6 +19,12 @@ const ACTIONS = [
     title: "Messages",
     desc: "Read and manage contact form submissions from visitors.",
   },
+  {
+    to: "/admin/resume",
+    icon: "📄",
+    title: "Edit Resume",
+    desc: "Update education history and technical skills displayed on your resume page.",
+  },
 ];
 
 export default function Dashboard() {

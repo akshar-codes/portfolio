@@ -1,82 +1,205 @@
+import { useState, useEffect } from "react";
 import { IoBookOutline } from "react-icons/io5";
+import api from "../services/api";
 
-export default function Resume() {
+/* ------------------------------------------------------------------ *
+ * Loading skeleton — mirrors the real content structure so there's
+ * no jarring layout shift when data arrives.
+ * ------------------------------------------------------------------ */
+function ResumeSkeleton() {
   return (
     <article className="resume active">
       <header>
         <h2 className="h2 article-title">Resume</h2>
       </header>
 
-      <section className="timeline">
-        <div className="title-wrapper">
-          <div className="icon-box">
-            <IoBookOutline />
+      {[1, 2].map((n) => (
+        <section key={n} className="timeline" style={{ marginBottom: 30 }}>
+          <div className="title-wrapper">
+            <div className="icon-box">
+              <IoBookOutline />
+            </div>
+            <div
+              style={{
+                height: 20,
+                width: 160,
+                background: "var(--jet)",
+                borderRadius: 6,
+                animation: "a-shimmer 1.5s ease-in-out infinite",
+              }}
+            />
           </div>
 
-          <h3 className="h3">Education</h3>
-        </div>
+          <ol className="timeline-list">
+            {[1, 2, 3].map((i) => (
+              <li
+                key={i}
+                className="timeline-item"
+                style={{ marginBottom: 20 }}
+              >
+                <div
+                  style={{
+                    height: 16,
+                    width: "60%",
+                    background: "var(--jet)",
+                    borderRadius: 4,
+                    marginBottom: 8,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 13,
+                    width: "30%",
+                    background: "var(--jet)",
+                    borderRadius: 4,
+                    marginBottom: 8,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 13,
+                    width: "90%",
+                    background: "var(--jet)",
+                    borderRadius: 4,
+                  }}
+                />
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </article>
+  );
+}
 
-        <ol className="timeline-list">
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">
-              Lovely Professional University
-            </h4>
+/* ------------------------------------------------------------------ *
+ * Main component
+ * ------------------------------------------------------------------ */
+export default function Resume() {
+  const [resume, setResume] = useState(null);
+  const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
+  const [errorMsg, setErrorMsg] = useState("");
 
-            <span>2025 — 2029 (Pursuing)</span>
+  useEffect(() => {
+    let cancelled = false;
 
-            <p className="timeline-text">
-              B.Tech in Computer Science and Engineering Relevant Coursework:
-              Data Structures & Algorithms, Database Systems, Object-Oriented
-              Programming
-            </p>
-          </li>
-        </ol>
-      </section>
+    const load = async () => {
+      setStatus("loading");
+      try {
+        const { data } = await api.get("/resume");
+        if (!cancelled) {
+          setResume(data);
+          setStatus("ready");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setErrorMsg(err.message || "Failed to load resume data.");
+          setStatus("error");
+        }
+      }
+    };
 
-      <section className="timeline">
-        <div className="title-wrapper">
-          <div className="icon-box">
-            <IoBookOutline />
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* ── Loading state ──────────────────────────────────────────── */
+  if (status === "loading") return <ResumeSkeleton />;
+
+  /* ── Error state ────────────────────────────────────────────── */
+  if (status === "error") {
+    return (
+      <article className="resume active">
+        <header>
+          <h2 className="h2 article-title">Resume</h2>
+        </header>
+        <p
+          style={{
+            color: "var(--bittersweet-shimmer)",
+            fontSize: "var(--fs-6)",
+            marginTop: 20,
+          }}
+        >
+          Could not load resume data: {errorMsg}
+        </p>
+      </article>
+    );
+  }
+
+  /* ── Empty state ────────────────────────────────────────────── */
+  const hasEducation = resume?.education?.length > 0;
+  const hasSkills = resume?.skills?.length > 0;
+
+  if (!hasEducation && !hasSkills) {
+    return (
+      <article className="resume active">
+        <header>
+          <h2 className="h2 article-title">Resume</h2>
+        </header>
+        <p
+          style={{
+            color: "var(--light-gray)",
+            fontSize: "var(--fs-6)",
+            marginTop: 20,
+          }}
+        >
+          Resume content coming soon.
+        </p>
+      </article>
+    );
+  }
+
+  /* ── Ready state ────────────────────────────────────────────── */
+  return (
+    <article className="resume active">
+      <header>
+        <h2 className="h2 article-title">Resume</h2>
+      </header>
+
+      {/* ── Education ─────────────────────────────────────────── */}
+      {hasEducation && (
+        <section className="timeline">
+          <div className="title-wrapper">
+            <div className="icon-box">
+              <IoBookOutline />
+            </div>
+            <h3 className="h3">Education</h3>
           </div>
-          <h3 className="h3">Technical Skills</h3>
-        </div>
 
-        <ol className="timeline-list">
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">Frontend</h4>
-            <p className="timeline-text">
-              HTML5, CSS3, JavaScript (ES6+), React.js, Tailwind CSS, Bootstrap
-            </p>
-          </li>
+          <ol className="timeline-list">
+            {resume.education.map((entry) => (
+              <li key={entry._id} className="timeline-item">
+                <h4 className="h4 timeline-item-title">{entry.institution}</h4>
+                <span>{entry.duration}</span>
+                <p className="timeline-text">{entry.description}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">Backend</h4>
-            <p className="timeline-text">
-              Node.js, Express.js, REST APIs, JWT Authentication, Role-Based
-              Access Control
-            </p>
-          </li>
+      {/* ── Technical Skills ──────────────────────────────────── */}
+      {hasSkills && (
+        <section className="timeline">
+          <div className="title-wrapper">
+            <div className="icon-box">
+              <IoBookOutline />
+            </div>
+            <h3 className="h3">Technical Skills</h3>
+          </div>
 
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">Database</h4>
-            <p className="timeline-text">MongoDB, MySQL, Mongoose</p>
-          </li>
-
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">Programming</h4>
-            <p className="timeline-text">
-              Java, Data Structures & Algorithms, OOP
-            </p>
-          </li>
-
-          <li className="timeline-item">
-            <h4 className="h4 timeline-item-title">Tools & Deployment</h4>
-            <p className="timeline-text">
-              Git, GitHub, Hoppscotch, MongoDB Atlas, Vercel, Render
-            </p>
-          </li>
-        </ol>
-      </section>
+          <ol className="timeline-list">
+            {resume.skills.map((group) => (
+              <li key={group._id} className="timeline-item">
+                <h4 className="h4 timeline-item-title">{group.category}</h4>
+                <p className="timeline-text">{group.items.join(", ")}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </article>
   );
 }

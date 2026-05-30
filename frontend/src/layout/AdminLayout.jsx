@@ -55,6 +55,14 @@ export default function AdminLayout() {
           Categories
         </NavLink>
         <NavLink
+          to="/admin/resume"
+          className={({ isActive }) =>
+            `admin-subnav__link${isActive ? " active" : ""}`
+          }
+        >
+          Resume
+        </NavLink>
+        <NavLink
           to="/admin/messages"
           className={({ isActive }) =>
             `admin-subnav__link${isActive ? " active" : ""}`

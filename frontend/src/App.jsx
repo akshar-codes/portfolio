@@ -19,6 +19,7 @@ const ManageProjects = lazy(() => import("./admin/ManageProjects"));
 const AddProject = lazy(() => import("./admin/AddProject"));
 const ManageCategories = lazy(() => import("./admin/ManageCategories"));
 const Messages = lazy(() => import("./admin/Messages"));
+const ManageResume = lazy(() => import("./admin/ManageResume"));
 
 const Fallback = () => (
   <div className="admin-shell__loading">
@@ -102,6 +103,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<Fallback />}>
                     <ManageCategories />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="resume"
+                element={
+                  <Suspense fallback={<Fallback />}>
+                    <ManageResume />
                   </Suspense>
                 }
               />
