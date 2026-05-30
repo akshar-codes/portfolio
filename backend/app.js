@@ -17,6 +17,8 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import adminCategoryRoutes from "./routes/adminCategoryRoutes.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import healthRoutes from "./routes/healthRoutes.js";
+import adminResumeRoutes from "./routes/adminResumeRoutes.js";
+import resumeRoutes from "./routes/resumeRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -125,6 +127,8 @@ app.use("/api/admin/categories", adminCategoryRoutes); // ← new
 app.use("/api/categories", categoryRoutes); // ← new (public)
 app.use("/api/projects", projectRoutes);
 app.use("/api/messages", messageLimiter, messageRoutes);
+app.use("/api/resume", resumeRoutes); // public GET
+app.use("/api/admin/resume", adminResumeRoutes); // protected GET + PATCH
 
 /* ------------------------------------------------------------------ *
  * 10. Central error handler
