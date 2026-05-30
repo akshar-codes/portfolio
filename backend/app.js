@@ -21,6 +21,8 @@ import adminResumeRoutes from "./routes/adminResumeRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import adminProfileRoutes from "./routes/adminProfileRoutes.js";
+import aboutRoutes from "./routes/aboutRoutes.js";
+import adminAboutRoutes from "./routes/adminAboutRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -133,6 +135,8 @@ app.use("/api/resume", resumeRoutes); // public GET
 app.use("/api/admin/resume", adminResumeRoutes); // protected GET + PATCH
 app.use("/api/profile", profileRoutes); // public GET
 app.use("/api/admin/profile", adminProfileRoutes);
+app.use("/api/about", aboutRoutes);
+app.use("/api/admin/about", adminAboutRoutes);
 
 /* ------------------------------------------------------------------ *
  * 10. Central error handler
