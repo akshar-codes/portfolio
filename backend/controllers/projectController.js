@@ -2,6 +2,7 @@ import {
   fetchAllProjects,
   addProject,
   removeProject,
+  reorderProjects,
 } from "../services/projectService.js";
 import AppError from "../utils/AppError.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
@@ -47,4 +48,18 @@ export const createProject = asyncHandler(async (req, res) => {
 export const deleteProject = asyncHandler(async (req, res) => {
   await removeProject(req.params.id);
   return sendNoContent(res);
+});
+
+/* ------------------------------------------------------------------ *
+ * PATCH /api/projects/reorder  (protected)
+ * ------------------------------------------------------------------ */
+export const reorderProjectsHandler = asyncHandler(async (req, res) => {
+  const { orderedIds } = req.body;
+
+  if (!Array.isArray(orderedIds)) {
+    throw new AppError("orderedIds must be an array.", 400);
+  }
+
+  await reorderProjects(orderedIds);
+  return sendSuccess(res, null, "Projects reordered successfully");
 });

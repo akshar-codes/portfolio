@@ -19,6 +19,24 @@ export function invalidateProjectsCache() {
   cache.delByPrefix(CACHE_PREFIX);
 }
 
+async function resequenceProjects(filter = {}) {
+  const projects = await Project.find(filter)
+    .select("_id order")
+    .sort({ order: 1 })
+    .lean();
+
+  const ops = projects.map((p, idx) => ({
+    updateOne: {
+      filter: { _id: p._id },
+      update: { $set: { order: idx } },
+    },
+  }));
+
+  if (ops.length) {
+    await Project.bulkWrite(ops, { ordered: false });
+  }
+}
+
 /* ── Category resolution ───────────────────────────────────────────── */
 
 async function resolveCategoryFilter(category) {
@@ -65,7 +83,8 @@ export const fetchAllProjects = async ({
     Project.find(filter)
       .select("-image.public_id")
       .populate("category", "name slug")
-      .sort({ createdAt: -1 })
+      // Primary sort: explicit order field; secondary: newest first as tiebreaker
+      .sort({ order: 1, createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
       .lean(),
@@ -107,11 +126,19 @@ export const addProject = async ({
 
   const uploadResult = await uploadToCloudinary(file);
 
+  // Assign next order value: count existing projects + ensure gap-free
+  const maxOrderDoc = await Project.findOne()
+    .sort({ order: -1 })
+    .select("order")
+    .lean();
+  const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
+
   const project = await Project.create({
     title,
     description,
     category: category._id,
     projectUrl,
+    order: nextOrder,
     image: {
       url: uploadResult.secure_url,
       public_id: uploadResult.public_id,
@@ -136,6 +163,59 @@ export const removeProject = async (id) => {
   }
 
   await project.deleteOne();
+
+  // Resequence remaining projects so order is always gap-free
+  await resequenceProjects();
+
   invalidateProjectsCache();
   invalidateCategoryCache();
+};
+
+/* ── reorderProjects ───────────────────────────────────────────────── */
+
+export const reorderProjects = async (orderedIds) => {
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    throw new ServiceError(
+      "orderedIds must be a non-empty array of project IDs.",
+      400,
+      "PROJECT_REORDER_INVALID",
+    );
+  }
+
+  // Validate that every supplied ID is a valid ObjectId
+  const invalidIds = orderedIds.filter(
+    (id) => !mongoose.Types.ObjectId.isValid(id),
+  );
+  if (invalidIds.length) {
+    throw new ServiceError(
+      `Invalid project ID(s): ${invalidIds.join(", ")}`,
+      400,
+      "PROJECT_REORDER_INVALID_ID",
+    );
+  }
+
+  // Verify all IDs exist in the database
+  const found = await Project.find({ _id: { $in: orderedIds } })
+    .select("_id")
+    .lean();
+
+  if (found.length !== orderedIds.length) {
+    throw new ServiceError(
+      "One or more project IDs were not found.",
+      404,
+      "PROJECT_REORDER_NOT_FOUND",
+    );
+  }
+
+  // Write sequential order values
+  const ops = orderedIds.map((id, idx) => ({
+    updateOne: {
+      filter: { _id: id },
+      update: { $set: { order: idx } },
+    },
+  }));
+
+  await Project.bulkWrite(ops, { ordered: false });
+
+  invalidateProjectsCache();
 };
