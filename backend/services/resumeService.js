@@ -3,9 +3,31 @@ import { ServiceError } from "./errors.js"; // re-uses existing errors.js
 
 const PATCHABLE_SECTIONS = new Set(["education", "skills"]);
 
+/* ── Ordering helpers (mirrors aboutService.js) ─────────────────────── */
+
+function stripTempIds(arr) {
+  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
+}
+
+function normaliseOrder(arr) {
+  return arr
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item, idx) => ({ ...item, order: idx }));
+}
+
+/* ── fetchResume ───────────────────────────────────────────────────── */
+
 export const fetchResume = async () => {
-  return Resume.getSingleton();
+  const doc = await Resume.getSingleton();
+
+  return {
+    ...doc,
+    skills: [...doc.skills].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+  };
 };
+
+/* ── patchResumeSection ────────────────────────────────────────────── */
 
 export const patchResumeSection = async (section, value) => {
   if (!PATCHABLE_SECTIONS.has(section)) {
@@ -24,23 +46,36 @@ export const patchResumeSection = async (section, value) => {
     );
   }
 
-  // Ensure the singleton exists, then patch the target section
+  // Normalise order for skills; education has no explicit ordering
+  const cleaned =
+    section === "skills"
+      ? normaliseOrder(stripTempIds(value))
+      : stripTempIds(value);
+
   const existing = await Resume.findOne({ owner: "default" });
 
   if (!existing) {
-    // Create with just the patched section; other sections default to []
     const created = await Resume.create({
       owner: "default",
-      [section]: value,
+      [section]: cleaned,
     });
-    return created.toObject();
+    const result = created.toObject();
+    return {
+      ...result,
+      skills: [...result.skills].sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0),
+      ),
+    };
   }
 
-  existing[section] = value;
+  existing[section] = cleaned;
 
-  // Run validators (length limits, field constraints)
   await existing.validate();
   await existing.save();
 
-  return existing.toObject();
+  const result = existing.toObject();
+  return {
+    ...result,
+    skills: [...result.skills].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+  };
 };

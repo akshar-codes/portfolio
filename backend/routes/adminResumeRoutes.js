@@ -8,7 +8,6 @@ import {
 
 const router = express.Router();
 
-// Every route in this file requires a valid admin JWT cookie.
 router.use(protect);
 
 /* ------------------------------------------------------------------ *
@@ -74,6 +73,12 @@ router.patch(
       .withMessage("Skill items cannot be empty strings")
       .isLength({ max: 100 })
       .withMessage("Each skill item must not exceed 100 characters"),
+
+    body("value.*.order")
+      .if(body("section").equals("skills"))
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage("order must be a non-negative integer"),
   ],
   updateResumeSection,
 );
