@@ -11,10 +11,30 @@ const PATCHABLE_FIELDS = new Set([
   "socialLinks",
 ]);
 
+/* ── Shared ordering helpers (mirrors aboutService.js) ─────────────── */
+
+function stripTempIds(arr) {
+  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
+}
+
+function normaliseOrder(arr) {
+  return arr
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item, idx) => ({ ...item, order: idx }));
+}
+
 /* ── fetchProfile ──────────────────────────────────────────────────── */
 
 export const fetchProfile = async () => {
-  return Profile.getSingleton();
+  const doc = await Profile.getSingleton();
+  // Sort social links by order before returning
+  return {
+    ...doc,
+    socialLinks: [...doc.socialLinks].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    ),
+  };
 };
 
 /* ── patchProfile ──────────────────────────────────────────────────── */
@@ -33,10 +53,14 @@ export const patchProfile = async (updates) => {
     );
   }
 
+  // Normalise social links order if provided
+  if (Array.isArray(sanitized.socialLinks)) {
+    sanitized.socialLinks = normaliseOrder(stripTempIds(sanitized.socialLinks));
+  }
+
   const existing = await Profile.findOne({ owner: "default" });
 
   if (!existing) {
-    // Shouldn't happen (getSingleton auto-creates), but guard anyway
     throw new ServiceError(
       "Profile not found. Run the seed script first.",
       404,
@@ -44,14 +68,19 @@ export const patchProfile = async (updates) => {
     );
   }
 
-  // Apply each sanitized field
   for (const [key, value] of Object.entries(sanitized)) {
     existing[key] = value;
   }
 
-  // Run full Mongoose validators before saving
   await existing.validate();
   await existing.save();
 
-  return existing.toObject();
+  const result = existing.toObject();
+  // Always return social links sorted by order
+  return {
+    ...result,
+    socialLinks: [...result.socialLinks].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    ),
+  };
 };

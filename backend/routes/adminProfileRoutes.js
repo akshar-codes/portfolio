@@ -5,7 +5,6 @@ import { getProfile, updateProfile } from "../controllers/profileController.js";
 
 const router = express.Router();
 
-// Every route in this file requires a valid admin JWT cookie.
 router.use(protect);
 
 /* ------------------------------------------------------------------ *
@@ -97,6 +96,11 @@ router.patch(
       )
       .isLength({ max: 40 })
       .withMessage("Icon key must not exceed 40 characters"),
+
+    body("socialLinks.*.order")
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage("order must be a non-negative integer"),
   ],
   updateProfile,
 );
