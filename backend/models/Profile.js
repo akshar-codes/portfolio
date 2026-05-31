@@ -19,7 +19,6 @@ const socialLinkSchema = new mongoose.Schema(
       maxlength: [2048, "URL must not exceed 2048 characters"],
       match: [/^https?:\/\/.+/, "URL must be a valid HTTP/HTTPS address"],
     },
-
     icon: {
       type: String,
       required: [true, "Icon key is required"],
@@ -30,6 +29,11 @@ const socialLinkSchema = new mongoose.Schema(
         /^[a-z0-9_-]+$/,
         "Icon key may only contain lowercase letters, numbers, hyphens, and underscores",
       ],
+    },
+    order: {
+      type: Number,
+      required: true,
+      default: 0,
     },
   },
   { _id: true },
@@ -120,7 +124,6 @@ profileSchema.index({ owner: 1 }, { unique: true, sparse: true });
 profileSchema.statics.getSingleton = async function () {
   let doc = await this.findOne({ owner: "default" }).lean();
   if (!doc) {
-    // Create a minimal valid document; admin will fill it in via the panel
     doc = await this.create({
       owner: "default",
       name: "Your Name",

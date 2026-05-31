@@ -54,6 +54,11 @@ const skillCategorySchema = new mongoose.Schema(
       },
       default: [],
     },
+    order: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
   },
   { _id: true },
 );
@@ -64,11 +69,6 @@ const skillCategorySchema = new mongoose.Schema(
 
 const resumeSchema = new mongoose.Schema(
   {
-    /**
-     * Singleton guard — we store exactly one resume document.
-     * A sparse unique index on `owner` (always "default") prevents
-     * accidental duplicates while allowing future extension if needed.
-     */
     owner: {
       type: String,
       default: "default",
@@ -101,9 +101,6 @@ const resumeSchema = new mongoose.Schema(
 
 resumeSchema.index({ owner: 1 }, { unique: true, sparse: true });
 
-/* ------------------------------------------------------------------ *
- * Static helper — always returns the singleton, creating it if absent
- * ------------------------------------------------------------------ */
 resumeSchema.statics.getSingleton = async function () {
   let doc = await this.findOne({ owner: "default" }).lean();
   if (!doc) {

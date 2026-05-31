@@ -1,13 +1,5 @@
 import mongoose from "mongoose";
 
-/**
- * BREAKING CHANGE: `category` is now a ref to the Category collection.
- *
- * Existing documents with a string value are converted to ObjectId refs
- * by backend/utils/migration.js, which runs automatically on server
- * startup (after connectDB).  Do NOT revert to an enum — categories are
- * now user-managed through the admin dashboard.
- */
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -54,11 +46,16 @@ const projectSchema = new mongoose.Schema(
         "Project URL must be empty or a valid HTTP/HTTPS URL",
       ],
     },
+    order: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
   },
   { timestamps: true },
 );
 
-projectSchema.index({ createdAt: -1 });
+projectSchema.index({ order: 1 });
 projectSchema.index({ category: 1 });
 
 export default mongoose.model("Project", projectSchema);
