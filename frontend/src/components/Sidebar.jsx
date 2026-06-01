@@ -9,8 +9,7 @@ import { useProfile } from "../hooks/useProfile";
 import { resolveIcon } from "../utils/iconMap";
 
 /* ─────────────────────────────────────────────────────────────────── *
- * Shimmer skeleton block — reuses the a-shimmer keyframe already
- * defined in index.css.
+ * Shimmer skeleton block
  * ─────────────────────────────────────────────────────────────────── */
 function Skeleton({ width, height, style = {} }) {
   return (
@@ -41,11 +40,6 @@ function Skeleton({ width, height, style = {} }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────── *
- * ContactItem — always rendered; shows a skeleton while loading.
- * Keeping all three rows in the DOM at all times means the expanded
- * sidebar height is stable from first paint.
- * ─────────────────────────────────────────────────────────────────── */
 function ContactItem({ icon: Icon, title, loading, children }) {
   return (
     <li className="contact-item">
@@ -68,16 +62,18 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: profile, isLoading } = useProfile();
 
-  // Always derive — fall back to empty strings so branches stay predictable.
   const name = profile?.name ?? "";
   const title = profile?.title ?? "";
   const email = profile?.email ?? "";
   const phone = profile?.phone ?? "";
   const location = profile?.location ?? "";
   const avatar = profile?.avatar || "/images/my-avatar.png";
-  const links = profile?.socialLinks ?? [];
 
-  // Never return null — the sidebar must always occupy its layout space.
+  // Sort social links by the persisted order field
+  const links = [...(profile?.socialLinks ?? [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  );
+
   return (
     <aside
       className={`sidebar ${isOpen ? "active" : ""}`}
@@ -85,10 +81,6 @@ export default function Sidebar() {
     >
       {/* ── Top info row ────────────────────────────────────────── */}
       <div className="sidebar-info">
-        {/*
-         * Avatar box: explicit width + height on the <figure> so the
-         * layout box is reserved before the image has loaded.
-         */}
         <figure className="avatar-box">
           {isLoading ? (
             <div className="avatar-skeleton">
@@ -99,13 +91,10 @@ export default function Sidebar() {
           )}
         </figure>
 
-        {/* Name + title */}
         <div className="info-content" style={{ minWidth: 0 }}>
           {isLoading ? (
             <>
-              {/* Matches --fs-3 (17 px line) + 10 px margin-bottom */}
               <Skeleton width={140} height={18} style={{ marginBottom: 10 }} />
-              {/* Matches .title badge height (~22 px incl. padding) */}
               <Skeleton width={90} height={22} style={{ borderRadius: 8 }} />
             </>
           ) : (
@@ -129,11 +118,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* ── Expandable contact section ───────────────────────────── *
-       * Always in the DOM — CSS opacity/visibility handles show/hide. *
-       * This prevents the max-height animation from resizing the      *
-       * document flow while data is still being fetched.             *
-       * ─────────────────────────────────────────────────────────── */}
+      {/* ── Expandable contact section ───────────────────────────── */}
       <div
         id="sidebar-contacts"
         className="sidebar-info_more"
@@ -141,11 +126,6 @@ export default function Sidebar() {
       >
         <div className="separator" role="separator" />
 
-        {/*
-         * All three contact rows are ALWAYS rendered.
-         * Conditional rendering of rows was the main source of CLS —
-         * absent rows made the list shorter, which shifted content below.
-         */}
         <ul className="contacts-list" role="list">
           <ContactItem icon={IoMailOutline} title="Email" loading={isLoading}>
             {email ? (
@@ -203,19 +183,13 @@ export default function Sidebar() {
           </ContactItem>
         </ul>
 
-        {/*
-         * Social links separator + list are always rendered so the
-         * vertical space is always reserved.
-         * While loading: 2 skeleton circles (typical count).
-         * After load: real icon links, or an empty list if none exist.
-         */}
         <div className="separator" role="separator" />
 
         <ul
           className="social-list"
           role="list"
           aria-label="Social media links"
-          style={{ minHeight: 26 /* reserves one icon row */ }}
+          style={{ minHeight: 26 }}
         >
           {isLoading ? (
             <>
@@ -235,6 +209,7 @@ export default function Sidebar() {
               </li>
             </>
           ) : (
+            // Links are pre-sorted by the order field above
             links.map((link) => {
               const Icon = resolveIcon(link.icon);
               return (

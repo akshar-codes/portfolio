@@ -1,16 +1,3 @@
-/**
- * ManageProfile.jsx
- *
- * Admin page for editing the profile singleton.
- *
- * UX contract (mirrors ManageResume.jsx):
- *  - Basic info (name, title, email, phone, location, avatar) shown read-only.
- *  - A single "Edit Profile" button enables an inline form.
- *  - Save → PATCH → cache updated via React Query mutation.
- *  - Cancel → form hidden, original values restored.
- *  - Social links section has per-row Edit / Delete and an Add button.
- */
-
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useAdminProfile, useUpdateProfile } from "../hooks/useProfile";
@@ -22,12 +9,83 @@ import {
 } from "../components/AdminStatus";
 
 /* ================================================================== *
- * Helpers
+ * Helpers — identical to ManageAbout.jsx
  * ================================================================== */
 
-/** Returns a blank new social-link object with a client-only temp id. */
-function newLink() {
-  return { _tempId: crypto.randomUUID(), label: "", url: "", icon: "" };
+function newLink(order = 0) {
+  return { _tempId: crypto.randomUUID(), label: "", url: "", icon: "", order };
+}
+
+/** Move array item at index by +1 or -1, then re-number order fields. */
+function moveItem(arr, index, direction) {
+  const next = index + direction;
+  if (next < 0 || next >= arr.length) return arr;
+  const copy = [...arr];
+  [copy[index], copy[next]] = [copy[next], copy[index]];
+  return copy.map((item, i) => ({ ...item, order: i }));
+}
+
+/** Strips _tempId before sending to the API. */
+function stripTempIds(arr) {
+  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
+}
+
+/** Compare two arrays by _id sequence to detect reordering. */
+function isOrderDirty(local, server) {
+  if (!local || !server || local.length !== server.length) return false;
+  return local.some((item, i) => {
+    const serverId = server[i]?._id ?? server[i]?._tempId;
+    return item._id !== serverId && item._tempId !== serverId;
+  });
+}
+
+/* ================================================================== *
+ * ReorderButtons — identical to ManageAbout.jsx
+ * ================================================================== */
+function ReorderButtons({ index, total, onMove, disabled }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        flexShrink: 0,
+      }}
+    >
+      <button
+        className="btn btn--ghost"
+        onClick={() => onMove(index, -1)}
+        disabled={index === 0 || disabled}
+        aria-label="Move up"
+        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+      >
+        ↑
+      </button>
+      <button
+        className="btn btn--ghost"
+        onClick={() => onMove(index, 1)}
+        disabled={index === total - 1 || disabled}
+        aria-label="Move down"
+        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+      >
+        ↓
+      </button>
+    </div>
+  );
+}
+
+/* ================================================================== *
+ * SectionCard — consistent list item wrapper
+ * ================================================================== */
+function SectionCard({ children }) {
+  return (
+    <li
+      className="admin-item"
+      style={{ alignItems: "flex-start", padding: "16px 18px" }}
+    >
+      {children}
+    </li>
+  );
 }
 
 /* ================================================================== *
@@ -141,7 +199,7 @@ function BasicInfoForm({ profile, onSave, onCancel, saving }) {
           maxLength={2048}
           placeholder="https://res.cloudinary.com/…"
         />
-        <p style={{ fontSize: 11, color: "var(--a-text-dim)", marginTop: 4 }}>
+        <p style={{ fontSize: 11, color: "var(--a-text-d)", marginTop: 4 }}>
           Leave blank to use the local /images/my-avatar.png fallback.
         </p>
       </div>
@@ -210,7 +268,6 @@ function SocialLinkEditor({ link, onSave, onCancel }) {
             maxLength={40}
             style={{ fontSize: 13 }}
           />
-          {/* Live icon preview */}
           <span
             style={{
               fontSize: 20,
@@ -235,7 +292,7 @@ function SocialLinkEditor({ link, onSave, onCancel }) {
         style={{ fontSize: 13 }}
       />
 
-      <p style={{ fontSize: 11, color: "var(--a-text-dim)", margin: 0 }}>
+      <p style={{ fontSize: 11, color: "var(--light-gray)", margin: 0 }}>
         Supported icon keys: linkedin, github, leetcode, twitter, x, instagram,
         youtube, website, email
       </p>
@@ -267,30 +324,39 @@ export default function ManageProfile() {
   const [editingBasic, setEditingBasic] = useState(false);
   const [savingBasic, setSavingBasic] = useState(false);
 
-  // Social links: track which row is open and which is being deleted
+  // Social links: which row is open and which is being deleted
   const [editingLinkId, setEditingLinkId] = useState(null);
   const [deletingLinkId, setDeletingLinkId] = useState(null);
   const [savingLinks, setSavingLinks] = useState(false);
 
-  // Local copy of links for optimistic add / cancel
+  // Local copy of links for optimistic reorder / add / cancel
+  // null = no active edit session; fallback to server data
   const [localLinks, setLocalLinks] = useState(null);
 
+  // Server-confirmed link order for dirty-check (mirrors serverSkills in ManageResume)
+  const [serverLinks, setServerLinks] = useState(null);
+
+  // Seed local state from server data when it first arrives
+  useEffect(() => {
+    if (profile && localLinks === null) {
+      const sorted = [...(profile.socialLinks ?? [])].sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0),
+      );
+      const seeded = sorted.map((l) => ({ ...l, _tempId: l._id }));
+      setLocalLinks(seeded);
+      setServerLinks(seeded);
+    }
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /**
-   * Derive the display list from server data, overlaid with any local edits.
-   * localLinks is null when no edit session is in progress; in that case we
-   * fall back to the server data so the list always stays current after saves.
-   *
-   * useMemo avoids the setState-in-effect anti-pattern while keeping the
-   * same logic — no cascading render, no stale closure issues.
+   * Display list: prefer localLinks (active edit session) over server data.
+   * useMemo avoids setState-in-effect anti-pattern.
    */
   const displayLinks = useMemo(() => {
     if (localLinks !== null) return localLinks;
-    return (
-      profile?.socialLinks?.map((l) => ({
-        ...l,
-        _tempId: l._id ?? l._id,
-      })) ?? []
-    );
+    return [...(profile?.socialLinks ?? [])]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((l) => ({ ...l, _tempId: l._id }));
   }, [localLinks, profile?.socialLinks]);
 
   /* ── Save basic info ─────────────────────────────────────────── */
@@ -307,25 +373,35 @@ export default function ManageProfile() {
     }
   };
 
-  /* ── Save a single social link ──────────────────────────────── */
-  const handleSaveLink = async (tempId, formData) => {
-    const updatedLinks = localLinks.map((l) =>
-      l._tempId === tempId ? { ...l, ...formData } : l,
-    );
-
+  /* ── Shared PATCH helper for social links ───────────────────── */
+  const patchLinks = async (updatedLinks, { successMsg } = {}) => {
     setSavingLinks(true);
     try {
-      // Strip _tempId before sending to the API
-      const payload = updatedLinks.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-      await updateProfile({ socialLinks: payload });
-      setLocalLinks(null); // reset → displayLinks falls back to fresh server data
+      const payload = stripTempIds(
+        updatedLinks.map((l, i) => ({ ...l, order: i })),
+      );
+      const updated = await updateProfile({ socialLinks: payload });
+      // Reseed both local and server snapshots from the confirmed server response
+      const refreshed = [...(updated.socialLinks ?? [])]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((l) => ({ ...l, _tempId: l._id }));
+      setLocalLinks(refreshed);
+      setServerLinks(refreshed);
       setEditingLinkId(null);
-      toast.success("Social links updated.");
+      toast.success(successMsg ?? "Social links updated.");
     } catch (err) {
       toast.error(err.message);
     } finally {
       setSavingLinks(false);
     }
+  };
+
+  /* ── Save a single social link ──────────────────────────────── */
+  const handleSaveLink = (tempId, formData) => {
+    const updatedLinks = localLinks.map((l) =>
+      l._tempId === tempId ? { ...l, ...formData } : l,
+    );
+    patchLinks(updatedLinks);
   };
 
   /* ── Delete a social link ───────────────────────────────────── */
@@ -338,12 +414,9 @@ export default function ManageProfile() {
     setDeletingLinkId(tempId);
 
     try {
-      const payload = updatedLinks.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-      await updateProfile({ socialLinks: payload });
-      setLocalLinks(null); // reset → displayLinks falls back to fresh server data
-      toast.success(`"${label}" link removed.`);
-    } catch (err) {
-      toast.error(err.message);
+      await patchLinks(updatedLinks, {
+        successMsg: `"${label}" link removed.`,
+      });
     } finally {
       setDeletingLinkId(null);
     }
@@ -351,25 +424,38 @@ export default function ManageProfile() {
 
   /* ── Add a new (unsaved) link row ───────────────────────────── */
   const handleAddLink = () => {
-    const entry = newLink();
-    // If localLinks is null (no active edit session), seed it from the
-    // current displayLinks so existing server links aren't lost.
+    const entry = newLink((localLinks ?? displayLinks).length);
     setLocalLinks((prev) => [...(prev ?? displayLinks), entry]);
     setEditingLinkId(entry._tempId);
   };
 
   /* ── Cancel editing a link ──────────────────────────────────── */
   const handleCancelLink = (tempId) => {
-    // If the link was freshly added (no _id), remove it
-    const link = localLinks.find((l) => l._tempId === tempId);
+    const link = localLinks?.find((l) => l._tempId === tempId);
     if (link && !link._id) {
-      setLocalLinks((prev) => prev.filter((l) => l._tempId !== tempId));
+      setLocalLinks((prev) => prev?.filter((l) => l._tempId !== tempId) ?? []);
     }
     setEditingLinkId(null);
   };
 
+  /* ── Reorder ────────────────────────────────────────────────── */
+  const handleMoveLink = (index, direction) => {
+    setLocalLinks((prev) => moveItem(prev, index, direction));
+  };
+
+  const handleSaveOrder = () => {
+    patchLinks(localLinks, { successMsg: "Link order saved." });
+  };
+
+  /* ── Dirty-check: show "Save Order" when local order differs ── */
+  const orderDirty =
+    !savingLinks &&
+    !editingLinkId &&
+    localLinks !== null &&
+    isOrderDirty(localLinks, serverLinks);
+
   /* ── Render guards ──────────────────────────────────────────── */
-  if (isLoading) {
+  if (isLoading || localLinks === null || serverLinks === null) {
     return (
       <div className="admin-page">
         <div className="admin-page__header">
@@ -417,7 +503,6 @@ export default function ManageProfile() {
           saving={savingBasic}
         />
       ) : (
-        /* Read-only view */
         <div
           style={{
             background: "var(--a-surface)",
@@ -469,14 +554,30 @@ export default function ManageProfile() {
       ══════════════════════════════════════════════════════════ */}
       <div className="admin-page__header" style={{ marginTop: 8 }}>
         <h2 className="admin-page__title">Social Links</h2>
-        <button
-          className="btn btn--primary"
-          onClick={handleAddLink}
-          disabled={editingLinkId !== null || savingLinks}
-        >
-          + Add Link
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {orderDirty && (
+            <button
+              className="btn btn--primary"
+              onClick={handleSaveOrder}
+              disabled={savingLinks}
+            >
+              {savingLinks ? "Saving…" : "Save Order"}
+            </button>
+          )}
+          <button
+            className="btn btn--primary"
+            onClick={handleAddLink}
+            disabled={editingLinkId !== null || savingLinks}
+          >
+            + Add Link
+          </button>
+        </div>
       </div>
+
+      {/* Helper note */}
+      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
+        Use ↑ ↓ to reorder, then click <strong>Save Order</strong>.
+      </p>
 
       {displayLinks.length === 0 && editingLinkId === null ? (
         <AdminEmpty
@@ -486,17 +587,23 @@ export default function ManageProfile() {
         />
       ) : (
         <ul className="admin-list" aria-label="Social links">
-          {displayLinks.map((link) => {
+          {displayLinks.map((link, index) => {
             const isEditing = editingLinkId === link._tempId;
             const isDeleting = deletingLinkId === link._tempId;
             const Icon = resolveIcon(link.icon);
 
             return (
-              <li
-                key={link._tempId}
-                className="admin-item"
-                style={{ alignItems: "flex-start", padding: "16px 18px" }}
-              >
+              <SectionCard key={link._tempId}>
+                {/* Reorder arrows — hidden while editing */}
+                {!isEditing && (
+                  <ReorderButtons
+                    index={index}
+                    total={displayLinks.length}
+                    onMove={handleMoveLink}
+                    disabled={editingLinkId !== null || savingLinks}
+                  />
+                )}
+
                 <div className="admin-item__body">
                   {isEditing ? (
                     <SocialLinkEditor
@@ -526,12 +633,23 @@ export default function ManageProfile() {
                           <Icon aria-hidden="true" />
                         </span>
                         <span className="admin-item__name">{link.label}</span>
+                        <span
+                          className="admin-item__badge"
+                          style={{
+                            background: "transparent",
+                            color: "var(--a-text-d)",
+                            borderColor: "var(--a-border)",
+                            fontSize: 10,
+                          }}
+                        >
+                          #{index + 1}
+                        </span>
                       </div>
                       <div className="admin-item__meta">
                         <code
                           style={{
                             fontSize: 11,
-                            color: "var(--a-text-dim)",
+                            color: "var(--a-text-d)",
                             background: "var(--a-surface-3)",
                             padding: "2px 7px",
                             borderRadius: 4,
@@ -580,7 +698,7 @@ export default function ManageProfile() {
                     </button>
                   </div>
                 )}
-              </li>
+              </SectionCard>
             );
           })}
         </ul>

@@ -12,11 +12,9 @@ export default function ManageCategories() {
   const [status, setStatus] = useState("loading");
   const [fetchError, setFetchError] = useState("");
 
-  // Add-form state — only tracks the input value and submit state now
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
 
-  // Track which category row is being deleted for optimistic spinner
   const [deletingId, setDeletingId] = useState(null);
 
   const nameInputRef = useRef(null);
@@ -61,7 +59,6 @@ export default function ManageCategories() {
 
   /* ── Delete ─────────────────────────────────────────────────────── */
   const handleDelete = async (id, name, projectCount) => {
-    // Button is disabled when in-use, but guard for race conditions
     if (projectCount > 0) {
       toast.warning(
         `"${name}" is in use by ${projectCount} project${projectCount === 1 ? "" : "s"} and cannot be deleted.`,
@@ -80,7 +77,6 @@ export default function ManageCategories() {
       toast.success(`Category "${name}" deleted.`);
       fetchCategories();
     } catch (err) {
-      // err.errorCode === "CATEGORY_IN_USE" arrives here on race conditions
       toast.error(err.message);
     } finally {
       setDeletingId(null);
@@ -98,7 +94,7 @@ export default function ManageCategories() {
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: "var(--a-text-muted)",
+              color: "var(--a-text)",
               background: "var(--a-surface)",
               border: "1px solid var(--a-border)",
               borderRadius: 100,
@@ -244,7 +240,7 @@ export default function ManageCategories() {
         <p
           style={{
             fontSize: 12,
-            color: "var(--a-text-dim)",
+            color: "var(--light-gray)",
             marginTop: -8,
           }}
         >

@@ -48,7 +48,7 @@ export default function Dashboard() {
       </div>
 
       {/* Welcome */}
-      <p style={{ fontSize: 14, color: "var(--a-text-muted)", marginTop: -8 }}>
+      <p style={{ fontSize: 14, color: "var(--light-gray)", marginTop: -8 }}>
         Welcome back. Here&apos;s what you can manage today.
       </p>
 

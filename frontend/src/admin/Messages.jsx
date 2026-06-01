@@ -90,7 +90,7 @@ export default function Messages() {
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: "var(--a-text-muted)",
+              color: "var(--a-text)",
               background: "var(--a-surface)",
               border: "1px solid var(--a-border)",
               borderRadius: 100,

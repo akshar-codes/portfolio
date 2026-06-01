@@ -1,17 +1,3 @@
-/**
- * ManageResume.jsx
- *
- * Admin panel for editing the resume singleton.
- *
- * UX contract:
- *   - Everything is READ-ONLY by default.
- *   - Each education item / skill category has its own Edit button.
- *   - Clicking Edit enables inline editing for only that block.
- *   - Save → PATCH request → cache updated in state.
- *   - Cancel → original values restored, no request sent.
- *   - Add / Remove for sub-items (skills list, education entries).
- */
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import api from "../services/api";
@@ -34,17 +20,68 @@ function newEducationEntry() {
   };
 }
 
-function newSkillGroup() {
-  return { _tempId: crypto.randomUUID(), category: "", items: [] };
+function newSkillGroup(order = 0) {
+  return { _tempId: crypto.randomUUID(), category: "", items: [], order };
 }
 
-/** Strips _tempId from entries before sending to the API */
+function moveItem(arr, index, direction) {
+  const next = index + direction;
+  if (next < 0 || next >= arr.length) return arr;
+  const copy = [...arr];
+  [copy[index], copy[next]] = [copy[next], copy[index]];
+  return copy.map((item, i) => ({ ...item, order: i }));
+}
+
 function stripTempIds(arr) {
   return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
 }
 
+/** Compare two arrays by _id sequence to detect reordering. */
+function isOrderDirty(local, server) {
+  if (!local || !server || local.length !== server.length) return false;
+  return local.some((item, i) => {
+    const serverId = server[i]?._id ?? server[i]?._tempId;
+    return item._id !== serverId && item._tempId !== serverId;
+  });
+}
+
 /* ================================================================== *
- * EducationEditor — inline editor for one education entry
+ * ReorderButtons
+ * ================================================================== */
+function ReorderButtons({ index, total, onMove, disabled }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        flexShrink: 0,
+      }}
+    >
+      <button
+        className="btn btn--ghost"
+        onClick={() => onMove(index, -1)}
+        disabled={index === 0 || disabled}
+        aria-label="Move up"
+        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+      >
+        ↑
+      </button>
+      <button
+        className="btn btn--ghost"
+        onClick={() => onMove(index, 1)}
+        disabled={index === total - 1 || disabled}
+        aria-label="Move down"
+        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+      >
+        ↓
+      </button>
+    </div>
+  );
+}
+
+/* ================================================================== *
+ * EducationEditor
  * ================================================================== */
 function EducationEditor({ entry, onSave, onCancel }) {
   const [form, setForm] = useState({
@@ -106,7 +143,7 @@ function EducationEditor({ entry, onSave, onCancel }) {
 }
 
 /* ================================================================== *
- * SkillGroupEditor — inline editor for one skill category
+ * SkillGroupEditor
  * ================================================================== */
 function SkillGroupEditor({ group, onSave, onCancel }) {
   const [category, setCategory] = useState(group.category);
@@ -147,7 +184,6 @@ function SkillGroupEditor({ group, onSave, onCancel }) {
         style={{ fontSize: 13 }}
       />
 
-      {/* Skills chip list */}
       {items.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {items.map((item, idx) => (
@@ -186,7 +222,6 @@ function SkillGroupEditor({ group, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Add new skill */}
       <div style={{ display: "flex", gap: 8 }}>
         <input
           ref={newItemRef}
@@ -224,7 +259,7 @@ function SkillGroupEditor({ group, onSave, onCancel }) {
 }
 
 /* ================================================================== *
- * SectionCard — wraps a single row in the list
+ * SectionCard
  * ================================================================== */
 function SectionCard({ children }) {
   return (
@@ -245,11 +280,11 @@ export default function ManageResume() {
   const [fetchStatus, setFetchStatus] = useState("loading");
   const [fetchError, setFetchError] = useState("");
 
-  // Which item is being edited: { section: "education"|"skills", id: string }
   const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(null);
 
-  // Which section is being saved (for per-section spinner)
-  const [saving, setSaving] = useState(null); // "education" | "skills" | null
+  // Server-confirmed skill order for dirty-check
+  const [serverSkills, setServerSkills] = useState(null);
 
   /* ── Fetch ──────────────────────────────────────────────────── */
   const loadResume = useCallback(async () => {
@@ -257,15 +292,19 @@ export default function ManageResume() {
     setFetchError("");
     try {
       const { data } = await api.get("/admin/resume");
-      // Add _tempId to existing entries so keying works consistently
+      const sortedSkills = [...(data.skills ?? [])]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((s) => ({ ...s, _tempId: s._id }));
+
       setResume({
         ...data,
         education: (data.education ?? []).map((e) => ({
           ...e,
           _tempId: e._id,
         })),
-        skills: (data.skills ?? []).map((s) => ({ ...s, _tempId: s._id })),
+        skills: sortedSkills,
       });
+      setServerSkills(sortedSkills);
       setFetchStatus("ready");
     } catch (err) {
       setFetchError(err.message);
@@ -278,32 +317,52 @@ export default function ManageResume() {
   }, [loadResume]);
 
   /* ── PATCH helper ───────────────────────────────────────────── */
-  const patchSection = useCallback(async (section, newArray) => {
-    setSaving(section);
-    try {
-      const { data } = await api.patch("/admin/resume", {
-        section,
-        value: stripTempIds(newArray),
-      });
-      // Merge fresh server data back, preserving _tempIds
-      setResume((prev) => ({
-        ...prev,
-        ...data,
-        [section]: (data[section] ?? []).map((item) => ({
-          ...item,
-          _tempId: item._id,
-        })),
-      }));
-      setEditing(null);
-      toast.success(
-        `${section === "education" ? "Education" : "Skills"} updated.`,
-      );
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setSaving(null);
-    }
-  }, []);
+  const patchSection = useCallback(
+    async (section, newArray, { successMsg } = {}) => {
+      setSaving(section);
+      try {
+        const { data } = await api.patch("/admin/resume", {
+          section,
+          value: stripTempIds(newArray),
+        });
+        const refreshedSkills =
+          section === "skills"
+            ? [...(data.skills ?? [])]
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .map((item) => ({ ...item, _tempId: item._id }))
+            : null;
+
+        setResume((prev) => ({
+          ...prev,
+          ...data,
+          [section]:
+            section === "skills"
+              ? refreshedSkills
+              : (data[section] ?? []).map((item) => ({
+                  ...item,
+                  _tempId: item._id,
+                })),
+        }));
+
+        if (section === "skills" && refreshedSkills) {
+          setServerSkills(refreshedSkills);
+        }
+
+        setEditing(null);
+        toast.success(
+          successMsg ??
+            (section === "education"
+              ? "Education updated."
+              : "Skills updated."),
+        );
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        setSaving(null);
+      }
+    },
+    [],
+  );
 
   /* ── Education handlers ─────────────────────────────────────── */
   const saveEducationEntry = (tempId) => (formData) => {
@@ -326,6 +385,17 @@ export default function ManageResume() {
     setEditing({ section: "education", id: entry._tempId });
   };
 
+  const cancelEducationEdit = (tempId) => {
+    const item = resume.education.find((e) => e._tempId === tempId);
+    if (item && !item._id) {
+      setResume((p) => ({
+        ...p,
+        education: p.education.filter((e) => e._tempId !== tempId),
+      }));
+    }
+    setEditing(null);
+  };
+
   /* ── Skills handlers ────────────────────────────────────────── */
   const saveSkillGroup = (tempId) => (formData) => {
     const updated = resume.skills.map((s) =>
@@ -336,30 +406,48 @@ export default function ManageResume() {
 
   const deleteSkillGroup = (tempId) => {
     if (!window.confirm("Delete this skill category?")) return;
-    const updated = resume.skills.filter((s) => s._tempId !== tempId);
+    const updated = resume.skills
+      .filter((s) => s._tempId !== tempId)
+      .map((s, i) => ({ ...s, order: i }));
     patchSection("skills", updated);
   };
 
   const addSkillGroup = () => {
-    const group = newSkillGroup();
+    const group = newSkillGroup(resume.skills.length);
     const updated = [...resume.skills, group];
     setResume((p) => ({ ...p, skills: updated }));
     setEditing({ section: "skills", id: group._tempId });
   };
 
-  const cancelEdit = (section, tempId) => {
-    // If the item has no _id (was newly added but not yet saved), remove it
-    const arr = section === "education" ? resume.education : resume.skills;
-    const item = arr.find((x) => x._tempId === tempId);
+  const cancelSkillEdit = (tempId) => {
+    const item = resume.skills.find((s) => s._tempId === tempId);
     if (item && !item._id) {
-      const field = section === "education" ? "education" : "skills";
       setResume((p) => ({
         ...p,
-        [field]: arr.filter((x) => x._tempId !== tempId),
+        skills: p.skills.filter((s) => s._tempId !== tempId),
       }));
     }
     setEditing(null);
   };
+
+  /* ── Skill reorder ──────────────────────────────────────────── */
+  const handleMoveSkill = (index, direction) => {
+    setResume((prev) => ({
+      ...prev,
+      skills: moveItem(prev.skills, index, direction),
+    }));
+  };
+
+  const handleSaveSkillOrder = () => {
+    patchSection("skills", resume.skills, { successMsg: "Skill order saved." });
+  };
+
+  // Dirty: compare local ID sequence against last server-confirmed sequence
+  const skillOrderDirty =
+    saving !== "skills" &&
+    !editing &&
+    resume !== null &&
+    isOrderDirty(resume.skills, serverSkills);
 
   /* ── Render guards ──────────────────────────────────────────── */
   if (fetchStatus === "loading")
@@ -420,7 +508,7 @@ export default function ManageResume() {
                     <EducationEditor
                       entry={entry}
                       onSave={saveEducationEntry(entry._tempId)}
-                      onCancel={() => cancelEdit("education", entry._tempId)}
+                      onCancel={() => cancelEducationEdit(entry._tempId)}
                     />
                   ) : (
                     <>
@@ -479,14 +567,30 @@ export default function ManageResume() {
       ════════════════════════════════════════════════════════ */}
       <div className="admin-page__header" style={{ marginTop: 8 }}>
         <h2 className="admin-page__title">Technical Skills</h2>
-        <button
-          className="btn btn--primary"
-          onClick={addSkillGroup}
-          disabled={saving === "skills"}
-        >
-          + Add Category
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {skillOrderDirty && (
+            <button
+              className="btn btn--ghost"
+              onClick={handleSaveSkillOrder}
+              disabled={!!saving}
+            >
+              Save Order
+            </button>
+          )}
+          <button
+            className="btn btn--primary"
+            onClick={addSkillGroup}
+            disabled={saving === "skills"}
+          >
+            + Add Category
+          </button>
+        </div>
       </div>
+
+      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
+        Use ↑ ↓ to reorder skill categories, then click{" "}
+        <strong>Save Order</strong>.
+      </p>
 
       {resume.skills.length === 0 ? (
         <AdminEmpty
@@ -496,17 +600,26 @@ export default function ManageResume() {
         />
       ) : (
         <ul className="admin-list" aria-label="Skill categories">
-          {resume.skills.map((group) => {
+          {resume.skills.map((group, index) => {
             const isEditing = isEditingSection("skills", group._tempId);
 
             return (
               <SectionCard key={group._tempId}>
+                {!isEditing && (
+                  <ReorderButtons
+                    index={index}
+                    total={resume.skills.length}
+                    onMove={handleMoveSkill}
+                    disabled={!!editing || !!saving}
+                  />
+                )}
+
                 <div className="admin-item__body">
                   {isEditing ? (
                     <SkillGroupEditor
                       group={group}
                       onSave={saveSkillGroup(group._tempId)}
-                      onCancel={() => cancelEdit("skills", group._tempId)}
+                      onCancel={() => cancelSkillEdit(group._tempId)}
                     />
                   ) : (
                     <>
@@ -535,6 +648,17 @@ export default function ManageResume() {
                             No skills added yet
                           </span>
                         )}
+                        <span
+                          className="admin-item__badge"
+                          style={{
+                            background: "transparent",
+                            color: "var(--a-text-dim)",
+                            borderColor: "var(--a-border)",
+                            fontSize: 10,
+                          }}
+                        >
+                          #{index + 1}
+                        </span>
                       </div>
                     </>
                   )}

@@ -40,6 +40,15 @@ function stripTempIds(arr) {
   return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
 }
 
+/** Compare two arrays by _tempId sequence to detect reordering. */
+function isOrderDirty(local, server) {
+  if (!local || !server || local.length !== server.length) return false;
+  return local.some((item, i) => {
+    const serverId = server[i]?._id ?? server[i]?._tempId;
+    return item._id !== serverId && item._tempId !== serverId;
+  });
+}
+
 /* ================================================================== *
  * ParagraphEditor — inline editor for a single paragraph
  * ================================================================== */
@@ -208,7 +217,7 @@ function ServiceEditor({ service, onSave, onCancel }) {
           />
         </div>
         <div style={{ display: "flex", alignItems: "flex-end" }}>
-          {/* Spacer — keeps the grid balanced on larger screens */}
+          {/* Spacer */}
         </div>
       </div>
 
@@ -316,27 +325,36 @@ export default function ManageAbout() {
   const { mutateAsync: updateAbout } = useUpdateAbout();
 
   // Which item is currently open in an inline editor
-  // { section: "paragraphs"|"services", id: string }
   const [editing, setEditing] = useState(null);
 
-  // Which section is currently saving (for per-section spinner)
-  const [saving, setSaving] = useState(null); // "paragraphs"|"services"|null
+  // Which section is currently saving
+  const [saving, setSaving] = useState(null);
 
   // Local copies for optimistic reorder / add / cancel
   const [localParagraphs, setLocalParagraphs] = useState(null);
   const [localServices, setLocalServices] = useState(null);
 
+  // Server-confirmed order snapshots for dirty-check comparison
+  const [serverParagraphs, setServerParagraphs] = useState(null);
+  const [serverServices, setServerServices] = useState(null);
+
   // Seed local state from server data when it first arrives
   useEffect(() => {
     if (about && localParagraphs === null) {
-      setLocalParagraphs(
-        (about.paragraphs ?? []).map((p) => ({ ...p, _tempId: p._id })),
-      );
+      const seeded = (about.paragraphs ?? []).map((p) => ({
+        ...p,
+        _tempId: p._id,
+      }));
+      setLocalParagraphs(seeded);
+      setServerParagraphs(seeded);
     }
     if (about && localServices === null) {
-      setLocalServices(
-        (about.services ?? []).map((s) => ({ ...s, _tempId: s._id })),
-      );
+      const seeded = (about.services ?? []).map((s) => ({
+        ...s,
+        _tempId: s._id,
+      }));
+      setLocalServices(seeded);
+      setServerServices(seeded);
     }
   }, [about]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -349,13 +367,17 @@ export default function ManageAbout() {
           section,
           value: stripTempIds(newArray),
         });
-        // Merge fresh server data back, preserving _tempIds
         const refreshed = (updated[section] ?? []).map((item) => ({
           ...item,
           _tempId: item._id,
         }));
-        if (section === "paragraphs") setLocalParagraphs(refreshed);
-        else setLocalServices(refreshed);
+        if (section === "paragraphs") {
+          setLocalParagraphs(refreshed);
+          setServerParagraphs(refreshed);
+        } else {
+          setLocalServices(refreshed);
+          setServerServices(refreshed);
+        }
         setEditing(null);
         toast.success(
           `${section === "paragraphs" ? "Paragraphs" : "Service cards"} updated.`,
@@ -469,17 +491,16 @@ export default function ManageAbout() {
   const isEditing = (section, id) =>
     editing?.section === section && editing?.id === id;
 
-  /* ── Reorder dirty-check: show "Save order" button when local
-       state differs from last server order ────────────────────── */
+  // Dirty: compare local ID sequence against last server-confirmed sequence
   const paragraphOrderDirty =
     saving !== "paragraphs" &&
     !editing &&
-    localParagraphs.some((p, i) => p.order !== i);
+    isOrderDirty(localParagraphs, serverParagraphs);
 
   const serviceOrderDirty =
     saving !== "services" &&
     !editing &&
-    localServices.some((s, i) => s.order !== i);
+    isOrderDirty(localServices, serverServices);
 
   /* ── Main render ────────────────────────────────────────────── */
   return (
@@ -509,10 +530,9 @@ export default function ManageAbout() {
         </div>
       </div>
 
-      {/* Helper note */}
-      <p style={{ fontSize: 12, color: "var(--a-text-dim)", marginTop: -8 }}>
+      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
         These paragraphs appear in the About Me section. Use ↑ ↓ to reorder,
-        then click Save Order.
+        then click <strong>Save Order</strong>.
       </p>
 
       {localParagraphs.length === 0 ? (
@@ -528,7 +548,6 @@ export default function ManageAbout() {
 
             return (
               <SectionCard key={para._tempId}>
-                {/* Reorder arrows — hidden while editing */}
                 {!isEditingThis && (
                   <ReorderButtons
                     index={index}
@@ -547,7 +566,6 @@ export default function ManageAbout() {
                     />
                   ) : (
                     <>
-                      {/* Order badge */}
                       <div
                         className="admin-item__meta"
                         style={{ marginBottom: 6 }}
@@ -564,8 +582,6 @@ export default function ManageAbout() {
                           #{index + 1}
                         </span>
                       </div>
-
-                      {/* Paragraph text preview */}
                       <p
                         style={{
                           fontSize: 13,
@@ -641,10 +657,9 @@ export default function ManageAbout() {
         </div>
       </div>
 
-      {/* Helper note */}
-      <p style={{ fontSize: 12, color: "var(--a-text-dim)", marginTop: -8 }}>
-        These cards appear in the "What I'm Doing" section. Use ↑ ↓ to reorder,
-        then click Save Order.
+      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
+        These cards appear in the &quot;What I&apos;m Doing&quot; section. Use ↑
+        ↓ to reorder, then click <strong>Save Order</strong>.
       </p>
 
       {localServices.length === 0 ? (
@@ -660,7 +675,6 @@ export default function ManageAbout() {
 
             return (
               <SectionCard key={service._tempId}>
-                {/* Reorder arrows */}
                 {!isEditingThis && (
                   <ReorderButtons
                     index={index}
@@ -670,7 +684,6 @@ export default function ManageAbout() {
                   />
                 )}
 
-                {/* Icon thumbnail */}
                 {!isEditingThis && (
                   <img
                     src={resolveAboutIcon(service.icon)}
