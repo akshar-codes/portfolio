@@ -37,6 +37,29 @@ async function resequenceProjects(filter = {}) {
   }
 }
 
+/* ── Shared JSON-string parse helper ───────────────────────────────── *
+ * FormData can only carry strings.  Both addProject and updateProject  *
+ * receive technologies / features as either:                           *
+ *   (a) an already-parsed JS array   — pass through as-is             *
+ *   (b) a JSON string like '["A","B"]' — parse it                     *
+ *   (c) undefined / null              — default to []                  *
+ *                                                                      *
+ * This helper centralises that logic so it can never drift between     *
+ * the two code paths again.                                            *
+ * ─────────────────────────────────────────────────────────────────── */
+function parseArrayField(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /* ── Category resolution ───────────────────────────────────────────── */
 
 async function resolveCategoryFilter(category) {
@@ -199,19 +222,6 @@ export const addProject = async ({
     .lean();
   const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
 
-  // Parse arrays from form data strings if needed
-  const parsedTechnologies = Array.isArray(technologies)
-    ? technologies
-    : typeof technologies === "string"
-      ? JSON.parse(technologies || "[]")
-      : [];
-
-  const parsedFeatures = Array.isArray(features)
-    ? features
-    : typeof features === "string"
-      ? JSON.parse(features || "[]")
-      : [];
-
   const project = await Project.create({
     title,
     description,
@@ -219,8 +229,8 @@ export const addProject = async ({
     projectUrl: liveUrl || projectUrl || "",
     liveUrl: liveUrl || projectUrl || "",
     githubUrl: githubUrl || "",
-    technologies: parsedTechnologies,
-    features: parsedFeatures,
+    technologies: parseArrayField(technologies),
+    features: parseArrayField(features),
     challenge: challenge || "",
     solution: solution || "",
     order: nextOrder,
@@ -245,22 +255,30 @@ export const updateProject = async (id, updates) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  const UPDATABLE = [
+  // Scalar fields — update only when present in the payload
+  const SCALAR_UPDATABLE = [
     "title",
     "description",
     "projectUrl",
     "liveUrl",
     "githubUrl",
-    "technologies",
-    "features",
     "challenge",
     "solution",
   ];
 
-  for (const key of UPDATABLE) {
+  for (const key of SCALAR_UPDATABLE) {
     if (updates[key] !== undefined) {
       project[key] = updates[key];
     }
+  }
+
+  // Array fields — always run through parseArrayField so FormData JSON
+  // strings are expanded into real arrays before being stored.
+  if (updates.technologies !== undefined) {
+    project.technologies = parseArrayField(updates.technologies);
+  }
+  if (updates.features !== undefined) {
+    project.features = parseArrayField(updates.features);
   }
 
   // Handle category update

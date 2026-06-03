@@ -603,6 +603,7 @@ export default function ProjectDetails({ project, onClose }) {
                     href={githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="form-btn"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
