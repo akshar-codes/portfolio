@@ -72,7 +72,17 @@ export const upload = multer({
   },
 });
 
-export async function uploadToCloudinary(file) {
+// For project creation — allow thumbnail + banner + up to 10 gallery images
+export const uploadProjectImages = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+    files: 12, // 1 thumbnail + 1 banner + 10 gallery
+  },
+});
+
+export async function uploadToCloudinary(file, folder = "portfolio/projects") {
   if (!file || !file.buffer) {
     throw new Error("No file buffer received.");
   }
@@ -87,7 +97,7 @@ export async function uploadToCloudinary(file) {
     const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: "image",
-        folder: "portfolio/projects",
+        folder,
         allowed_formats: ["jpg", "jpeg", "png", "webp", "gif"],
       },
       (error, result) => {
