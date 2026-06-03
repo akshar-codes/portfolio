@@ -1,29 +1,35 @@
 import express from "express";
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import {
   getProjects,
+  getProjectById,
   createProject,
+  editProject,
   deleteProject,
   reorderProjectsHandler,
 } from "../controllers/projectController.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { upload } from "../utils/cloudinary.js";
+import { uploadProjectImages } from "../utils/cloudinary.js";
 
 const router = express.Router();
+
+// Multi-field upload: thumbnail (image), banner (bannerImage), gallery (gallery[])
+const projectUpload = uploadProjectImages.fields([
+  { name: "image", maxCount: 1 },
+  { name: "bannerImage", maxCount: 1 },
+  { name: "gallery", maxCount: 10 },
+]);
 
 // ── Public ───────────────────────────────────────────────────────────
 
 router.get("/", getProjects);
 
+router.get("/:id", getProjectById);
+
 // ── Protected ────────────────────────────────────────────────────────
 
-router.post("/", protect, upload.single("image"), createProject);
+router.post("/", protect, projectUpload, createProject);
 
-router.delete("/:id", protect, deleteProject);
-
-/* ------------------------------------------------------------------ *
- * PATCH /api/projects/reorder
- * ------------------------------------------------------------------ */
 router.patch(
   "/reorder",
   protect,
@@ -37,5 +43,15 @@ router.patch(
   ],
   reorderProjectsHandler,
 );
+
+router.patch(
+  "/:id",
+  protect,
+  [param("id").isMongoId().withMessage("Invalid project ID")],
+  projectUpload,
+  editProject,
+);
+
+router.delete("/:id", protect, deleteProject);
 
 export default router;

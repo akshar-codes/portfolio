@@ -1,6 +1,8 @@
 import {
   fetchAllProjects,
+  fetchProjectById,
   addProject,
+  updateProject,
   removeProject,
   reorderProjects,
 } from "../services/projectService.js";
@@ -26,20 +28,71 @@ export const getProjects = asyncHandler(async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ *
+ * GET /api/projects/:id  (public)
+ * ------------------------------------------------------------------ */
+export const getProjectById = asyncHandler(async (req, res) => {
+  const project = await fetchProjectById(req.params.id);
+  return sendSuccess(res, project, "Project retrieved successfully");
+});
+
+/* ------------------------------------------------------------------ *
  * POST /api/projects  (protected, multipart/form-data)
  * ------------------------------------------------------------------ */
 export const createProject = asyncHandler(async (req, res) => {
-  const { title, description, category: categoryId, projectUrl } = req.body;
+  const {
+    title,
+    description,
+    category: categoryId,
+    projectUrl,
+    liveUrl,
+    githubUrl,
+    technologies,
+    features,
+    challenge,
+    solution,
+  } = req.body;
+
+  // req.files is populated by uploadProjectImages.fields(...)
+  const files = req.files ?? {};
+  const file = files.image?.[0] ?? req.file ?? null;
+  const bannerFile = files.bannerImage?.[0] ?? null;
+  const galleryFiles = files.gallery ?? [];
 
   const project = await addProject({
     title,
     description,
     categoryId,
     projectUrl,
-    file: req.file,
+    liveUrl,
+    githubUrl,
+    technologies,
+    features,
+    challenge,
+    solution,
+    file,
+    bannerFile,
+    galleryFiles,
   });
 
   return sendSuccess(res, project, "Project created successfully", 201);
+});
+
+/* ------------------------------------------------------------------ *
+ * PATCH /api/projects/:id  (protected, multipart/form-data)
+ * ------------------------------------------------------------------ */
+export const editProject = asyncHandler(async (req, res) => {
+  const files = req.files ?? {};
+
+  const updates = {
+    ...req.body,
+    file: files.image?.[0] ?? null,
+    bannerFile: files.bannerImage?.[0] ?? null,
+    galleryFiles: files.gallery ?? [],
+    categoryId: req.body.category || undefined,
+  };
+
+  const project = await updateProject(req.params.id, updates);
+  return sendSuccess(res, project, "Project updated successfully");
 });
 
 /* ------------------------------------------------------------------ *
