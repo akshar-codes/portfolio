@@ -1,12 +1,19 @@
 import mongoose from "mongoose";
 import Project from "../models/Project.js";
 import Category from "../models/Category.js";
-import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
+import {
+  cloudinaryFolder,
+  uploadToCloudinary,
+  destroyManyFromCloudinary,
+} from "../utils/cloudinary.js";
 import { ServiceError } from "./errors.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
+import logger from "../utils/logger.js";
 
-/* ── Cache ─────────────────────────────────────────────────────────── */
+/* ================================================================== *
+ * Cache helpers
+ * ================================================================== */
 
 const CACHE_TTL_MS = 60_000;
 const CACHE_PREFIX = "projects:";
@@ -37,21 +44,20 @@ async function resequenceProjects(filter = {}) {
   }
 }
 
-/* ── Shared parse helpers ──────────────────────────────────────────── */
+/* ================================================================== *
+ * Field-parsing helpers (unchanged from original)
+ * ================================================================== */
 
 function parseGroupedField(value) {
-  // Already a JS value (not a FormData string)
   if (Array.isArray(value)) {
-    // Check if it's already the grouped shape
     if (value.length === 0) return [];
     if (
       typeof value[0] === "object" &&
       value[0] !== null &&
       "group" in value[0]
     ) {
-      return value; // correct shape
+      return value;
     }
-    // Flat string array — wrap into a single "General" group
     const items = value.filter((v) => typeof v === "string" && v.trim());
     return items.length ? [{ group: "General", items }] : [];
   }
@@ -60,12 +66,9 @@ function parseGroupedField(value) {
 
   try {
     const parsed = JSON.parse(value.trim());
-
     if (!Array.isArray(parsed)) return [];
-
     if (parsed.length === 0) return [];
 
-    // Grouped shape: [{ group, items }]
     if (
       typeof parsed[0] === "object" &&
       parsed[0] !== null &&
@@ -79,7 +82,6 @@ function parseGroupedField(value) {
       }));
     }
 
-    // Legacy flat string array inside JSON: ["React","Node.js"]
     const items = parsed.filter((v) => typeof v === "string" && v.trim());
     return items.length ? [{ group: "General", items }] : [];
   } catch {
@@ -98,7 +100,9 @@ function parseArrayField(value) {
   }
 }
 
-/* ── Category resolution ───────────────────────────────────────────── */
+/* ================================================================== *
+ * Category resolution helper (unchanged)
+ * ================================================================== */
 
 async function resolveCategoryFilter(category) {
   if (!category || category === "All") return {};
@@ -113,7 +117,9 @@ async function resolveCategoryFilter(category) {
   return cat ? { category: cat._id } : null;
 }
 
-/* ── fetchAllProjects ──────────────────────────────────────────────── */
+/* ================================================================== *
+ * fetchAllProjects  (public — unchanged)
+ * ================================================================== */
 
 export const fetchAllProjects = async ({
   page = 1,
@@ -129,7 +135,6 @@ export const fetchAllProjects = async ({
   if (cached) return cached;
 
   const filter = await resolveCategoryFilter(category);
-
   if (filter === null) {
     return {
       projects: [],
@@ -162,7 +167,9 @@ export const fetchAllProjects = async ({
   return result;
 };
 
-/* ── fetchProjectById ──────────────────────────────────────────────── */
+/* ================================================================== *
+ * fetchProjectById  (public — unchanged)
+ * ================================================================== */
 
 export const fetchProjectById = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -187,7 +194,9 @@ export const fetchProjectById = async (id) => {
   return project;
 };
 
-/* ── addProject ────────────────────────────────────────────────────── */
+/* ================================================================== *
+ * addProject
+ * ================================================================== */
 
 export const addProject = async ({
   title,
@@ -217,70 +226,95 @@ export const addProject = async ({
     );
   }
 
-  const uploadResult = await uploadToCloudinary(file, "portfolio/projects");
+  const uploadedPublicIds = [];
 
-  let bannerImage = { url: "", public_id: "" };
-  if (bannerFile?.buffer) {
-    const bannerResult = await uploadToCloudinary(
-      bannerFile,
-      "portfolio/projects/banners",
+  try {
+    // Thumbnail (required) + optional banner — concurrent
+    const thumbFolder = cloudinaryFolder("portfolio/projects");
+    const bannerFolder = cloudinaryFolder("portfolio/projects/banners");
+
+    const [thumbResult, bannerResult] = await Promise.all([
+      uploadToCloudinary(file, thumbFolder).then((r) => {
+        uploadedPublicIds.push(r.public_id);
+        return r;
+      }),
+      bannerFile?.buffer
+        ? uploadToCloudinary(bannerFile, bannerFolder).then((r) => {
+            uploadedPublicIds.push(r.public_id);
+            return r;
+          })
+        : Promise.resolve(null),
+    ]);
+
+    // Gallery — concurrent (up to 10 images)
+    const galleryFolder = cloudinaryFolder("portfolio/projects/gallery");
+    const validGallery = (galleryFiles ?? []).filter((gf) => gf?.buffer);
+    const galleryResults = await Promise.all(
+      validGallery.map((gf) =>
+        uploadToCloudinary(gf, galleryFolder).then((r) => {
+          uploadedPublicIds.push(r.public_id);
+          return r;
+        }),
+      ),
     );
-    bannerImage = {
-      url: bannerResult.secure_url,
-      public_id: bannerResult.public_id,
-    };
-  }
 
-  const gallery = [];
-  if (Array.isArray(galleryFiles) && galleryFiles.length > 0) {
-    for (let i = 0; i < galleryFiles.length; i++) {
-      const gf = galleryFiles[i];
-      if (gf?.buffer) {
-        const gResult = await uploadToCloudinary(
-          gf,
-          "portfolio/projects/gallery",
-        );
-        gallery.push({
-          url: gResult.secure_url,
-          public_id: gResult.public_id,
-          order: i,
-        });
-      }
+    const maxOrderDoc = await Project.findOne()
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
+
+    const project = await Project.create({
+      title,
+      description,
+      category: category._id,
+      projectUrl: liveUrl || projectUrl || "",
+      liveUrl: liveUrl || projectUrl || "",
+      githubUrl: githubUrl || "",
+      technologies: parseGroupedField(technologies),
+      features: parseArrayField(features),
+      challenge: challenge || "",
+      solution: solution || "",
+      order: nextOrder,
+      image: {
+        url: thumbResult.secure_url,
+        public_id: thumbResult.public_id,
+      },
+      bannerImage: bannerResult
+        ? { url: bannerResult.secure_url, public_id: bannerResult.public_id }
+        : { url: "", public_id: "" },
+      gallery: galleryResults.map((r, i) => ({
+        url: r.secure_url,
+        public_id: r.public_id,
+        order: i,
+      })),
+    });
+
+    // DB succeeded — uploads are no longer "pending"
+    invalidateProjectsCache();
+    invalidateCategoryCache();
+    return project;
+  } catch (err) {
+    if (uploadedPublicIds.length > 0) {
+      logger.warn(
+        "[addProject] Rolling back Cloudinary uploads after failure",
+        {
+          count: uploadedPublicIds.length,
+          publicIds: uploadedPublicIds,
+          error: err.message,
+        },
+      );
+      await destroyManyFromCloudinary(uploadedPublicIds, logger);
     }
+
+    // Re-throw so the controller returns the correct error response
+    throw err;
   }
-
-  const maxOrderDoc = await Project.findOne()
-    .sort({ order: -1 })
-    .select("order")
-    .lean();
-  const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
-
-  const project = await Project.create({
-    title,
-    description,
-    category: category._id,
-    projectUrl: liveUrl || projectUrl || "",
-    liveUrl: liveUrl || projectUrl || "",
-    githubUrl: githubUrl || "",
-    technologies: parseGroupedField(technologies),
-    features: parseArrayField(features),
-    challenge: challenge || "",
-    solution: solution || "",
-    order: nextOrder,
-    image: {
-      url: uploadResult.secure_url,
-      public_id: uploadResult.public_id,
-    },
-    bannerImage,
-    gallery,
-  });
-
-  invalidateProjectsCache();
-  invalidateCategoryCache();
-  return project;
 };
 
-/* ── updateProject ─────────────────────────────────────────────────── */
+/* ================================================================== *
+ * updateProject
+ * ================================================================== */
 
 export const updateProject = async (id, updates) => {
   const project = await Project.findById(id);
@@ -288,6 +322,9 @@ export const updateProject = async (id, updates) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
+  /* ---------------------------------------------------------------- *
+   * Scalar fields — direct assignment, no Cloudinary involved
+   * ---------------------------------------------------------------- */
   const SCALAR_UPDATABLE = [
     "title",
     "description",
@@ -297,14 +334,10 @@ export const updateProject = async (id, updates) => {
     "challenge",
     "solution",
   ];
-
   for (const key of SCALAR_UPDATABLE) {
-    if (updates[key] !== undefined) {
-      project[key] = updates[key];
-    }
+    if (updates[key] !== undefined) project[key] = updates[key];
   }
 
-  // Array fields — always parsed so FormData JSON strings expand correctly
   if (updates.technologies !== undefined) {
     project.technologies = parseGroupedField(updates.technologies);
   }
@@ -324,54 +357,65 @@ export const updateProject = async (id, updates) => {
     project.category = category._id;
   }
 
+  // Track { newPublicId, oldPublicId } pairs for post-save cleanup
+  const pendingDestroys = [];
+
+  // — Thumbnail replacement
   if (updates.file?.buffer) {
-    if (project.image?.public_id) {
-      await cloudinary.uploader.destroy(project.image.public_id);
-    }
-    const result = await uploadToCloudinary(updates.file, "portfolio/projects");
+    const folder = cloudinaryFolder("portfolio/projects");
+    const result = await uploadToCloudinary(updates.file, folder);
+
+    const oldPublicId = project.image?.public_id || null;
     project.image = { url: result.secure_url, public_id: result.public_id };
+    pendingDestroys.push(oldPublicId);
   }
 
+  // — Banner replacement
   if (updates.bannerFile?.buffer) {
-    if (project.bannerImage?.public_id) {
-      await cloudinary.uploader.destroy(project.bannerImage.public_id);
-    }
-    const result = await uploadToCloudinary(
-      updates.bannerFile,
-      "portfolio/projects/banners",
-    );
+    const folder = cloudinaryFolder("portfolio/projects/banners");
+    const result = await uploadToCloudinary(updates.bannerFile, folder);
+
+    const oldPublicId = project.bannerImage?.public_id || null;
     project.bannerImage = {
       url: result.secure_url,
       public_id: result.public_id,
     };
+    pendingDestroys.push(oldPublicId);
   }
 
+  // — New gallery images appended
   if (Array.isArray(updates.galleryFiles) && updates.galleryFiles.length > 0) {
+    const folder = cloudinaryFolder("portfolio/projects/gallery");
     const currentCount = project.gallery?.length ?? 0;
-    for (let i = 0; i < updates.galleryFiles.length; i++) {
-      const gf = updates.galleryFiles[i];
-      if (gf?.buffer && currentCount + i < 10) {
-        const result = await uploadToCloudinary(
-          gf,
-          "portfolio/projects/gallery",
-        );
-        project.gallery.push({
-          url: result.secure_url,
-          public_id: result.public_id,
-          order: currentCount + i,
-        });
-      }
-    }
+    const toUpload = updates.galleryFiles.filter(
+      (gf, i) => gf?.buffer && currentCount + i < 10,
+    );
+
+    // Upload new gallery images concurrently
+    const galleryResults = await Promise.all(
+      toUpload.map((gf) => uploadToCloudinary(gf, folder)),
+    );
+
+    galleryResults.forEach((result, i) => {
+      project.gallery.push({
+        url: result.secure_url,
+        public_id: result.public_id,
+        order: currentCount + i,
+      });
+    });
   }
 
+  /* ---------------------------------------------------------------- *
+   * Gallery reorder (in-memory only, no Cloudinary involved)
+   * ---------------------------------------------------------------- */
   if (updates.galleryOrder !== undefined) {
     const orderedIds = JSON.parse(updates.galleryOrder || "[]");
     const galleryMap = new Map(
       project.gallery.map((g) => [g._id.toString(), g]),
     );
     const reordered = orderedIds
-      .map((id, idx) => {
-        const item = galleryMap.get(id);
+      .map((gid, idx) => {
+        const item = galleryMap.get(gid);
         if (item) return { ...item.toObject(), order: idx };
         return null;
       })
@@ -379,29 +423,70 @@ export const updateProject = async (id, updates) => {
     project.gallery = reordered;
   }
 
+  const galleryPublicIdsToDestroy = [];
+
   if (updates.deleteGalleryIds) {
     const toDelete = JSON.parse(updates.deleteGalleryIds || "[]");
+
+    // Collect public_ids of items being removed
     for (const gid of toDelete) {
       const item = project.gallery.find((g) => g._id.toString() === gid);
       if (item?.public_id) {
-        await cloudinary.uploader.destroy(item.public_id);
+        galleryPublicIdsToDestroy.push(item.public_id);
       }
     }
-    project.gallery = project.gallery.filter(
-      (g) => !toDelete.includes(g._id.toString()),
-    );
-    project.gallery = project.gallery.map((g, i) => ({
-      ...(g.toObject ? g.toObject() : g),
-      order: i,
-    }));
+
+    // Remove from the document and re-number order
+    project.gallery = project.gallery
+      .filter((g) => !toDelete.includes(g._id.toString()))
+      .map((g, i) => ({
+        ...(g.toObject ? g.toObject() : g),
+        order: i,
+      }));
   }
 
-  await project.save();
+  try {
+    await project.save();
+  } catch (saveErr) {
+    const newlyUploadedIds = [
+      updates.file?.buffer ? project.image?.public_id : null,
+      updates.bannerFile?.buffer ? project.bannerImage?.public_id : null,
+      ...(Array.isArray(updates.galleryFiles) && updates.galleryFiles.length > 0
+        ? project.gallery
+            .slice(-updates.galleryFiles.length)
+            .map((g) => g.public_id)
+        : []),
+    ].filter(Boolean);
+
+    if (newlyUploadedIds.length > 0) {
+      logger.warn(
+        "[updateProject] Rolling back new Cloudinary uploads after DB save failure",
+        {
+          count: newlyUploadedIds.length,
+          publicIds: newlyUploadedIds,
+          error: saveErr.message,
+        },
+      );
+      await destroyManyFromCloudinary(newlyUploadedIds, logger);
+    }
+
+    throw saveErr;
+  }
+
+  if (pendingDestroys.length > 0) {
+    await destroyManyFromCloudinary(pendingDestroys, logger);
+  }
+  if (galleryPublicIdsToDestroy.length > 0) {
+    await destroyManyFromCloudinary(galleryPublicIdsToDestroy, logger);
+  }
+
   invalidateProjectsCache();
   return project;
 };
 
-/* ── removeProject ─────────────────────────────────────────────────── */
+/* ================================================================== *
+ * removeProject
+ * ================================================================== */
 
 export const removeProject = async (id) => {
   const project = await Project.findById(id);
@@ -409,30 +494,25 @@ export const removeProject = async (id) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  const destroyPromises = [];
-  if (project.image?.public_id) {
-    destroyPromises.push(cloudinary.uploader.destroy(project.image.public_id));
-  }
-  if (project.bannerImage?.public_id) {
-    destroyPromises.push(
-      cloudinary.uploader.destroy(project.bannerImage.public_id),
-    );
-  }
-  for (const img of project.gallery ?? []) {
-    if (img.public_id) {
-      destroyPromises.push(cloudinary.uploader.destroy(img.public_id));
-    }
-  }
-  await Promise.allSettled(destroyPromises);
-
+  // Delete from MongoDB first — the source of truth
   await project.deleteOne();
   await resequenceProjects();
+
+  // Best-effort Cloudinary cleanup AFTER the DB record is gone
+  const publicIds = [
+    project.image?.public_id,
+    project.bannerImage?.public_id,
+    ...(project.gallery ?? []).map((g) => g.public_id),
+  ];
+  await destroyManyFromCloudinary(publicIds, logger);
 
   invalidateProjectsCache();
   invalidateCategoryCache();
 };
 
-/* ── reorderProjects ───────────────────────────────────────────────── */
+/* ================================================================== *
+ * reorderProjects  (unchanged)
+ * ================================================================== */
 
 export const reorderProjects = async (orderedIds) => {
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
