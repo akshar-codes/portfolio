@@ -4,9 +4,8 @@ import { toast } from "sonner";
 import api from "../services/api";
 
 /* ------------------------------------------------------------------ *
- * Helpers
+ * FilePickerField
  * ------------------------------------------------------------------ */
-
 function FilePickerField({
   id,
   label,
@@ -25,7 +24,7 @@ function FilePickerField({
       <label className={`file-label${file ? " has-file" : ""}`} htmlFor={id}>
         <span className="file-label__icon">{file ? "🖼️" : "📁"}</span>
         <span className="file-label__text">
-          {file ? file.name : `Click to upload (JPG, PNG, WEBP)`}
+          {file ? file.name : "Click to upload (JPG, PNG, WEBP)"}
         </span>
         <input
           id={id}
@@ -45,7 +44,275 @@ function FilePickerField({
 }
 
 /* ------------------------------------------------------------------ *
- * TagInput — reusable chip input for technologies / features
+ * GroupedTagInput
+ * ------------------------------------------------------------------ */
+export function GroupedTagInput({
+  id,
+  label,
+  groups,
+  onChange,
+  maxGroups = 10,
+}) {
+  const [newGroupName, setNewGroupName] = useState("");
+  const newGroupRef = useRef(null);
+
+  /* Add a new empty group */
+  const addGroup = () => {
+    const name = newGroupName.trim();
+    if (!name || groups.length >= maxGroups) return;
+    onChange([...groups, { group: name, items: [] }]);
+    setNewGroupName("");
+    newGroupRef.current?.focus();
+  };
+
+  /* Rename an existing group */
+  const renameGroup = (idx, newName) => {
+    const updated = groups.map((g, i) =>
+      i === idx ? { ...g, group: newName } : g,
+    );
+    onChange(updated);
+  };
+
+  /* Delete an entire group */
+  const deleteGroup = (idx) => {
+    onChange(groups.filter((_, i) => i !== idx));
+  };
+
+  /* Add an item to a group */
+  const addItem = (groupIdx, item) => {
+    const trimmed = item.trim();
+    if (!trimmed) return;
+    if (groups[groupIdx].items.includes(trimmed)) return;
+    const updated = groups.map((g, i) =>
+      i === groupIdx ? { ...g, items: [...g.items, trimmed] } : g,
+    );
+    onChange(updated);
+  };
+
+  /* Remove an item from a group */
+  const removeItem = (groupIdx, itemIdx) => {
+    const updated = groups.map((g, i) =>
+      i === groupIdx
+        ? { ...g, items: g.items.filter((_, j) => j !== itemIdx) }
+        : g,
+    );
+    onChange(updated);
+  };
+
+  return (
+    <div className="admin-form__field">
+      <label className="admin-form__label" htmlFor={id}>
+        {label}
+      </label>
+
+      {/* Existing groups */}
+      {groups.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            marginBottom: 12,
+          }}
+        >
+          {groups.map((g, groupIdx) => (
+            <GroupRow
+              key={groupIdx}
+              group={g}
+              groupIdx={groupIdx}
+              onRename={(name) => renameGroup(groupIdx, name)}
+              onDelete={() => deleteGroup(groupIdx)}
+              onAddItem={(item) => addItem(groupIdx, item)}
+              onRemoveItem={(itemIdx) => removeItem(groupIdx, itemIdx)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add new group row */}
+      {groups.length < maxGroups && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            ref={newGroupRef}
+            id={id}
+            type="text"
+            className="form-input"
+            placeholder='Add group (e.g. "Frontend", "Backend")'
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addGroup();
+              }
+            }}
+            style={{ flex: 1, fontSize: 13 }}
+          />
+          <button
+            type="button"
+            className="btn btn--ghost"
+            onClick={addGroup}
+            disabled={!newGroupName.trim()}
+            style={{ flexShrink: 0 }}
+          >
+            + Add Group
+          </button>
+        </div>
+      )}
+
+      <p style={{ fontSize: 11, color: "var(--light-gray)", marginTop: 6 }}>
+        {groups.length}/{maxGroups} groups. Press Enter or click Add Group.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * GroupRow — a single technology group with its items
+ * ------------------------------------------------------------------ */
+function GroupRow({
+  group,
+  groupIdx,
+  onRename,
+  onDelete,
+  onAddItem,
+  onRemoveItem,
+}) {
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef(null);
+
+  const handleAddItem = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onAddItem(v);
+    setDraft("");
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div
+      style={{
+        border: "1px solid var(--a-border)",
+        borderRadius: "var(--a-r-md)",
+        padding: "12px 14px",
+        background: "var(--a-surface)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      {/* Group header: editable name + delete button */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input
+          className="form-input"
+          value={group.group}
+          onChange={(e) => onRename(e.target.value)}
+          placeholder="Group name"
+          maxLength={80}
+          style={{
+            flex: 1,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--a-accent)",
+            background: "transparent",
+            border: "none",
+            borderBottom: "1px solid var(--a-border)",
+            borderRadius: 0,
+            padding: "4px 0",
+          }}
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete group ${group.group}`}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--a-danger)",
+            fontSize: 16,
+            padding: "0 4px",
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Chips */}
+      {group.items.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {group.items.map((item, itemIdx) => (
+            <span
+              key={itemIdx}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 10px",
+                borderRadius: 100,
+                fontSize: 12,
+                background: "hsla(45,100%,72%,0.10)",
+                border: "1px solid hsla(45,100%,72%,0.20)",
+                color: "var(--orange-yellow-crayola)",
+              }}
+            >
+              {item}
+              <button
+                type="button"
+                onClick={() => onRemoveItem(itemIdx)}
+                aria-label={`Remove ${item}`}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--a-danger)",
+                  padding: "0 2px",
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Item input */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          ref={inputRef}
+          type="text"
+          className="form-input"
+          placeholder={`Add item to "${group.group}" (press Enter)`}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAddItem();
+            }
+          }}
+          style={{ flex: 1, fontSize: 13 }}
+        />
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={handleAddItem}
+          disabled={!draft.trim()}
+          style={{ flexShrink: 0 }}
+        >
+          + Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * TagInput — still used for features (flat array, unchanged)
  * ------------------------------------------------------------------ */
 function TagInput({ id, label, placeholder, items, onChange, maxItems = 30 }) {
   const [draft, setDraft] = useState("");
@@ -58,17 +325,14 @@ function TagInput({ id, label, placeholder, items, onChange, maxItems = 30 }) {
     setDraft("");
     inputRef.current?.focus();
   };
-
   const remove = (idx) => onChange(items.filter((_, i) => i !== idx));
-
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       add();
     }
-    if (e.key === "Backspace" && !draft && items.length > 0) {
+    if (e.key === "Backspace" && !draft && items.length > 0)
       remove(items.length - 1);
-    }
   };
 
   return (
@@ -156,7 +420,6 @@ function GalleryPicker({ files, onChange }) {
     onChange(combined);
     e.target.value = "";
   };
-
   const remove = (idx) => onChange(files.filter((_, i) => i !== idx));
 
   return (
@@ -169,7 +432,6 @@ function GalleryPicker({ files, onChange }) {
           (optional, up to 10)
         </span>
       </label>
-
       {files.length > 0 && (
         <div
           style={{
@@ -228,7 +490,6 @@ function GalleryPicker({ files, onChange }) {
           })}
         </div>
       )}
-
       {files.length < 10 && (
         <label
           className="file-label"
@@ -271,14 +532,12 @@ export default function AddProject() {
     challenge: "",
     solution: "",
   });
-  const [technologies, setTechnologies] = useState([]);
+  const [technologies, setTechnologies] = useState([]); // [{ group, items }]
   const [features, setFeatures] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Accordion open state
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
@@ -313,7 +572,7 @@ export default function AddProject() {
     fd.append("githubUrl", form.githubUrl);
     fd.append("challenge", form.challenge);
     fd.append("solution", form.solution);
-    fd.append("technologies", JSON.stringify(technologies));
+    fd.append("technologies", JSON.stringify(technologies)); // [{group,items}]
     fd.append("features", JSON.stringify(features));
     fd.append("image", thumbnail);
     if (bannerImage) fd.append("bannerImage", bannerImage);
@@ -334,7 +593,6 @@ export default function AddProject() {
 
   return (
     <div className="admin-page">
-      {/* Header */}
       <div className="admin-page__header">
         <h2 className="admin-page__title">Add New Project</h2>
         <button
@@ -352,7 +610,7 @@ export default function AddProject() {
         noValidate
         style={{ maxWidth: 680 }}
       >
-        {/* ── Title ────────────────────────────────────────────── */}
+        {/* Title */}
         <div className="admin-form__field">
           <label className="admin-form__label" htmlFor="proj-title">
             Project Title <span style={{ color: "var(--a-danger)" }}>*</span>
@@ -368,7 +626,7 @@ export default function AddProject() {
           />
         </div>
 
-        {/* ── Description ──────────────────────────────────────── */}
+        {/* Description */}
         <div className="admin-form__field">
           <label className="admin-form__label" htmlFor="proj-desc">
             Description <span style={{ color: "var(--a-danger)" }}>*</span>
@@ -376,7 +634,7 @@ export default function AddProject() {
           <textarea
             id="proj-desc"
             className="form-input"
-            placeholder="Describe what this project does, what problem it solves, and who it's for…"
+            placeholder="Describe what this project does, what problem it solves…"
             value={form.description}
             onChange={set("description")}
             required
@@ -388,7 +646,7 @@ export default function AddProject() {
           </p>
         </div>
 
-        {/* ── Category + Live URL ───────────────────────────────── */}
+        {/* Category + Live URL */}
         <div className="admin-form__row admin-form__row--2col">
           <div className="admin-form__field">
             <label className="admin-form__label" htmlFor="proj-cat">
@@ -437,7 +695,7 @@ export default function AddProject() {
           </div>
         </div>
 
-        {/* ── GitHub URL ───────────────────────────────────────── */}
+        {/* GitHub URL */}
         <div className="admin-form__field">
           <label className="admin-form__label" htmlFor="proj-github">
             GitHub URL
@@ -452,17 +710,15 @@ export default function AddProject() {
           />
         </div>
 
-        {/* ── Technologies ─────────────────────────────────────── */}
-        <TagInput
-          id="proj-tech"
+        {/* Technologies — grouped */}
+        <GroupedTagInput
+          id="proj-tech-group"
           label="Technologies Used"
-          placeholder="e.g. React, Node.js (press Enter)"
-          items={technologies}
+          groups={technologies}
           onChange={setTechnologies}
-          maxItems={30}
         />
 
-        {/* ── Key Features ─────────────────────────────────────── */}
+        {/* Features — flat */}
         <TagInput
           id="proj-features"
           label="Key Features"
@@ -472,7 +728,7 @@ export default function AddProject() {
           maxItems={20}
         />
 
-        {/* ── Thumbnail ────────────────────────────────────────── */}
+        {/* Thumbnail */}
         <FilePickerField
           id="proj-thumbnail"
           label="Project Thumbnail"
@@ -482,7 +738,7 @@ export default function AddProject() {
           hint="Required. Displayed on portfolio cards. Max 5 MB."
         />
 
-        {/* ── Advanced section toggle ───────────────────────────── */}
+        {/* Advanced toggle */}
         <div>
           <button
             type="button"
@@ -497,7 +753,6 @@ export default function AddProject() {
 
         {showAdvanced && (
           <>
-            {/* Banner Image */}
             <FilePickerField
               id="proj-banner"
               label="Banner Image"
@@ -506,10 +761,8 @@ export default function AddProject() {
               hint="Optional large banner shown at the top of the detail panel. Max 5 MB."
             />
 
-            {/* Gallery */}
             <GalleryPicker files={galleryFiles} onChange={setGalleryFiles} />
 
-            {/* Challenge */}
             <div className="admin-form__field">
               <label className="admin-form__label" htmlFor="proj-challenge">
                 Challenge
@@ -525,7 +778,6 @@ export default function AddProject() {
               />
             </div>
 
-            {/* Solution */}
             <div className="admin-form__field">
               <label className="admin-form__label" htmlFor="proj-solution">
                 Solution
@@ -543,7 +795,7 @@ export default function AddProject() {
           </>
         )}
 
-        {/* ── Actions ──────────────────────────────────────────── */}
+        {/* Actions */}
         <div
           style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 4 }}
         >

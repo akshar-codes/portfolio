@@ -7,6 +7,7 @@ import {
   AdminEmpty,
   AdminError,
 } from "../components/AdminStatus";
+import { GroupedTagInput } from "./AddProject";
 
 const PAGE_SIZE = 10;
 
@@ -20,6 +21,23 @@ function moveItem(arr, index, direction) {
   const copy = [...arr];
   [copy[index], copy[next]] = [copy[next], copy[index]];
   return copy;
+}
+
+function flattenTechNames(technologies) {
+  if (!Array.isArray(technologies)) return [];
+  if (technologies.length === 0) return [];
+
+  // New grouped shape: [{ group, items }]
+  if (
+    typeof technologies[0] === "object" &&
+    technologies[0] !== null &&
+    "group" in technologies[0]
+  ) {
+    return technologies.flatMap((g) => g.items ?? []);
+  }
+
+  // Legacy flat shape: ["React", "Node.js"]
+  return technologies.filter((t) => typeof t === "string");
 }
 
 /* ------------------------------------------------------------------ *
@@ -58,7 +76,7 @@ function ReorderButtons({ index, total, onMove, disabled }) {
 }
 
 /* ------------------------------------------------------------------ *
- * TagInput — reusable chip input (mirrors AddProject)
+ * TagInput — flat array, used for features only
  * ------------------------------------------------------------------ */
 function TagInput({ id, label, placeholder, items, onChange, maxItems = 30 }) {
   const [draft, setDraft] = useState("");
@@ -154,7 +172,7 @@ function TagInput({ id, label, placeholder, items, onChange, maxItems = 30 }) {
 }
 
 /* ------------------------------------------------------------------ *
- * GalleryManager — view existing + add/remove in edit modal
+ * GalleryManager
  * ------------------------------------------------------------------ */
 function GalleryManager({
   existing = [],
@@ -177,8 +195,6 @@ function GalleryManager({
   return (
     <div className="admin-form__field">
       <label className="admin-form__label">Gallery Screenshots</label>
-
-      {/* Existing images */}
       {existing.length > 0 && (
         <div
           style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
@@ -228,8 +244,6 @@ function GalleryManager({
           ))}
         </div>
       )}
-
-      {/* New files preview */}
       {newFiles.length > 0 && (
         <div
           style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
@@ -282,7 +296,6 @@ function GalleryManager({
           })}
         </div>
       )}
-
       {existing.length + newFiles.length < 10 && (
         <label
           className="file-label"
@@ -320,9 +333,20 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
     challenge: project.challenge ?? "",
     solution: project.solution ?? "",
   });
-  const [technologies, setTechnologies] = useState([
-    ...(project.technologies ?? []),
-  ]);
+
+  // Normalise incoming technologies to grouped shape
+  const normaliseTech = (raw) => {
+    if (!Array.isArray(raw) || raw.length === 0) return [];
+    if (typeof raw[0] === "object" && raw[0] !== null && "group" in raw[0])
+      return raw;
+    // Legacy flat array — wrap
+    const items = raw.filter((t) => typeof t === "string" && t.trim());
+    return items.length ? [{ group: "General", items }] : [];
+  };
+
+  const [technologies, setTechnologies] = useState(
+    normaliseTech(project.technologies ?? []),
+  );
   const [features, setFeatures] = useState([...(project.features ?? [])]);
   const [existingGallery, setExistingGallery] = useState(
     [...(project.gallery ?? [])].sort(
@@ -355,7 +379,7 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
       fd.append("githubUrl", form.githubUrl);
       fd.append("challenge", form.challenge);
       fd.append("solution", form.solution);
-      fd.append("technologies", JSON.stringify(technologies));
+      fd.append("technologies", JSON.stringify(technologies)); // [{group,items}]
       fd.append("features", JSON.stringify(features));
       if (newThumbnail) fd.append("image", newThumbnail);
       if (newBanner) fd.append("bannerImage", newBanner);
@@ -377,7 +401,6 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
     }
   };
 
-  // Close on Escape
   useEffect(() => {
     const h = (e) => {
       if (e.key === "Escape") onClose();
@@ -392,7 +415,6 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
 
   return (
     <>
-      {/* Overlay */}
       <div
         onClick={onClose}
         style={{
@@ -403,7 +425,6 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
         }}
         aria-hidden="true"
       />
-      {/* Modal */}
       <div
         style={{
           position: "fixed",
@@ -432,7 +453,6 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
             animation: "fade 0.25s ease backwards",
           }}
         >
-          {/* Close */}
           <button
             onClick={onClose}
             aria-label="Close"
@@ -545,16 +565,15 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
               />
             </div>
 
-            {/* Technologies */}
-            <TagInput
-              id="ep-tech"
-              label="Technologies"
-              placeholder="Add technology…"
-              items={technologies}
+            {/* Technologies — grouped */}
+            <GroupedTagInput
+              id="ep-tech-group"
+              label="Technologies Used"
+              groups={technologies}
               onChange={setTechnologies}
             />
 
-            {/* Features */}
+            {/* Features — flat */}
             <TagInput
               id="ep-feat"
               label="Key Features"
@@ -564,7 +583,7 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
               maxItems={20}
             />
 
-            {/* New thumbnail */}
+            {/* Replace thumbnail */}
             <div className="admin-form__field">
               <label className="admin-form__label">
                 Replace Thumbnail
@@ -600,7 +619,7 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
               </label>
             </div>
 
-            {/* New banner */}
+            {/* Replace banner */}
             <div className="admin-form__field">
               <label className="admin-form__label">
                 Replace Banner Image
@@ -715,11 +734,8 @@ export default function ManageProjects() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([]);
-
   const [localProjects, setLocalProjects] = useState(null);
   const [savingOrder, setSavingOrder] = useState(false);
-
-  // Edit modal
   const [editingProject, setEditingProject] = useState(null);
 
   const fetchProjects = useCallback(async (targetPage = 1) => {
@@ -744,7 +760,6 @@ export default function ManageProjects() {
     }
   }, []);
 
-  // Fetch categories for edit modal
   useEffect(() => {
     api
       .get("/admin/categories")
@@ -779,7 +794,6 @@ export default function ManageProjects() {
     }
   };
 
-  /* ── Reorder ──────────────────────────────────────────────────── */
   const handleMove = (index, direction) => {
     setLocalProjects((prev) => moveItem(prev, index, direction));
   };
@@ -856,79 +870,84 @@ export default function ManageProjects() {
         {status === "ready" && displayProjects.length > 0 && (
           <>
             <ul className="admin-list" aria-label="Portfolio projects">
-              {displayProjects.map((project, index) => (
-                <li
-                  key={project._id}
-                  className="admin-item"
-                  style={{ alignItems: "flex-start", padding: "14px 18px" }}
-                >
-                  <ReorderButtons
-                    index={index}
-                    total={displayProjects.length}
-                    onMove={handleMove}
-                    disabled={savingOrder}
-                  />
+              {displayProjects.map((project, index) => {
+                const techNames = flattenTechNames(project.technologies);
+                return (
+                  <li
+                    key={project._id}
+                    className="admin-item"
+                    style={{ alignItems: "flex-start", padding: "14px 18px" }}
+                  >
+                    <ReorderButtons
+                      index={index}
+                      total={displayProjects.length}
+                      onMove={handleMove}
+                      disabled={savingOrder}
+                    />
 
-                  <img
-                    className="admin-item__thumb"
-                    src={project.image?.url || "/images/placeholder.png"}
-                    alt={project.title}
-                    loading="lazy"
-                  />
+                    <img
+                      className="admin-item__thumb"
+                      src={project.image?.url || "/images/placeholder.png"}
+                      alt={project.title}
+                      loading="lazy"
+                    />
 
-                  <div className="admin-item__body">
-                    <span className="admin-item__name">{project.title}</span>
-                    <div className="admin-item__meta">
-                      <span className="admin-item__badge">
-                        {project.category?.name ?? "—"}
-                      </span>
-                      {project.technologies?.length > 0 && (
-                        <span
-                          style={{ fontSize: 11, color: "var(--a-text-m)" }}
-                        >
-                          {project.technologies.slice(0, 3).join(", ")}
-                          {project.technologies.length > 3 &&
-                            ` +${project.technologies.length - 3}`}
+                    <div className="admin-item__body">
+                      <span className="admin-item__name">{project.title}</span>
+                      <div className="admin-item__meta">
+                        <span className="admin-item__badge">
+                          {project.category?.name ?? "—"}
                         </span>
-                      )}
-                      <span
-                        className="admin-item__badge"
-                        style={{
-                          background: "transparent",
-                          color: "var(--a-text-dim)",
-                          borderColor: "var(--a-border)",
-                          fontSize: 10,
-                        }}
-                      >
-                        #{index + 1}
+                        {techNames.length > 0 && (
+                          <span
+                            style={{ fontSize: 11, color: "var(--a-text-m)" }}
+                          >
+                            {techNames.slice(0, 3).join(", ")}
+                            {techNames.length > 3 &&
+                              ` +${techNames.length - 3}`}
+                          </span>
+                        )}
+                        <span
+                          className="admin-item__badge"
+                          style={{
+                            background: "transparent",
+                            color: "var(--a-text-dim)",
+                            borderColor: "var(--a-border)",
+                            fontSize: 10,
+                          }}
+                        >
+                          #{index + 1}
+                        </span>
+                      </div>
+                      <span className="admin-item__preview">
+                        {project.description?.slice(0, 90)}
+                        {project.description?.length > 90 && "…"}
                       </span>
                     </div>
-                    <span className="admin-item__preview">
-                      {project.description?.slice(0, 90)}
-                      {project.description?.length > 90 && "…"}
-                    </span>
-                  </div>
 
-                  <div className="admin-item__actions">
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() => handleOpenEdit(project._id)}
-                      disabled={savingOrder}
-                      aria-label={`Edit project ${project.title}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn--danger"
-                      onClick={() => deleteProject(project._id, project.title)}
-                      disabled={savingOrder}
-                      aria-label={`Delete project ${project.title}`}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    <div className="admin-item__actions">
+                      <button
+                        className="btn btn--ghost"
+                        onClick={() => handleOpenEdit(project._id)}
+                        disabled={savingOrder}
+                        aria-label={`Edit project ${project.title}`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn--danger"
+                        onClick={() =>
+                          deleteProject(project._id, project.title)
+                        }
+                        disabled={savingOrder}
+                        aria-label={`Delete project ${project.title}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
 
             {totalPages > 1 && (
@@ -963,7 +982,6 @@ export default function ManageProjects() {
         )}
       </div>
 
-      {/* Edit modal */}
       {editingProject && (
         <EditProjectModal
           project={editingProject}

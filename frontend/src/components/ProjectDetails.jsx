@@ -13,9 +13,7 @@ function preventDefault(e) {
  * GalleryViewer — lightbox-style thumbnail strip
  * ------------------------------------------------------------------ */
 function GalleryViewer({ thumbnail, banner, gallery = [] }) {
-  // Build the full image list: banner (if exists) → thumbnail → gallery
   const images = [];
-
   if (banner?.url) images.push({ url: banner.url, label: "Banner" });
   if (thumbnail?.url) images.push({ url: thumbnail.url, label: "Thumbnail" });
   gallery.forEach((g, i) => {
@@ -23,12 +21,10 @@ function GalleryViewer({ thumbnail, banner, gallery = [] }) {
   });
 
   const [active, setActive] = useState(0);
-
   if (images.length === 0) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Main image */}
       <div
         style={{
           width: "100%",
@@ -53,7 +49,6 @@ function GalleryViewer({ thumbnail, banner, gallery = [] }) {
         />
       </div>
 
-      {/* Thumbnail strip — only when there are multiple images */}
       {images.length > 1 && (
         <div
           style={{
@@ -126,7 +121,7 @@ function TechBadge({ label }) {
 }
 
 /* ------------------------------------------------------------------ *
- * SectionHeading — matches article-title style from index.css
+ * SectionHeading
  * ------------------------------------------------------------------ */
 function SectionHeading({ children }) {
   return (
@@ -144,7 +139,6 @@ function SectionHeading({ children }) {
       {children}
       <span
         style={{
-          content: '""',
           position: "absolute",
           bottom: 0,
           left: 0,
@@ -156,6 +150,61 @@ function SectionHeading({ children }) {
         }}
       />
     </h3>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * TechnologiesSection
+ * ------------------------------------------------------------------ */
+function TechnologiesSection({ technologies }) {
+  if (!Array.isArray(technologies) || technologies.length === 0) return null;
+
+  // Detect shape
+  const isGrouped =
+    typeof technologies[0] === "object" &&
+    technologies[0] !== null &&
+    "group" in technologies[0];
+
+  return (
+    <section style={{ marginBottom: 24 }}>
+      <SectionHeading>Technologies Used</SectionHeading>
+
+      {isGrouped ? (
+        /* ── Grouped render ────────────────────────────────────── */
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {technologies.map((group, gIdx) => (
+            <div key={gIdx}>
+              {/* Group label */}
+              <p
+                style={{
+                  fontSize: "var(--fs-7, 13px)",
+                  fontWeight: 600,
+                  color: "var(--white-2)",
+                  marginBottom: 8,
+                  textTransform: "none",
+                }}
+              >
+                {group.group}
+              </p>
+
+              {/* Badges */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(group.items ?? []).map((item, iIdx) => (
+                  <TechBadge key={iIdx} label={item} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Legacy flat render ────────────────────────────────── */
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {technologies.map((tech, idx) => (
+            <TechBadge key={idx} label={tech} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -181,7 +230,6 @@ export default function ProjectDetails({ project, onClose }) {
     const handleKey = (e) => {
       if (e.key === "Escape") handleClose();
 
-      // Trap focus inside panel
       if (e.key === "Tab" && panelRef.current) {
         const focusable = panelRef.current.querySelectorAll(
           'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
@@ -394,23 +442,8 @@ export default function ProjectDetails({ project, onClose }) {
             </section>
           )}
 
-          {/* ── Technologies ─────────────────────────────────────── */}
-          {technologies.length > 0 && (
-            <section style={{ marginBottom: 24 }}>
-              <SectionHeading>Technologies Used</SectionHeading>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}
-              >
-                {technologies.map((tech, idx) => (
-                  <TechBadge key={idx} label={tech} />
-                ))}
-              </div>
-            </section>
-          )}
+          {/* ── Technologies — grouped or flat ────────────────────── */}
+          <TechnologiesSection technologies={technologies} />
 
           {/* ── Key Features ─────────────────────────────────────── */}
           {features.length > 0 && (
@@ -603,7 +636,6 @@ export default function ProjectDetails({ project, onClose }) {
                     href={githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="form-btn"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
