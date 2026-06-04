@@ -37,27 +37,65 @@ async function resequenceProjects(filter = {}) {
   }
 }
 
-/* ── Shared JSON-string parse helper ───────────────────────────────── *
- * FormData can only carry strings.  Both addProject and updateProject  *
- * receive technologies / features as either:                           *
- *   (a) an already-parsed JS array   — pass through as-is             *
- *   (b) a JSON string like '["A","B"]' — parse it                     *
- *   (c) undefined / null              — default to []                  *
- *                                                                      *
- * This helper centralises that logic so it can never drift between     *
- * the two code paths again.                                            *
- * ─────────────────────────────────────────────────────────────────── */
+/* ── Shared parse helpers ──────────────────────────────────────────── */
+
+function parseGroupedField(value) {
+  // Already a JS value (not a FormData string)
+  if (Array.isArray(value)) {
+    // Check if it's already the grouped shape
+    if (value.length === 0) return [];
+    if (
+      typeof value[0] === "object" &&
+      value[0] !== null &&
+      "group" in value[0]
+    ) {
+      return value; // correct shape
+    }
+    // Flat string array — wrap into a single "General" group
+    const items = value.filter((v) => typeof v === "string" && v.trim());
+    return items.length ? [{ group: "General", items }] : [];
+  }
+
+  if (typeof value !== "string" || value.trim() === "") return [];
+
+  try {
+    const parsed = JSON.parse(value.trim());
+
+    if (!Array.isArray(parsed)) return [];
+
+    if (parsed.length === 0) return [];
+
+    // Grouped shape: [{ group, items }]
+    if (
+      typeof parsed[0] === "object" &&
+      parsed[0] !== null &&
+      "group" in parsed[0]
+    ) {
+      return parsed.map((g) => ({
+        group: String(g.group ?? "General").trim(),
+        items: Array.isArray(g.items)
+          ? g.items.filter((i) => typeof i === "string" && i.trim())
+          : [],
+      }));
+    }
+
+    // Legacy flat string array inside JSON: ["React","Node.js"]
+    const items = parsed.filter((v) => typeof v === "string" && v.trim());
+    return items.length ? [{ group: "General", items }] : [];
+  } catch {
+    return [];
+  }
+}
+
 function parseArrayField(value) {
   if (Array.isArray(value)) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+  if (typeof value !== "string" || value.trim() === "") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-  return [];
 }
 
 /* ── Category resolution ───────────────────────────────────────────── */
@@ -140,7 +178,6 @@ export const fetchProjectById = async (id) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  // Sort gallery by order
   if (project.gallery?.length) {
     project.gallery = [...project.gallery].sort(
       (a, b) => (a.order ?? 0) - (b.order ?? 0),
@@ -163,9 +200,9 @@ export const addProject = async ({
   features,
   challenge,
   solution,
-  file, // thumbnail (required)
-  bannerFile, // banner image (optional)
-  galleryFiles, // array of gallery images (optional)
+  file,
+  bannerFile,
+  galleryFiles,
 }) => {
   if (!file) {
     throw new ServiceError("Image is required.", 400, "PROJECT_IMAGE_REQUIRED");
@@ -180,10 +217,8 @@ export const addProject = async ({
     );
   }
 
-  // Upload thumbnail
   const uploadResult = await uploadToCloudinary(file, "portfolio/projects");
 
-  // Upload banner if provided
   let bannerImage = { url: "", public_id: "" };
   if (bannerFile?.buffer) {
     const bannerResult = await uploadToCloudinary(
@@ -196,7 +231,6 @@ export const addProject = async ({
     };
   }
 
-  // Upload gallery images if provided
   const gallery = [];
   if (Array.isArray(galleryFiles) && galleryFiles.length > 0) {
     for (let i = 0; i < galleryFiles.length; i++) {
@@ -215,7 +249,6 @@ export const addProject = async ({
     }
   }
 
-  // Assign next order value
   const maxOrderDoc = await Project.findOne()
     .sort({ order: -1 })
     .select("order")
@@ -229,7 +262,7 @@ export const addProject = async ({
     projectUrl: liveUrl || projectUrl || "",
     liveUrl: liveUrl || projectUrl || "",
     githubUrl: githubUrl || "",
-    technologies: parseArrayField(technologies),
+    technologies: parseGroupedField(technologies),
     features: parseArrayField(features),
     challenge: challenge || "",
     solution: solution || "",
@@ -255,7 +288,6 @@ export const updateProject = async (id, updates) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  // Scalar fields — update only when present in the payload
   const SCALAR_UPDATABLE = [
     "title",
     "description",
@@ -272,16 +304,14 @@ export const updateProject = async (id, updates) => {
     }
   }
 
-  // Array fields — always run through parseArrayField so FormData JSON
-  // strings are expanded into real arrays before being stored.
+  // Array fields — always parsed so FormData JSON strings expand correctly
   if (updates.technologies !== undefined) {
-    project.technologies = parseArrayField(updates.technologies);
+    project.technologies = parseGroupedField(updates.technologies);
   }
   if (updates.features !== undefined) {
     project.features = parseArrayField(updates.features);
   }
 
-  // Handle category update
   if (updates.categoryId) {
     const category = await Category.findById(updates.categoryId).lean();
     if (!category) {
@@ -294,7 +324,6 @@ export const updateProject = async (id, updates) => {
     project.category = category._id;
   }
 
-  // Handle new thumbnail
   if (updates.file?.buffer) {
     if (project.image?.public_id) {
       await cloudinary.uploader.destroy(project.image.public_id);
@@ -303,7 +332,6 @@ export const updateProject = async (id, updates) => {
     project.image = { url: result.secure_url, public_id: result.public_id };
   }
 
-  // Handle new banner
   if (updates.bannerFile?.buffer) {
     if (project.bannerImage?.public_id) {
       await cloudinary.uploader.destroy(project.bannerImage.public_id);
@@ -318,7 +346,6 @@ export const updateProject = async (id, updates) => {
     };
   }
 
-  // Handle gallery additions
   if (Array.isArray(updates.galleryFiles) && updates.galleryFiles.length > 0) {
     const currentCount = project.gallery?.length ?? 0;
     for (let i = 0; i < updates.galleryFiles.length; i++) {
@@ -337,7 +364,6 @@ export const updateProject = async (id, updates) => {
     }
   }
 
-  // Handle gallery reorder / removal
   if (updates.galleryOrder !== undefined) {
     const orderedIds = JSON.parse(updates.galleryOrder || "[]");
     const galleryMap = new Map(
@@ -353,7 +379,6 @@ export const updateProject = async (id, updates) => {
     project.gallery = reordered;
   }
 
-  // Handle gallery image deletions
   if (updates.deleteGalleryIds) {
     const toDelete = JSON.parse(updates.deleteGalleryIds || "[]");
     for (const gid of toDelete) {
@@ -365,7 +390,6 @@ export const updateProject = async (id, updates) => {
     project.gallery = project.gallery.filter(
       (g) => !toDelete.includes(g._id.toString()),
     );
-    // Re-sequence gallery order
     project.gallery = project.gallery.map((g, i) => ({
       ...(g.toObject ? g.toObject() : g),
       order: i,
@@ -385,7 +409,6 @@ export const removeProject = async (id) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  // Delete all cloudinary assets
   const destroyPromises = [];
   if (project.image?.public_id) {
     destroyPromises.push(cloudinary.uploader.destroy(project.image.public_id));

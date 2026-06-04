@@ -1,5 +1,36 @@
 import mongoose from "mongoose";
 
+/* ------------------------------------------------------------------ *
+ * Sub-schema: one technology group (e.g. "Frontend": ["React","Vite"])
+ * ------------------------------------------------------------------ */
+const techGroupSchema = new mongoose.Schema(
+  {
+    group: {
+      type: String,
+      required: [true, "Technology group name is required"],
+      trim: true,
+      minlength: [1, "Group name cannot be empty"],
+      maxlength: [80, "Group name must not exceed 80 characters"],
+    },
+    items: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          minlength: [1, "Technology item cannot be empty"],
+          maxlength: [60, "Technology item must not exceed 60 characters"],
+        },
+      ],
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length <= 30,
+        message: "Each technology group must not exceed 30 items",
+      },
+      default: [],
+    },
+  },
+  { _id: true },
+);
+
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -58,21 +89,18 @@ const projectSchema = new mongoose.Schema(
         ],
       },
     },
+
+    // ── technologies: grouped structure ───────────────────────────
+
     technologies: {
-      type: [
-        {
-          type: String,
-          trim: true,
-          minlength: [1, "Technology name cannot be empty"],
-          maxlength: [60, "Technology name must not exceed 60 characters"],
-        },
-      ],
+      type: [techGroupSchema],
       validate: {
-        validator: (arr) => Array.isArray(arr) && arr.length <= 30,
-        message: "Technologies list must not exceed 30 entries",
+        validator: (arr) => Array.isArray(arr) && arr.length <= 10,
+        message: "Technologies must not exceed 10 groups",
       },
       default: [],
     },
+
     features: {
       type: [
         {
