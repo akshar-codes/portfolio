@@ -1,6 +1,6 @@
 import About from "../models/About.js";
 import cache from "../utils/cache.js";
-import { ServiceError } from "./errors.js";
+import { ServiceError } from "./ServiceError.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 

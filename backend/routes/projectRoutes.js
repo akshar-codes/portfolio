@@ -9,7 +9,7 @@ import {
   reorderProjectsHandler,
 } from "../controllers/projectController.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { uploadProjectImages } from "../utils/cloudinary.js";
+import { uploadProjectImages } from "../config/cloudinary.js";
 
 const router = express.Router();
 

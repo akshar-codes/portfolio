@@ -7,7 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 
-import validateEnv from "./utils/validateEnv.js";
+import validateEnv from "./config/validateEnv.js";
 import mongoSanitize from "./middleware/sanitizeMiddleware.js";
 import logger, { morganStream } from "./utils/logger.js";
 import adminRoutes from "./routes/adminRoutes.js";

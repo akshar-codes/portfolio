@@ -1,7 +1,7 @@
 import Category from "../models/Category.js";
 import Project from "../models/Project.js";
 import { generateSlug, normalizeName } from "../utils/slug.js";
-import { ServiceError } from "./errors.js";
+import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */

@@ -29,7 +29,7 @@ if (missingVars.length > 0) {
  * Configure the ISOLATED Cloudinary instance.
  *
  * We import { v2 as newCloudinary } above — this is a separate object
- * from the one configured in utils/cloudinary.js.  Configuring it here
+ * from the one configured in config/cloudinary.js.  Configuring it here
  * does NOT affect the application's main Cloudinary client.
  * ------------------------------------------------------------------ */
 newCloudinary.config({

@@ -1,5 +1,5 @@
 import Message from "../models/Message.js";
-import { ServiceError } from "./errors.js";
+import { ServiceError } from "./ServiceError.js";
 
 const MESSAGE_CAP = 500;
 

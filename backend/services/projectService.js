@@ -5,8 +5,8 @@ import {
   cloudinaryFolder,
   uploadToCloudinary,
   destroyManyFromCloudinary,
-} from "../utils/cloudinary.js";
-import { ServiceError } from "./errors.js";
+} from "../config/cloudinary.js";
+import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
 import logger from "../utils/logger.js";

@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import logger from "../utils/logger.js";
 
-export { ServiceError } from "./errors.js";
+export { ServiceError } from "./ServiceError.js";
 
 export const COOKIE_NAME = "admin_token";
 

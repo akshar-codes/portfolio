@@ -1,5 +1,5 @@
 import Resume from "../models/Resume.js";
-import { ServiceError } from "./errors.js"; // re-uses existing errors.js
+import { ServiceError } from "./ServiceError.js"; // re-uses existing errors.js
 
 const PATCHABLE_SECTIONS = new Set(["education", "skills"]);
 

@@ -12,7 +12,7 @@ dotenv.config({
 const migrate = async () => {
   try {
     const { default: connectDB } = await import("../config/db.js");
-    const { runMigration } = await import("../utils/migration.js");
+    const { runMigration } = await import("../scripts/migration.js");
 
     await connectDB();
 

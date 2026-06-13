@@ -1,5 +1,5 @@
 import Profile from "../models/Profile.js";
-import { ServiceError } from "./errors.js";
+import { ServiceError } from "./ServiceError.js";
 
 const PATCHABLE_FIELDS = new Set([
   "name",
