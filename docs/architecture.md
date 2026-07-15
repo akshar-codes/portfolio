@@ -2,11 +2,11 @@
 
 ## Overview
 
-MERN stack, split into two independently deployable apps:
+MERN stack, split into two independently deployed apps:
 
 ```
-frontend/   React 19 + Vite + React Router v6 + TanStack Query
-backend/    Node/Express 5 + Mongoose + Cloudinary + JWT (cookie-based)
+frontend/   React 19 + Vite + React Router v6 + TanStack Query  → Vercel
+backend/    Node/Express 5 + Mongoose + Cloudinary + JWT         → Render
 ```
 
 Single-admin application: there is exactly one authenticated role (Admin),
@@ -14,19 +14,33 @@ managing all site content through a protected CMS. There is no public
 registration, no multi-tenant concept, and no roles/permissions beyond
 "admin or not."
 
-## Request flow
+## Request flow (production)
 
 ```
 Browser
   │
-  ├─ Static SPA assets  → nginx (frontend container) → served directly
+  ├─ Static SPA assets  → Vercel (frontend build) → served directly
   │
-  └─ /api/*             → nginx (frontend container) → backend:5000 → MongoDB / Cloudinary
+  └─ /api/*             → Render (backend:PORT, injected by Render)
+                            → MongoDB Atlas / Cloudinary
 ```
 
-In the self-hosted (Docker Compose) path, nginx is the single public entry
-point. The backend is never exposed directly to the internet — it's only
-reachable on the internal Docker network as `backend:5000`.
+There is **no reverse proxy in front of the backend in production.** The
+browser calls the Render API origin directly (cross-origin from the
+Vercel domain). Two mechanisms replace what a proxy would otherwise
+enforce:
+
+- **CORS** — `backend/app.js` only allows requests whose `Origin` header
+  exactly matches `ALLOWED_ORIGIN` (the Vercel production domain).
+- **Rate limiting** — enforced entirely inside Express via
+  `express-rate-limit` (global limiter + per-route limiters for login and
+  the public contact form). There is no edge-level rate limiting in
+  production, unlike the local Docker Compose stack.
+
+`nginx.conf` and `docker-compose.yml` exist solely for local
+container-parity testing (see `docs/DEPLOYMENT.md`) and describe a
+different, proxy-fronted topology that is **not** what runs in production.
+Do not use them as a reference for how the deployed app actually behaves.
 
 ## Backend layering (enforced convention)
 
@@ -68,7 +82,7 @@ errorCode)`. The error middleware preserves `errorCode` through to the
 
 ## Deliberate constraints — read before scaling
 
-**The backend must run as a single instance.**
+**The backend must run as a single Render instance.**
 
 Two pieces of shared state currently live in process memory, not in a
 shared store:
@@ -78,29 +92,28 @@ shared store:
 2. `express-rate-limit`'s default `MemoryStore` — backs the global, login,
    and message rate limiters.
 
-If you run more than one backend replica (multiple containers, multiple
-regions, autoscaling), each instance has its own independent cache and
-rate-limit counters. Concretely:
+`backend/render.yaml` pins `numInstances: 1` deliberately. If you scale to
+multiple instances (or add a second region), each instance has its own
+independent cache and rate-limit counters. Concretely:
 
 - Cache invalidation (`invalidateProjectsCache()`, etc.) only clears the
   instance that handled the write — other instances keep serving stale
   reads for up to 60s per-instance, not 60s globally.
 - Rate limits become effectively `N × limit` instead of `limit`, where `N`
-  is the replica count — an attacker hitting a round-robin load balancer
-  gets a fresh bucket on each instance.
+  is the replica count.
 
 This is an acceptable, deliberate trade-off for a single-admin portfolio
 with modest traffic. If traffic ever justifies horizontal scaling, both of
 these need to move to Redis (`ioredis` + a rate-limit store adapter)
-before adding a second replica — not after.
+before increasing `numInstances` — not after.
 
-**Reverse proxy requires `trust proxy`.**
+**`trust proxy` is required regardless of hosting choice.**
 
-Both the self-hosted nginx path and most managed platforms (Vercel,
-Render, Railway) put a proxy in front of Express. Without
-`app.set('trust proxy', ...)` configured to match your proxy topology,
-`req.ip` reflects the proxy's address for every request, which defeats
-IP-based rate limiting. See `docs/DEPLOYMENT.md`.
+Render (like most managed platforms) puts its own edge proxy in front of
+the container. `app.set('trust proxy', 1)` in `backend/app.js` is what
+makes `req.ip` reflect the real client IP rather than Render's proxy
+address — this is what IP-based rate limiting depends on. This is already
+configured and does not need to change for the Render topology.
 
 ## Grouped technologies migration
 

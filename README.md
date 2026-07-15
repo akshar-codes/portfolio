@@ -7,10 +7,12 @@ and contact messages.
 **Stack:** MongoDB/Mongoose · Express 5 · React 19 · Node.js · Cloudinary ·
 JWT (cookie-based auth) · React Router v6 · TanStack Query · `sonner`
 
+**Hosting:** Vercel (frontend) · Render (backend) · MongoDB Atlas · Cloudinary
+
 ## Project structure
 
 ```
-backend/     Express API — MVC/service-layered, see docs/ARCHITECTURE.md
+backend/     Express API — MVC/service-layered, see docs/architecture.md
 frontend/    React SPA — public site + protected /admin CMS
 docs/        Deployment, environment, and architecture reference
 ```
@@ -35,7 +37,7 @@ docs/        Deployment, environment, and architecture reference
 
 ```
 cd backend
-cp .env.example .env   # fill in real values — see docs/ENVIRONMENT.md
+cp .env.example .env   # fill in real values — see docs/environment.md
 npm install
 npm run dev             # nodemon, http://localhost:5000
 ```
@@ -63,23 +65,36 @@ admin-creation script (kept out of version control).
 
 ## Production deployment
 
-Two supported paths — see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for
-full instructions:
+**Production is Vercel (frontend) + Render (backend).** Full instructions:
+**[docs/deployment.md](docs/deployment.md)**.
 
-- **Managed**: Vercel (frontend, `vercel.json` already configured) +
-  Render/Railway/Fly (backend)
-- **Self-hosted**: `docker compose up -d` using the included
-  `Dockerfile`s and `frontend/nginx.conf`
+```
+Frontend  → Vercel   (frontend/vercel.json)
+Backend   → Render   (backend/render.yaml)
+```
 
-Full environment variable reference: **[docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)**
-Architecture, patterns, and scaling constraints: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+`docker-compose.yml` and `nginx.conf` are **local development / container
+parity testing tools only** — they are not part of the production deploy
+path and are not used by Vercel or Render. See "Local Docker testing" in
+`docs/deployment.md` if you want to run the containerized build locally:
+
+```
+docker compose up -d
+```
+
+Full environment variable reference: **[docs/environment.md](docs/environment.md)**
+Architecture, patterns, and scaling constraints: **[docs/architecture.md](docs/architecture.md)**
 
 ## CI/CD
 
 - `.github/workflows/ci.yml` — lint, build, `npm audit`, and Docker build
   validation on every PR and push to `main`
-- `.github/workflows/docker-publish.yml` — builds and pushes tagged images
-  to GHCR on push to `main` and on version tags
+- `.github/workflows/docker-publish.yml` — **optional**: builds and pushes
+  tagged images to GHCR on push to `main` and on version tags. Not
+  consumed by Vercel or Render; useful only if you also want to self-host
+  a copy elsewhere.
+- `.github/dependabot.yml` — weekly automated dependency update PRs for
+  both `npm` workspaces, both Dockerfiles, and GitHub Actions.
 
 ## Operational scripts (`backend/scripts/`)
 
