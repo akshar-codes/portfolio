@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useAdminAbout, useUpdateAbout } from "../hooks/useAbout";
 import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../utils/aboutIconMap";
+import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
 import {
   AdminSkeleton,
   AdminEmpty,
@@ -24,29 +25,6 @@ function newService(order = 0) {
     icon: "web",
     order,
   };
-}
-
-/** Move array item at index by +1 or -1, then re-number order fields. */
-function moveItem(arr, index, direction) {
-  const next = index + direction;
-  if (next < 0 || next >= arr.length) return arr;
-  const copy = [...arr];
-  [copy[index], copy[next]] = [copy[next], copy[index]];
-  return copy.map((item, i) => ({ ...item, order: i }));
-}
-
-/** Strips _tempId before sending to the API. */
-function stripTempIds(arr) {
-  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-}
-
-/** Compare two arrays by _tempId sequence to detect reordering. */
-function isOrderDirty(local, server) {
-  if (!local || !server || local.length !== server.length) return false;
-  return local.some((item, i) => {
-    const serverId = server[i]?._id ?? server[i]?._tempId;
-    return item._id !== serverId && item._tempId !== serverId;
-  });
 }
 
 /* ================================================================== *

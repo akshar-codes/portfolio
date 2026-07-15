@@ -8,20 +8,13 @@ import {
   AdminError,
 } from "../components/AdminStatus";
 import { GroupedTagInput } from "./AddProject";
+import { moveItem, isOrderDirty } from "../utils/ordering";
 
 const PAGE_SIZE = 10;
 
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
-
-function moveItem(arr, index, direction) {
-  const next = index + direction;
-  if (next < 0 || next >= arr.length) return arr;
-  const copy = [...arr];
-  [copy[index], copy[next]] = [copy[next], copy[index]];
-  return copy;
-}
 
 function flattenTechNames(technologies) {
   if (!Array.isArray(technologies)) return [];
@@ -795,7 +788,11 @@ export default function ManageProjects() {
   };
 
   const handleMove = (index, direction) => {
-    setLocalProjects((prev) => moveItem(prev, index, direction));
+    // Project order is persisted via a separate orderedIds endpoint,
+    // not a per-item `order` field on the client — skip renumbering.
+    setLocalProjects((prev) =>
+      moveItem(prev, index, direction, { renumber: false }),
+    );
   };
 
   const handleSaveOrder = async () => {
@@ -818,7 +815,7 @@ export default function ManageProjects() {
   const orderDirty =
     !savingOrder &&
     localProjects !== null &&
-    localProjects.some((p, i) => projects[i]?._id !== p._id);
+    isOrderDirty(localProjects, projects);
 
   useEffect(() => {
     fetchProjects(1);

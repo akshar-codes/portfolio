@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useAdminProfile, useUpdateProfile } from "../hooks/useProfile";
 import { resolveIcon } from "../utils/iconMap";
+import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
 import {
   AdminSkeleton,
   AdminEmpty,
@@ -9,38 +10,15 @@ import {
 } from "../components/AdminStatus";
 
 /* ================================================================== *
- * Helpers — identical to ManageAbout.jsx
+ * Helpers
  * ================================================================== */
 
 function newLink(order = 0) {
   return { _tempId: crypto.randomUUID(), label: "", url: "", icon: "", order };
 }
 
-/** Move array item at index by +1 or -1, then re-number order fields. */
-function moveItem(arr, index, direction) {
-  const next = index + direction;
-  if (next < 0 || next >= arr.length) return arr;
-  const copy = [...arr];
-  [copy[index], copy[next]] = [copy[next], copy[index]];
-  return copy.map((item, i) => ({ ...item, order: i }));
-}
-
-/** Strips _tempId before sending to the API. */
-function stripTempIds(arr) {
-  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-}
-
-/** Compare two arrays by _id sequence to detect reordering. */
-function isOrderDirty(local, server) {
-  if (!local || !server || local.length !== server.length) return false;
-  return local.some((item, i) => {
-    const serverId = server[i]?._id ?? server[i]?._tempId;
-    return item._id !== serverId && item._tempId !== serverId;
-  });
-}
-
 /* ================================================================== *
- * ReorderButtons — identical to ManageAbout.jsx
+ * ReorderButtons
  * ================================================================== */
 function ReorderButtons({ index, total, onMove, disabled }) {
   return (

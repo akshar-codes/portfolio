@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import api from "../services/api";
+import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
 import {
   AdminSkeleton,
   AdminEmpty,
@@ -22,27 +23,6 @@ function newEducationEntry() {
 
 function newSkillGroup(order = 0) {
   return { _tempId: crypto.randomUUID(), category: "", items: [], order };
-}
-
-function moveItem(arr, index, direction) {
-  const next = index + direction;
-  if (next < 0 || next >= arr.length) return arr;
-  const copy = [...arr];
-  [copy[index], copy[next]] = [copy[next], copy[index]];
-  return copy.map((item, i) => ({ ...item, order: i }));
-}
-
-function stripTempIds(arr) {
-  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-}
-
-/** Compare two arrays by _id sequence to detect reordering. */
-function isOrderDirty(local, server) {
-  if (!local || !server || local.length !== server.length) return false;
-  return local.some((item, i) => {
-    const serverId = server[i]?._id ?? server[i]?._tempId;
-    return item._id !== serverId && item._tempId !== serverId;
-  });
 }
 
 /* ================================================================== *
