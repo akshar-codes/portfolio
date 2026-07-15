@@ -1,6 +1,7 @@
 import About from "../models/About.js";
 import cache from "../utils/cache.js";
 import { ServiceError } from "./ServiceError.js";
+import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 
@@ -9,19 +10,6 @@ const CACHE_TTL_MS = 60_000; // 60 seconds
 
 function invalidateAboutCache() {
   cache.del(CACHE_KEY);
-}
-
-/* ── Helpers ───────────────────────────────────────────────────────── */
-
-function stripTempIds(arr) {
-  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-}
-
-function normaliseOrder(arr) {
-  return arr
-    .slice()
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((item, idx) => ({ ...item, order: idx }));
 }
 
 /* ── fetchAbout (public) ───────────────────────────────────────────── */

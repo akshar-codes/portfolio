@@ -1,5 +1,6 @@
 import Profile from "../models/Profile.js";
 import { ServiceError } from "./ServiceError.js";
+import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
 
 const PATCHABLE_FIELDS = new Set([
   "name",
@@ -10,19 +11,6 @@ const PATCHABLE_FIELDS = new Set([
   "avatar",
   "socialLinks",
 ]);
-
-/* ── Shared ordering helpers (mirrors aboutService.js) ─────────────── */
-
-function stripTempIds(arr) {
-  return arr.map(({ _tempId, ...rest }) => rest); // eslint-disable-line no-unused-vars
-}
-
-function normaliseOrder(arr) {
-  return arr
-    .slice()
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((item, idx) => ({ ...item, order: idx }));
-}
 
 /* ── fetchProfile ──────────────────────────────────────────────────── */
 
