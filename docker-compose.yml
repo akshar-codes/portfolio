@@ -1,17 +1,30 @@
 services:
+  # Optional local MongoDB — omitted by default so you can point
+  # MONGO_URI at Atlas instead. Start it with:
+  #   docker compose --profile with-mongo up
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    profiles: ["with-mongo"]
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - portfolio-net
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: portfolio-backend:latest
+    image: portfolio-backend:local
     restart: unless-stopped
     env_file:
       - ./backend/.env
     environment:
-      NODE_ENV: production
-      PORT: "5000"
-    expose:
-      - "5000"
+      NODE_ENV: development
+    ports:
+      - "5000:5000" # exposed directly for local API testing/Postman/Hoppscotch
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:5000/health"]
       interval: 30s
@@ -20,25 +33,26 @@ services:
       start_period: 15s
     networks:
       - portfolio-net
-    deploy:
-      replicas: 1 # do not scale without Redis-backed cache/rate-limit — see docs/ARCHITECTURE.md
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-    image: portfolio-frontend:latest
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api}
+    image: portfolio-frontend:local
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "8080:80" # 8080, not 80 — avoids clashing with a locally-running `vite dev`
     networks:
       - portfolio-net
 
 networks:
   portfolio-net:
     driver: bridge
+
+volumes:
+  mongo-data:
