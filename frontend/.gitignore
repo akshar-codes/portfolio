@@ -7,7 +7,7 @@ dist-ssr/
 
 # Environment variables
 .env
-.env.*
+.env
 
 # Logs
 logs
