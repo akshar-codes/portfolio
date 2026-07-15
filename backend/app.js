@@ -34,7 +34,12 @@ const app = express();
 const { ALLOWED_ORIGIN, NODE_ENV } = process.env;
 
 /* ------------------------------------------------------------------ *
- * 2. Request correlation IDs
+ * 2. Trust the first reverse-proxy hop.
+ * ------------------------------------------------------------------ */
+app.set("trust proxy", 1);
+
+/* ------------------------------------------------------------------ *
+ * 3. Request correlation IDs
  * ------------------------------------------------------------------ */
 app.use((req, _res, next) => {
   req.id = randomUUID();
@@ -42,7 +47,7 @@ app.use((req, _res, next) => {
 });
 
 /* ------------------------------------------------------------------ *
- * 3. Security headers
+ * 4. Security headers
  * ------------------------------------------------------------------ */
 app.use(
   helmet({
@@ -58,13 +63,13 @@ app.use(
 );
 
 /* ------------------------------------------------------------------ *
- * 4. HTTP request logging (morgan → winston)
+ * 5. HTTP request logging (morgan → winston)
  * ------------------------------------------------------------------ */
 const morganFormat = NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(morganFormat, { stream: morganStream }));
 
 /* ------------------------------------------------------------------ *
- * 5. CORS
+ * 6. CORS
  * ------------------------------------------------------------------ */
 app.use(
   cors({
@@ -82,19 +87,24 @@ app.use(
 );
 
 /* ------------------------------------------------------------------ *
- * 6. Body parsers + cookie parser
+ * 7. Body parsers + cookie parser
  * ------------------------------------------------------------------ */
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "150kb" }));
+app.use(express.urlencoded({ extended: true, limit: "150kb" }));
 app.use(cookieParser());
 
 /* ------------------------------------------------------------------ *
- * 7. MongoDB injection sanitizer
+ * 8. MongoDB injection sanitizer
  * ------------------------------------------------------------------ */
 app.use(mongoSanitize);
 
 /* ------------------------------------------------------------------ *
- * 8. Rate limiters
+ * 9. Health check — mounted BEFORE the global rate limiter so
+ * ------------------------------------------------------------------ */
+app.use("/health", healthRoutes);
+
+/* ------------------------------------------------------------------ *
+ * 10. Rate limiters
  * ------------------------------------------------------------------ */
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -108,38 +118,25 @@ const globalLimiter = rateLimit({
   },
 });
 
-const messageLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    data: null,
-    message: "Too many messages sent. Try again later.",
-  },
-});
-
 app.use(globalLimiter);
 
 /* ------------------------------------------------------------------ *
- * 9. Routes
+ * 11. Routes
  * ------------------------------------------------------------------ */
-app.use("/health", healthRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/admin/categories", adminCategoryRoutes); // ← new
-app.use("/api/categories", categoryRoutes); // ← new (public)
+app.use("/api/admin/categories", adminCategoryRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/messages", messageLimiter, messageRoutes);
-app.use("/api/resume", resumeRoutes); // public GET
-app.use("/api/admin/resume", adminResumeRoutes); // protected GET + PATCH
-app.use("/api/profile", profileRoutes); // public GET
+app.use("/api/messages", messageRoutes);
+app.use("/api/resume", resumeRoutes);
+app.use("/api/admin/resume", adminResumeRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/admin/profile", adminProfileRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/admin/about", adminAboutRoutes);
 
 /* ------------------------------------------------------------------ *
- * 10. Central error handler
+ * 12. Central error handler
  * ------------------------------------------------------------------ */
 app.use(errorMiddleware);
 

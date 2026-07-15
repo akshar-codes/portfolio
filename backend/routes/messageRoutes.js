@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { body } from "express-validator";
 import {
   sendMessage,
@@ -9,11 +10,27 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+/* ------------------------------------------------------------------ *
+ * Rate limiter for the PUBLIC contact form only.
+ * ------------------------------------------------------------------ */
+const contactFormLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    data: null,
+    message: "Too many messages sent. Try again later.",
+  },
+});
+
 /* ===============================
    Public - Send Message
 ================================ */
 router.post(
   "/",
+  contactFormLimiter,
   [
     body("fullname")
       .trim()
