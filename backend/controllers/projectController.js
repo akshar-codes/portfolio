@@ -1,3 +1,5 @@
+import { validationResult } from "express-validator";
+import AppError from "../utils/AppError.js";
 import {
   fetchAllProjects,
   fetchProjectById,
@@ -6,7 +8,6 @@ import {
   removeProject,
   reorderProjects,
 } from "../services/projectService.js";
-import AppError from "../utils/AppError.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
@@ -39,6 +40,11 @@ export const getProjectById = asyncHandler(async (req, res) => {
  * POST /api/projects  (protected, multipart/form-data)
  * ------------------------------------------------------------------ */
 export const createProject = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
   const {
     title,
     description,
@@ -81,6 +87,11 @@ export const createProject = asyncHandler(async (req, res) => {
  * PATCH /api/projects/:id  (protected, multipart/form-data)
  * ------------------------------------------------------------------ */
 export const editProject = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
   const files = req.files ?? {};
 
   const updates = {
@@ -107,12 +118,12 @@ export const deleteProject = asyncHandler(async (req, res) => {
  * PATCH /api/projects/reorder  (protected)
  * ------------------------------------------------------------------ */
 export const reorderProjectsHandler = asyncHandler(async (req, res) => {
-  const { orderedIds } = req.body;
-
-  if (!Array.isArray(orderedIds)) {
-    throw new AppError("orderedIds must be an array.", 400);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
   }
 
+  const { orderedIds } = req.body;
   await reorderProjects(orderedIds);
   return sendSuccess(res, null, "Projects reordered successfully");
 });
