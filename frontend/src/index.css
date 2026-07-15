@@ -2178,6 +2178,16 @@ select.form-input option {
   --a-text: hsl(0, 0%, 92%);
   --a-text-m: hsl(0, 0%, 55%); /* muted  */
   --a-text-d: hsl(0, 0%, 35%); /* dimmed */
+  --a-text-dim: hsl(
+    0,
+    0%,
+    35%
+  ); /* alias of --a-text-d — several admin
+     components (ManageResume, ManageAbout, Messages, ManageCategories)
+     reference --a-text-dim specifically; only --a-text-d was ever
+     defined, so those elements previously fell back to no color
+     override at all. Kept as an explicit alias rather than rewriting
+     every call site. */
 
   /* Accent / status */
   --a-accent: var(--orange-yellow-crayola);
