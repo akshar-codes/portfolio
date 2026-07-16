@@ -38,4 +38,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -fsS http://localhost:${PORT:-5000}/health || exit 1
 
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]
