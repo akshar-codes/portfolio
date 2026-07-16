@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { generateSlug, normalizeName } from "./slug.js";
-import logger from "./logger.js";
+import { generateSlug, normalizeName } from "../utils/slug.js";
+import logger from "../utils/logger.js";
 
 export async function runMigration() {
   try {
