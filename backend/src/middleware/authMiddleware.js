@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import Admin from "../models/Admin.js";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { COOKIE_NAME } from "../services/authService.js"; // single source of truth
+import { findByIdSafe } from "../repositories/adminRepository.js";
+import { COOKIE_NAME } from "../utils/constants.js";
 
 function extractToken(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
@@ -36,7 +36,7 @@ export const protect = asyncHandler(async (req, res, next) => {
     throw new AppError("Not authorized — malformed token payload.", 401);
   }
 
-  const admin = await Admin.findById(decoded.id).select("-password");
+  const admin = await findByIdSafe(decoded.id);
 
   if (!admin) {
     throw new AppError("Not authorized — account not found.", 401);
