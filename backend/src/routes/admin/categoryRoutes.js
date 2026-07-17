@@ -1,11 +1,14 @@
 import express from "express";
-import { body, param } from "express-validator";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../../middleware/authMiddleware.js";
 import {
   getAllCategories,
   addCategory,
   deleteCategoryById,
-} from "../controllers/categoryController.js";
+} from "../../controllers/categoryController.js";
+import {
+  createCategoryValidator,
+  deleteCategoryValidator,
+} from "../../validators/categoryValidators.js";
 
 const router = express.Router();
 
@@ -20,28 +23,11 @@ router.get("/", getAllCategories);
 /* ------------------------------------------------------------------ *
  * POST /api/admin/categories
  * ------------------------------------------------------------------ */
-router.post(
-  "/",
-  [
-    body("name")
-      .trim()
-      .notEmpty()
-      .withMessage("Category name is required")
-      .isLength({ min: 2 })
-      .withMessage("Category name must be at least 2 characters")
-      .isLength({ max: 80 })
-      .withMessage("Category name must not exceed 80 characters"),
-  ],
-  addCategory,
-);
+router.post("/", createCategoryValidator, addCategory);
 
 /* ------------------------------------------------------------------ *
  * DELETE /api/admin/categories/:id
  * ------------------------------------------------------------------ */
-router.delete(
-  "/:id",
-  [param("id").isMongoId().withMessage("Invalid category ID format")],
-  deleteCategoryById,
-);
+router.delete("/:id", deleteCategoryValidator, deleteCategoryById);
 
 export default router;
