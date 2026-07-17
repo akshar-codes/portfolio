@@ -1,6 +1,11 @@
 import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import dotenv from "dotenv";
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_PROJECT_UPLOAD_FILES,
+  ALLOWED_IMAGE_MIME_TYPES,
+} from "../utils/constants.js";
 
 dotenv.config();
 
@@ -27,17 +32,8 @@ export function cloudinaryFolder(path) {
 }
 
 /* ------------------------------------------------------------------ *
- * File size / type constants
+ * Magic-byte signatures for the allowed image formats
  * ------------------------------------------------------------------ */
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-const ALLOWED_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-
 const ALLOWED_MAGIC_BYTES = [
   { bytes: [0xff, 0xd8, 0xff], label: "JPEG" },
   { bytes: [0x89, 0x50, 0x4e, 0x47], label: "PNG" },
@@ -70,11 +66,11 @@ function validateMagicBytes(buffer) {
  * Multer fileFilter — first-layer MIME type check.
  * ------------------------------------------------------------------ */
 function fileFilter(_req, file, cb) {
-  if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
     return cb(
       new Error(
         `Invalid file type: "${file.mimetype}". ` +
-          `Allowed types: ${[...ALLOWED_MIME_TYPES].join(", ")}.`,
+          `Allowed types: ${[...ALLOWED_IMAGE_MIME_TYPES].join(", ")}.`,
       ),
       false,
     );
@@ -88,14 +84,14 @@ const storage = multer.memoryStorage();
 export const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE, files: 1 },
+  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 },
 });
 
-/* Multi-field upload for project creation/editing:*/
+/* Multi-field upload for project creation/editing */
 export const uploadProjectImages = multer({
   storage,
   fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE, files: 12 },
+  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: MAX_PROJECT_UPLOAD_FILES },
 });
 
 /* ------------------------------------------------------------------ *
