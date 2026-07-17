@@ -10,13 +10,14 @@ import {
 } from "../services/projectService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { DEFAULT_PROJECTS_PAGE_SIZE } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * GET /api/projects  (public)
  * ------------------------------------------------------------------ */
 export const getProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 9;
+  const limit = parseInt(req.query.limit, 10) || DEFAULT_PROJECTS_PAGE_SIZE;
 
   if (page < 1) throw new AppError("page must be a positive integer.", 400);
   if (limit < 1) throw new AppError("limit must be a positive integer.", 400);

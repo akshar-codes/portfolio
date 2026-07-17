@@ -7,6 +7,7 @@ import {
 } from "../services/messageService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { DEFAULT_MESSAGES_PAGE_SIZE } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * POST /api/messages  (public)
@@ -31,7 +32,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
  * ------------------------------------------------------------------ */
 export const getMessages = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10;
+  const limit = parseInt(req.query.limit, 10) || DEFAULT_MESSAGES_PAGE_SIZE;
 
   if (page < 1) throw new AppError("page must be a positive integer.", 400);
   if (limit < 1) throw new AppError("limit must be a positive integer.", 400);

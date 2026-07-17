@@ -1,4 +1,3 @@
-import Admin from "../models/Admin.js";
 import {
   attemptLogin,
   getVerifiedPayload,
@@ -6,6 +5,7 @@ import {
   getClearCookieOptions,
   COOKIE_NAME,
 } from "../services/authService.js";
+import { incrementTokenVersion } from "../repositories/adminRepository.js";
 import { sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
@@ -32,7 +32,7 @@ export const verifyAdmin = (req, res) => {
    POST /api/admin/logout
 --------------------------------------------------------------- */
 export const logoutAdmin = asyncHandler(async (req, res) => {
-  await Admin.findByIdAndUpdate(req.admin._id, { $inc: { tokenVersion: 1 } });
+  await incrementTokenVersion(req.admin._id);
 
   res.clearCookie(COOKIE_NAME, getClearCookieOptions());
   return sendSuccess(res, null, "Logged out successfully");
