@@ -5,24 +5,31 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
-import rateLimit from "express-rate-limit";
 
 import validateEnv from "./config/validateEnv.js";
 import mongoSanitize from "./middleware/sanitizeMiddleware.js";
+import { globalLimiter } from "./middleware/rateLimiters.js";
 import logger, { morganStream } from "./utils/logger.js";
-import adminRoutes from "./routes/adminRoutes.js";
-import projectRoutes from "./routes/projectRoutes.js";
-import messageRoutes from "./routes/messageRoutes.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import adminCategoryRoutes from "./routes/adminCategoryRoutes.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
-import healthRoutes from "./routes/healthRoutes.js";
-import adminResumeRoutes from "./routes/adminResumeRoutes.js";
-import resumeRoutes from "./routes/resumeRoutes.js";
-import profileRoutes from "./routes/profileRoutes.js";
-import adminProfileRoutes from "./routes/adminProfileRoutes.js";
-import aboutRoutes from "./routes/aboutRoutes.js";
-import adminAboutRoutes from "./routes/adminAboutRoutes.js";
+import { JSON_BODY_LIMIT } from "./utils/constants.js";
+
+// ── Admin (protected) routes ────────────────────────────────────────
+import adminAuthRoutes from "./routes/admin/authRoutes.js";
+import adminCategoryRoutes from "./routes/admin/categoryRoutes.js";
+import adminProjectRoutes from "./routes/admin/projectRoutes.js";
+import adminMessageRoutes from "./routes/admin/messageRoutes.js";
+import adminResumeRoutes from "./routes/admin/resumeRoutes.js";
+import adminProfileRoutes from "./routes/admin/profileRoutes.js";
+import adminAboutRoutes from "./routes/admin/aboutRoutes.js";
+
+// ── General (public) routes ──────────────────────────────────────────
+import healthRoutes from "./routes/general/healthRoutes.js";
+import categoryRoutes from "./routes/general/categoryRoutes.js";
+import projectRoutes from "./routes/general/projectRoutes.js";
+import messageRoutes from "./routes/general/messageRoutes.js";
+import resumeRoutes from "./routes/general/resumeRoutes.js";
+import profileRoutes from "./routes/general/profileRoutes.js";
+import aboutRoutes from "./routes/general/aboutRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -89,8 +96,8 @@ app.use(
 /* ------------------------------------------------------------------ *
  * 7. Body parsers + cookie parser
  * ------------------------------------------------------------------ */
-app.use(express.json({ limit: "150kb" }));
-app.use(express.urlencoded({ extended: true, limit: "150kb" }));
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 app.use(cookieParser());
 
 /* ------------------------------------------------------------------ *
@@ -104,30 +111,23 @@ app.use(mongoSanitize);
 app.use("/health", healthRoutes);
 
 /* ------------------------------------------------------------------ *
- * 10. Rate limiters
+ * 10. Global rate limiter
  * ------------------------------------------------------------------ */
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    data: null,
-    message: "Too many requests. Please try again later.",
-  },
-});
-
 app.use(globalLimiter);
 
 /* ------------------------------------------------------------------ *
  * 11. Routes
  * ------------------------------------------------------------------ */
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
+
 app.use("/api/projects", projectRoutes);
+app.use("/api/projects", adminProjectRoutes);
+
 app.use("/api/messages", messageRoutes);
+app.use("/api/messages", adminMessageRoutes);
+
 app.use("/api/resume", resumeRoutes);
 app.use("/api/admin/resume", adminResumeRoutes);
 app.use("/api/profile", profileRoutes);
