@@ -1,6 +1,19 @@
 import mongoose from "mongoose";
-import Project from "../models/Project.js";
-import Category from "../models/Category.js";
+import {
+  findPaginated,
+  countAll,
+  findByIdPublic,
+  findById,
+  findMaxOrder,
+  create,
+  findManyByIds,
+  bulkWrite,
+  findAllForResequence,
+} from "../repositories/projectRepository.js";
+import {
+  findById as findCategoryById,
+  findBySlug as findCategoryBySlug,
+} from "../repositories/categoryRepository.js";
 import {
   cloudinaryFolder,
   uploadToCloudinary,
@@ -10,12 +23,17 @@ import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
 import logger from "../utils/logger.js";
+import {
+  CACHE_TTL_MS,
+  DEFAULT_PROJECTS_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MAX_GALLERY_IMAGES,
+} from "../utils/constants.js";
 
 /* ================================================================== *
  * Cache helpers
  * ================================================================== */
 
-const CACHE_TTL_MS = 60_000;
 const CACHE_PREFIX = "projects:";
 
 function buildCacheKey(page, limit, category) {
@@ -27,10 +45,7 @@ export function invalidateProjectsCache() {
 }
 
 async function resequenceProjects(filter = {}) {
-  const projects = await Project.find(filter)
-    .select("_id order")
-    .sort({ order: 1 })
-    .lean();
+  const projects = await findAllForResequence(filter);
 
   const ops = projects.map((p, idx) => ({
     updateOne: {
@@ -40,12 +55,12 @@ async function resequenceProjects(filter = {}) {
   }));
 
   if (ops.length) {
-    await Project.bulkWrite(ops, { ordered: false });
+    await bulkWrite(ops);
   }
 }
 
 /* ================================================================== *
- * Field-parsing helpers (unchanged from original)
+ * Field-parsing helpers
  * ================================================================== */
 
 function parseGroupedField(value) {
@@ -101,7 +116,7 @@ function parseArrayField(value) {
 }
 
 /* ================================================================== *
- * Category resolution helper (unchanged)
+ * Category resolution helper
  * ================================================================== */
 
 async function resolveCategoryFilter(category) {
@@ -109,25 +124,25 @@ async function resolveCategoryFilter(category) {
 
   let cat;
   if (mongoose.Types.ObjectId.isValid(category)) {
-    cat = await Category.findById(category).lean();
+    cat = await findCategoryById(category);
   } else {
-    cat = await Category.findOne({ slug: category.toLowerCase() }).lean();
+    cat = await findCategoryBySlug(category.toLowerCase());
   }
 
   return cat ? { category: cat._id } : null;
 }
 
 /* ================================================================== *
- * fetchAllProjects  (public — unchanged)
+ * fetchAllProjects  (public)
  * ================================================================== */
 
 export const fetchAllProjects = async ({
   page = 1,
-  limit = 9,
+  limit = DEFAULT_PROJECTS_PAGE_SIZE,
   category = "",
 } = {}) => {
   const safePage = Math.max(1, page);
-  const safeLimit = Math.min(Math.max(1, limit), 50);
+  const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
   const skip = (safePage - 1) * safeLimit;
 
   const cacheKey = buildCacheKey(safePage, safeLimit, category);
@@ -146,14 +161,8 @@ export const fetchAllProjects = async ({
   }
 
   const [projects, total] = await Promise.all([
-    Project.find(filter)
-      .select("-image.public_id -bannerImage.public_id -gallery.public_id")
-      .populate("category", "name slug")
-      .sort({ order: 1, createdAt: -1 })
-      .skip(skip)
-      .limit(safeLimit)
-      .lean(),
-    Project.countDocuments(filter),
+    findPaginated({ filter, skip, limit: safeLimit }),
+    countAll(filter),
   ]);
 
   const result = {
@@ -168,7 +177,7 @@ export const fetchAllProjects = async ({
 };
 
 /* ================================================================== *
- * fetchProjectById  (public — unchanged)
+ * fetchProjectById  (public)
  * ================================================================== */
 
 export const fetchProjectById = async (id) => {
@@ -176,10 +185,7 @@ export const fetchProjectById = async (id) => {
     throw new ServiceError("Invalid project ID.", 400, "PROJECT_INVALID_ID");
   }
 
-  const project = await Project.findById(id)
-    .select("-image.public_id -bannerImage.public_id -gallery.public_id")
-    .populate("category", "name slug")
-    .lean();
+  const project = await findByIdPublic(id);
 
   if (!project) {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
@@ -217,7 +223,7 @@ export const addProject = async ({
     throw new ServiceError("Image is required.", 400, "PROJECT_IMAGE_REQUIRED");
   }
 
-  const category = await Category.findById(categoryId).lean();
+  const category = await findCategoryById(categoryId);
   if (!category) {
     throw new ServiceError(
       "Invalid category — not found.",
@@ -246,7 +252,7 @@ export const addProject = async ({
         : Promise.resolve(null),
     ]);
 
-    // Gallery — concurrent (up to 10 images)
+    // Gallery — concurrent (up to MAX_GALLERY_IMAGES images)
     const galleryFolder = cloudinaryFolder("portfolio/projects/gallery");
     const validGallery = (galleryFiles ?? []).filter((gf) => gf?.buffer);
     const galleryResults = await Promise.all(
@@ -258,13 +264,10 @@ export const addProject = async ({
       ),
     );
 
-    const maxOrderDoc = await Project.findOne()
-      .sort({ order: -1 })
-      .select("order")
-      .lean();
+    const maxOrderDoc = await findMaxOrder();
     const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
 
-    const project = await Project.create({
+    const project = await create({
       title,
       description,
       category: category._id,
@@ -317,7 +320,7 @@ export const addProject = async ({
  * ================================================================== */
 
 export const updateProject = async (id, updates) => {
-  const project = await Project.findById(id);
+  const project = await findById(id);
   if (!project) {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
@@ -346,7 +349,7 @@ export const updateProject = async (id, updates) => {
   }
 
   if (updates.categoryId) {
-    const category = await Category.findById(updates.categoryId).lean();
+    const category = await findCategoryById(updates.categoryId);
     if (!category) {
       throw new ServiceError(
         "Invalid category — not found.",
@@ -388,7 +391,7 @@ export const updateProject = async (id, updates) => {
     const folder = cloudinaryFolder("portfolio/projects/gallery");
     const currentCount = project.gallery?.length ?? 0;
     const toUpload = updates.galleryFiles.filter(
-      (gf, i) => gf?.buffer && currentCount + i < 10,
+      (gf, i) => gf?.buffer && currentCount + i < MAX_GALLERY_IMAGES,
     );
 
     // Upload new gallery images concurrently
@@ -489,7 +492,7 @@ export const updateProject = async (id, updates) => {
  * ================================================================== */
 
 export const removeProject = async (id) => {
-  const project = await Project.findById(id);
+  const project = await findById(id);
   if (!project) {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
@@ -511,7 +514,7 @@ export const removeProject = async (id) => {
 };
 
 /* ================================================================== *
- * reorderProjects  (unchanged)
+ * reorderProjects
  * ================================================================== */
 
 export const reorderProjects = async (orderedIds) => {
@@ -534,9 +537,7 @@ export const reorderProjects = async (orderedIds) => {
     );
   }
 
-  const found = await Project.find({ _id: { $in: orderedIds } })
-    .select("_id")
-    .lean();
+  const found = await findManyByIds(orderedIds);
 
   if (found.length !== orderedIds.length) {
     throw new ServiceError(
@@ -553,6 +554,6 @@ export const reorderProjects = async (orderedIds) => {
     },
   }));
 
-  await Project.bulkWrite(ops, { ordered: false });
+  await bulkWrite(ops);
   invalidateProjectsCache();
 };

@@ -1,10 +1,18 @@
-import Message from "../models/Message.js";
+import {
+  countAll,
+  create,
+  findPaginated,
+  findById,
+} from "../repositories/messageRepository.js";
 import { ServiceError } from "./ServiceError.js";
-
-const MESSAGE_CAP = 500;
+import {
+  MESSAGE_CAP,
+  DEFAULT_MESSAGES_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+} from "../utils/constants.js";
 
 export const createMessage = async ({ fullname, email, message }) => {
-  const total = await Message.countDocuments();
+  const total = await countAll();
 
   if (total >= MESSAGE_CAP) {
     throw new ServiceError(
@@ -14,18 +22,21 @@ export const createMessage = async ({ fullname, email, message }) => {
     );
   }
 
-  const newMessage = await Message.create({ fullname, email, message });
+  const newMessage = await create({ fullname, email, message });
   return newMessage;
 };
 
-export const fetchAllMessages = async ({ page = 1, limit = 10 } = {}) => {
+export const fetchAllMessages = async ({
+  page = 1,
+  limit = DEFAULT_MESSAGES_PAGE_SIZE,
+} = {}) => {
   const safePage = Math.max(1, page);
-  const safeLimit = Math.min(Math.max(1, limit), 50);
+  const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
   const skip = (safePage - 1) * safeLimit;
 
   const [messages, total] = await Promise.all([
-    Message.find().sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
-    Message.countDocuments(),
+    findPaginated({ skip, limit: safeLimit }),
+    countAll(),
   ]);
 
   return {
@@ -38,7 +49,7 @@ export const fetchAllMessages = async ({ page = 1, limit = 10 } = {}) => {
 };
 
 export const removeMessage = async (id) => {
-  const message = await Message.findById(id);
+  const message = await findById(id);
 
   if (!message) {
     throw new ServiceError("Message not found", 404, "MESSAGE_NOT_FOUND");

@@ -1,4 +1,8 @@
-import Resume from "../models/Resume.js";
+import {
+  getSingleton,
+  findDefault,
+  create,
+} from "../repositories/resumeRepository.js";
 import { ServiceError } from "./ServiceError.js";
 import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
 
@@ -7,7 +11,7 @@ const PATCHABLE_SECTIONS = new Set(["education", "skills"]);
 /* ── fetchResume ───────────────────────────────────────────────────── */
 
 export const fetchResume = async () => {
-  const doc = await Resume.getSingleton();
+  const doc = await getSingleton();
 
   return {
     ...doc,
@@ -34,16 +38,15 @@ export const patchResumeSection = async (section, value) => {
     );
   }
 
-  // Normalise order for skills; education has no explicit ordering
   const cleaned =
     section === "skills"
       ? normaliseOrder(stripTempIds(value))
       : stripTempIds(value);
 
-  const existing = await Resume.findOne({ owner: "default" });
+  const existing = await findDefault();
 
   if (!existing) {
-    const created = await Resume.create({
+    const created = await create({
       owner: "default",
       [section]: cleaned,
     });

@@ -1,12 +1,18 @@
-import Category from "../models/Category.js";
-import Project from "../models/Project.js";
+import {
+  aggregateCategories,
+  findBySlug,
+  findById,
+  create as createCategoryDoc,
+  deleteById,
+} from "../repositories/categoryRepository.js";
+import { countByCategory } from "../repositories/projectRepository.js";
 import { generateSlug, normalizeName } from "../utils/slug.js";
 import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
+import { CACHE_TTL_MS } from "../utils/constants.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 
-const CACHE_TTL_MS = 60_000;
 export const CATEGORY_CACHE_PUBLIC = "categories:public";
 export const CATEGORY_CACHE_ADMIN = "categories:admin";
 
@@ -45,7 +51,7 @@ export const fetchPublicCategories = async () => {
   const cached = cache.get(CATEGORY_CACHE_PUBLIC);
   if (cached) return cached;
 
-  const result = await Category.aggregate(
+  const result = await aggregateCategories(
     buildCategoryPipeline({ publicOnly: true }),
   );
 
@@ -59,7 +65,7 @@ export const fetchAllCategories = async () => {
   const cached = cache.get(CATEGORY_CACHE_ADMIN);
   if (cached) return cached;
 
-  const result = await Category.aggregate(buildCategoryPipeline());
+  const result = await aggregateCategories(buildCategoryPipeline());
 
   cache.set(CATEGORY_CACHE_ADMIN, result, CACHE_TTL_MS);
   return result;
@@ -79,7 +85,7 @@ export const createCategory = async (rawName) => {
     );
   }
 
-  const existing = await Category.findOne({ slug }).lean();
+  const existing = await findBySlug(slug);
   if (existing) {
     throw new ServiceError(
       `Category "${existing.name}" already exists.`,
@@ -88,7 +94,7 @@ export const createCategory = async (rawName) => {
     );
   }
 
-  const category = await Category.create({ name, slug });
+  const category = await createCategoryDoc({ name, slug });
   invalidateCategoryCache();
   return category;
 };
@@ -96,12 +102,12 @@ export const createCategory = async (rawName) => {
 /* ── removeCategory ────────────────────────────────────────────────── */
 
 export const removeCategory = async (id) => {
-  const category = await Category.findById(id).lean();
+  const category = await findById(id);
   if (!category) {
     throw new ServiceError("Category not found.", 404, "CATEGORY_NOT_FOUND");
   }
 
-  const projectCount = await Project.countDocuments({ category: id });
+  const projectCount = await countByCategory(id);
   if (projectCount > 0) {
     throw new ServiceError(
       `Cannot delete — ${projectCount} project${projectCount === 1 ? "" : "s"} use this category. Reassign or delete those projects first.`,
@@ -110,6 +116,6 @@ export const removeCategory = async (id) => {
     );
   }
 
-  await Category.findByIdAndDelete(id);
+  await deleteById(id);
   invalidateCategoryCache();
 };

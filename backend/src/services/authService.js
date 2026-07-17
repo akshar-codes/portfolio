@@ -1,17 +1,22 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import Admin from "../models/Admin.js";
+import { findByUsername } from "../repositories/adminRepository.js";
+import { ServiceError } from "./ServiceError.js";
 import logger from "../utils/logger.js";
+import {
+  COOKIE_NAME,
+  JWT_EXPIRES_IN,
+  COOKIE_MAX_AGE_MS,
+} from "../utils/constants.js";
 
-export { ServiceError } from "./ServiceError.js";
-
-export const COOKIE_NAME = "admin_token";
+export { ServiceError };
+export { COOKIE_NAME };
 
 export const getCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
-  maxAge: 24 * 60 * 60 * 1000,
+  maxAge: COOKIE_MAX_AGE_MS,
   path: "/",
 });
 
@@ -35,7 +40,7 @@ export const attemptLogin = async (username, password) => {
     );
   }
 
-  const admin = await Admin.findOne({ username });
+  const admin = await findByUsername(username);
 
   const hashToCompare = admin?.password ?? DUMMY_HASH;
   const isMatch = await bcrypt.compare(password, hashToCompare);
@@ -60,7 +65,7 @@ export const attemptLogin = async (username, password) => {
   const token = jwt.sign(
     { id: admin._id, tokenVersion: admin.tokenVersion },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" },
+    { expiresIn: JWT_EXPIRES_IN },
   );
 
   return token;

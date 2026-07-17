@@ -1,4 +1,7 @@
-import Profile from "../models/Profile.js";
+import {
+  getSingleton,
+  findDefault,
+} from "../repositories/profileRepository.js";
 import { ServiceError } from "./ServiceError.js";
 import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
 
@@ -15,8 +18,7 @@ const PATCHABLE_FIELDS = new Set([
 /* ── fetchProfile ──────────────────────────────────────────────────── */
 
 export const fetchProfile = async () => {
-  const doc = await Profile.getSingleton();
-  // Sort social links by order before returning
+  const doc = await getSingleton();
   return {
     ...doc,
     socialLinks: [...doc.socialLinks].sort(
@@ -28,7 +30,6 @@ export const fetchProfile = async () => {
 /* ── patchProfile ──────────────────────────────────────────────────── */
 
 export const patchProfile = async (updates) => {
-  // Strip unknown keys
   const sanitized = Object.fromEntries(
     Object.entries(updates).filter(([key]) => PATCHABLE_FIELDS.has(key)),
   );
@@ -41,12 +42,11 @@ export const patchProfile = async (updates) => {
     );
   }
 
-  // Normalise social links order if provided
   if (Array.isArray(sanitized.socialLinks)) {
     sanitized.socialLinks = normaliseOrder(stripTempIds(sanitized.socialLinks));
   }
 
-  const existing = await Profile.findOne({ owner: "default" });
+  const existing = await findDefault();
 
   if (!existing) {
     throw new ServiceError(
@@ -64,7 +64,6 @@ export const patchProfile = async (updates) => {
   await existing.save();
 
   const result = existing.toObject();
-  // Always return social links sorted by order
   return {
     ...result,
     socialLinks: [...result.socialLinks].sort(

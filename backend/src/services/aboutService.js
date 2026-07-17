@@ -1,12 +1,16 @@
-import About from "../models/About.js";
+import {
+  getSingleton,
+  findDefault,
+  create,
+} from "../repositories/aboutRepository.js";
 import cache from "../utils/cache.js";
 import { ServiceError } from "./ServiceError.js";
 import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
+import { CACHE_TTL_MS } from "../utils/constants.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 
 const CACHE_KEY = "about:public";
-const CACHE_TTL_MS = 60_000; // 60 seconds
 
 function invalidateAboutCache() {
   cache.del(CACHE_KEY);
@@ -18,9 +22,8 @@ export const fetchAbout = async () => {
   const cached = cache.get(CACHE_KEY);
   if (cached) return cached;
 
-  const doc = await About.getSingleton();
+  const doc = await getSingleton();
 
-  // Sort by order before returning so the client never has to sort
   const result = {
     ...doc,
     paragraphs: [...doc.paragraphs].sort((a, b) => a.order - b.order),
@@ -52,13 +55,12 @@ export const patchAboutSection = async (section, value) => {
     );
   }
 
-  // Remove transient client-side IDs and normalise order
   const cleaned = normaliseOrder(stripTempIds(value));
 
-  const existing = await About.findOne({ owner: "default" });
+  const existing = await findDefault();
 
   if (!existing) {
-    const created = await About.create({
+    const created = await create({
       owner: "default",
       [section]: cleaned,
     });
