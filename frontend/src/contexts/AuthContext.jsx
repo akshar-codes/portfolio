@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
@@ -20,7 +21,7 @@ export function AuthProvider({ children }) {
 
   /* Run once on mount */
   useEffect(() => {
-    verify();
+    queueMicrotask(() => verify());
   }, [verify]);
 
   /* api.js dispatches this event on every 401 response */

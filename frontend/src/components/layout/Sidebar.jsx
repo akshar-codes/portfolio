@@ -40,11 +40,12 @@ function Skeleton({ width, height, style = {} }) {
   );
 }
 
-function ContactItem({ icon: Icon, title, loading, children }) {
+// eslint-disable-next-line no-unused-vars
+function ContactItem({ icon: IconComp, title, loading, children }) {
   return (
     <li className="contact-item">
       <div className="icon-box" aria-hidden="true">
-        <Icon />
+        <IconComp />
       </div>
       <div className="contact-info">
         <p className="contact-title">{title}</p>

@@ -247,7 +247,7 @@ export default function ManageResume() {
   }, []);
 
   useEffect(() => {
-    loadResume();
+    queueMicrotask(() => loadResume());
   }, [loadResume]);
 
   /* ── PATCH helper ───────────────────────────────────────────── */

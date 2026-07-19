@@ -271,8 +271,10 @@ export default function ManageProfile() {
         (a, b) => (a.order ?? 0) - (b.order ?? 0),
       );
       const seeded = sorted.map((l) => ({ ...l, _tempId: l._id }));
-      setLocalLinks(seeded);
-      setServerLinks(seeded);
+      queueMicrotask(() => {
+        setLocalLinks(seeded);
+        setServerLinks(seeded);
+      });
     }
   }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -67,7 +67,6 @@ export function GroupedTagInput({
             <GroupRow
               key={groupIdx}
               group={g}
-              groupIdx={groupIdx}
               onRename={(name) => renameGroup(groupIdx, name)}
               onDelete={() => deleteGroup(groupIdx)}
               onAddItem={(item) => addItem(groupIdx, item)}
@@ -119,7 +118,6 @@ export function GroupedTagInput({
  * ------------------------------------------------------------------ */
 function GroupRow({
   group,
-  groupIdx,
   onRename,
   onDelete,
   onAddItem,

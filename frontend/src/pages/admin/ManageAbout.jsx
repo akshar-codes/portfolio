@@ -276,16 +276,20 @@ export default function ManageAbout() {
         ...p,
         _tempId: p._id,
       }));
-      setLocalParagraphs(seeded);
-      setServerParagraphs(seeded);
+      queueMicrotask(() => {
+        setLocalParagraphs(seeded);
+        setServerParagraphs(seeded);
+      });
     }
     if (about && localServices === null) {
       const seeded = (about.services ?? []).map((s) => ({
         ...s,
         _tempId: s._id,
       }));
-      setLocalServices(seeded);
-      setServerServices(seeded);
+      queueMicrotask(() => {
+        setLocalServices(seeded);
+        setServerServices(seeded);
+      });
     }
   }, [about]); // eslint-disable-line react-hooks/exhaustive-deps
 

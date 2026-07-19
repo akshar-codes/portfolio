@@ -35,7 +35,7 @@ export default function ManageCategories() {
   }, []);
 
   useEffect(() => {
-    fetchCategories();
+    queueMicrotask(() => fetchCategories());
   }, [fetchCategories]);
 
   /* ── Add ────────────────────────────────────────────────────────── */

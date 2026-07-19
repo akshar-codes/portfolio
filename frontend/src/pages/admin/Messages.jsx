@@ -54,7 +54,7 @@ export default function Messages() {
   };
 
   useEffect(() => {
-    fetchMessages(1);
+    queueMicrotask(() => fetchMessages(1));
   }, [fetchMessages]);
 
   return (

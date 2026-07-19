@@ -223,6 +223,11 @@ export default function ProjectDetails({ project, onClose }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const handleClose = useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 280);
+  }, [onClose]);
+
   // Focus trap + close on Escape
   useEffect(() => {
     closeBtnRef.current?.focus();
@@ -256,12 +261,7 @@ export default function ProjectDetails({ project, onClose }) {
       window.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleClose = useCallback(() => {
-    setVisible(false);
-    setTimeout(onClose, 280);
-  }, [onClose]);
+  }, [handleClose]);
 
   const handleOverlayClick = (e) => {
     if (e.target === overlayRef.current) handleClose();

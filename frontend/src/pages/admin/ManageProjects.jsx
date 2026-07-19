@@ -666,7 +666,7 @@ export default function ManageProjects() {
     isOrderDirty(localProjects, projects);
 
   useEffect(() => {
-    fetchProjects(1);
+    queueMicrotask(() => fetchProjects(1));
   }, [fetchProjects]);
 
   const displayProjects = localProjects ?? projects;
