@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import api from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
+import { useAdminStyles } from "../../hooks/useAdminStyles";
 import { ROUTES } from "../../constants/routes";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 
 export default function AdminLogin() {
+  useAdminStyles();
   const navigate = useNavigate();
   const location = useLocation();
   const dest = location.state?.from?.pathname ?? ROUTES.adminDashboard;
