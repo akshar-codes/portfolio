@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { useAdminProfile, useUpdateProfile } from "../hooks/useProfile";
-import { resolveIcon } from "../utils/iconMap";
-import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
+import { useAdminProfile, useUpdateProfile } from "../../hooks/useProfile";
+import { resolveIcon } from "../../utils/iconMap";
+import { moveItem, stripTempIds, isOrderDirty } from "../../utils/ordering";
+import { isValidSocialLink } from "../../validators/socialLink";
+import { SUPPORTED_SOCIAL_ICON_KEYS } from "../../constants/icons";
+import ReorderButtons from "../../components/common/ReorderButtons";
+import SectionCard from "../../components/common/SectionCard";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
+} from "../../components/common/AdminStatus";
 
 /* ================================================================== *
  * Helpers
@@ -15,55 +19,6 @@ import {
 
 function newLink(order = 0) {
   return { _tempId: crypto.randomUUID(), label: "", url: "", icon: "", order };
-}
-
-/* ================================================================== *
- * ReorderButtons
- * ================================================================== */
-function ReorderButtons({ index, total, onMove, disabled }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, -1)}
-        disabled={index === 0 || disabled}
-        aria-label="Move up"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↑
-      </button>
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, 1)}
-        disabled={index === total - 1 || disabled}
-        aria-label="Move down"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↓
-      </button>
-    </div>
-  );
-}
-
-/* ================================================================== *
- * SectionCard — consistent list item wrapper
- * ================================================================== */
-function SectionCard({ children }) {
-  return (
-    <li
-      className="admin-item"
-      style={{ alignItems: "flex-start", padding: "16px 18px" }}
-    >
-      {children}
-    </li>
-  );
 }
 
 /* ================================================================== *
@@ -216,11 +171,7 @@ function SocialLinkEditor({ link, onSave, onCancel }) {
   const set = (field) => (e) =>
     setForm((p) => ({ ...p, [field]: e.target.value }));
 
-  const isValid =
-    form.label.trim() &&
-    form.url.trim() &&
-    form.icon.trim() &&
-    /^https?:\/\/.+/.test(form.url.trim());
+  const isValid = isValidSocialLink(form);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
@@ -271,8 +222,7 @@ function SocialLinkEditor({ link, onSave, onCancel }) {
       />
 
       <p style={{ fontSize: 11, color: "var(--light-gray)", margin: 0 }}>
-        Supported icon keys: linkedin, github, leetcode, twitter, x, instagram,
-        youtube, website, email
+        Supported icon keys: {SUPPORTED_SOCIAL_ICON_KEYS.join(", ")}
       </p>
 
       <div style={{ display: "flex", gap: 8 }}>

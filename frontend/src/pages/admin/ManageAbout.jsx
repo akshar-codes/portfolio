@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { useAdminAbout, useUpdateAbout } from "../hooks/useAbout";
-import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../utils/aboutIconMap";
-import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
+import { useAdminAbout, useUpdateAbout } from "../../hooks/useAbout";
+import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../../utils/aboutIconMap";
+import { moveItem, stripTempIds, isOrderDirty } from "../../utils/ordering";
+import ReorderButtons from "../../components/common/ReorderButtons";
+import SectionCard from "../../components/common/SectionCard";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
+} from "../../components/common/AdminStatus";
 
 /* ================================================================== *
  * Tiny helpers
@@ -242,55 +244,6 @@ function ServiceEditor({ service, onSave, onCancel }) {
           Cancel
         </button>
       </div>
-    </div>
-  );
-}
-
-/* ================================================================== *
- * SectionCard — consistent list item wrapper
- * ================================================================== */
-function SectionCard({ children }) {
-  return (
-    <li
-      className="admin-item"
-      style={{ alignItems: "flex-start", padding: "16px 18px" }}
-    >
-      {children}
-    </li>
-  );
-}
-
-/* ================================================================== *
- * ReorderButtons — shared ↑/↓ controls
- * ================================================================== */
-function ReorderButtons({ index, total, onMove, disabled }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, -1)}
-        disabled={index === 0 || disabled}
-        aria-label="Move up"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↑
-      </button>
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, 1)}
-        disabled={index === total - 1 || disabled}
-        aria-label="Move down"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↓
-      </button>
     </div>
   );
 }

@@ -1,168 +1,24 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { ROUTES } from "../../constants/routes";
+import { PROJECTS_ADMIN_PAGE_SIZE } from "../../constants/pagination";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
-import { GroupedTagInput } from "./AddProject";
-import { moveItem, isOrderDirty } from "../utils/ordering";
-
-const PAGE_SIZE = 10;
-
-/* ------------------------------------------------------------------ *
- * Helpers
- * ------------------------------------------------------------------ */
-
-function flattenTechNames(technologies) {
-  if (!Array.isArray(technologies)) return [];
-  if (technologies.length === 0) return [];
-
-  // New grouped shape: [{ group, items }]
-  if (
-    typeof technologies[0] === "object" &&
-    technologies[0] !== null &&
-    "group" in technologies[0]
-  ) {
-    return technologies.flatMap((g) => g.items ?? []);
-  }
-
-  // Legacy flat shape: ["React", "Node.js"]
-  return technologies.filter((t) => typeof t === "string");
-}
-
-/* ------------------------------------------------------------------ *
- * ReorderButtons
- * ------------------------------------------------------------------ */
-function ReorderButtons({ index, total, onMove, disabled }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, -1)}
-        disabled={index === 0 || disabled}
-        aria-label="Move up"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↑
-      </button>
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, 1)}
-        disabled={index === total - 1 || disabled}
-        aria-label="Move down"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↓
-      </button>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- * TagInput — flat array, used for features only
- * ------------------------------------------------------------------ */
-function TagInput({ id, label, placeholder, items, onChange, maxItems = 30 }) {
-  const [draft, setDraft] = useState("");
-  const inputRef = useRef(null);
-
-  const add = () => {
-    const v = draft.trim();
-    if (!v || items.includes(v) || items.length >= maxItems) return;
-    onChange([...items, v]);
-    setDraft("");
-    inputRef.current?.focus();
-  };
-  const remove = (idx) => onChange(items.filter((_, i) => i !== idx));
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      add();
-    }
-    if (e.key === "Backspace" && !draft && items.length > 0)
-      remove(items.length - 1);
-  };
-
-  return (
-    <div className="admin-form__field">
-      <label className="admin-form__label" htmlFor={id}>
-        {label}
-      </label>
-      {items.length > 0 && (
-        <div
-          style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}
-        >
-          {items.map((item, idx) => (
-            <span
-              key={idx}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "3px 10px",
-                borderRadius: 100,
-                fontSize: 12,
-                background: "hsla(45,100%,72%,0.10)",
-                border: "1px solid hsla(45,100%,72%,0.20)",
-                color: "var(--orange-yellow-crayola)",
-              }}
-            >
-              {item}
-              <button
-                type="button"
-                onClick={() => remove(idx)}
-                aria-label={`Remove ${item}`}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--a-danger)",
-                  padding: "0 2px",
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <input
-          ref={inputRef}
-          id={id}
-          type="text"
-          className="form-input"
-          placeholder={placeholder}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={items.length >= maxItems}
-          style={{ flex: 1, fontSize: 13 }}
-        />
-        <button
-          type="button"
-          className="btn btn--ghost"
-          onClick={add}
-          disabled={!draft.trim() || items.length >= maxItems}
-          style={{ flexShrink: 0 }}
-        >
-          + Add
-        </button>
-      </div>
-    </div>
-  );
-}
+} from "../../components/common/AdminStatus";
+import { GroupedTagInput } from "../../components/common/GroupedTagInput";
+import TagInput from "../../components/common/TagInput";
+import ReorderButtons from "../../components/common/ReorderButtons";
+import Pagination from "../../components/common/Pagination";
+import { moveItem, isOrderDirty } from "../../utils/ordering";
+import {
+  flattenTechNames,
+  normaliseTechnologies,
+} from "../../utils/projectHelpers";
 
 /* ------------------------------------------------------------------ *
  * GalleryManager
@@ -327,18 +183,8 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
     solution: project.solution ?? "",
   });
 
-  // Normalise incoming technologies to grouped shape
-  const normaliseTech = (raw) => {
-    if (!Array.isArray(raw) || raw.length === 0) return [];
-    if (typeof raw[0] === "object" && raw[0] !== null && "group" in raw[0])
-      return raw;
-    // Legacy flat array — wrap
-    const items = raw.filter((t) => typeof t === "string" && t.trim());
-    return items.length ? [{ group: "General", items }] : [];
-  };
-
   const [technologies, setTechnologies] = useState(
-    normaliseTech(project.technologies ?? []),
+    normaliseTechnologies(project.technologies ?? []),
   );
   const [features, setFeatures] = useState([...(project.features ?? [])]);
   const [existingGallery, setExistingGallery] = useState(
@@ -381,9 +227,11 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
         fd.append("deleteGalleryIds", JSON.stringify(deletedGalleryIds));
       }
 
-      const { data } = await api.patch(`/projects/${project._id}`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.patch(
+        API_ENDPOINTS.projectById(project._id),
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
       toast.success("Project updated.");
       onSaved(data);
       onClose();
@@ -736,8 +584,8 @@ export default function ManageProjects() {
     setError("");
     setLocalProjects(null);
     try {
-      const { data } = await api.get("/projects", {
-        params: { page: targetPage, limit: PAGE_SIZE },
+      const { data } = await api.get(API_ENDPOINTS.projects, {
+        params: { page: targetPage, limit: PROJECTS_ADMIN_PAGE_SIZE },
       });
       const sorted = [...(data.projects ?? [])].sort(
         (a, b) => (a.order ?? 0) - (b.order ?? 0),
@@ -755,14 +603,14 @@ export default function ManageProjects() {
 
   useEffect(() => {
     api
-      .get("/admin/categories")
+      .get(API_ENDPOINTS.adminCategories)
       .then(({ data }) => setCategories(data ?? []))
       .catch(() => {});
   }, []);
 
   const handleOpenEdit = async (projectId) => {
     try {
-      const { data } = await api.get(`/projects/${projectId}`);
+      const { data } = await api.get(API_ENDPOINTS.projectById(projectId));
       setEditingProject(data);
     } catch (err) {
       toast.error(err.message);
@@ -779,7 +627,7 @@ export default function ManageProjects() {
     );
     if (!confirmed) return;
     try {
-      await api.delete(`/projects/${id}`);
+      await api.delete(API_ENDPOINTS.projectById(id));
       toast.success(`"${title}" deleted successfully.`);
       fetchProjects(page);
     } catch (err) {
@@ -799,7 +647,7 @@ export default function ManageProjects() {
     if (!localProjects) return;
     setSavingOrder(true);
     try {
-      await api.patch("/projects/reorder", {
+      await api.patch(API_ENDPOINTS.projectReorder, {
         orderedIds: localProjects.map((p) => p._id),
       });
       setProjects(localProjects);
@@ -838,7 +686,7 @@ export default function ManageProjects() {
                 {savingOrder ? "Saving…" : "Save Order"}
               </button>
             )}
-            <Link to="/admin/projects/new" className="btn btn--primary">
+            <Link to={ROUTES.adminProjectsNew} className="btn btn--primary">
               + Add Project
             </Link>
           </div>
@@ -947,34 +795,12 @@ export default function ManageProjects() {
               })}
             </ul>
 
-            {totalPages > 1 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  marginTop: 8,
-                }}
-              >
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => fetchProjects(page - 1)}
-                  disabled={page === 1 || savingOrder}
-                >
-                  ← Prev
-                </button>
-                <span style={{ fontSize: 13, color: "var(--a-text-muted)" }}>
-                  {page} / {totalPages}
-                </span>
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => fetchProjects(page + 1)}
-                  disabled={page === totalPages || savingOrder}
-                >
-                  Next →
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={fetchProjects}
+              disabled={savingOrder}
+            />
           </>
         )}
       </div>

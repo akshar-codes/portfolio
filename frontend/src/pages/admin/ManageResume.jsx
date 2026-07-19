@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import api from "../services/api";
-import { moveItem, stripTempIds, isOrderDirty } from "../utils/ordering";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { moveItem, stripTempIds, isOrderDirty } from "../../utils/ordering";
+import ReorderButtons from "../../components/common/ReorderButtons";
+import SectionCard from "../../components/common/SectionCard";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
+} from "../../components/common/AdminStatus";
 
 /* ================================================================== *
  * Helpers
@@ -23,41 +26,6 @@ function newEducationEntry() {
 
 function newSkillGroup(order = 0) {
   return { _tempId: crypto.randomUUID(), category: "", items: [], order };
-}
-
-/* ================================================================== *
- * ReorderButtons
- * ================================================================== */
-function ReorderButtons({ index, total, onMove, disabled }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, -1)}
-        disabled={index === 0 || disabled}
-        aria-label="Move up"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↑
-      </button>
-      <button
-        className="btn btn--ghost"
-        onClick={() => onMove(index, 1)}
-        disabled={index === total - 1 || disabled}
-        aria-label="Move down"
-        style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-      >
-        ↓
-      </button>
-    </div>
-  );
 }
 
 /* ================================================================== *
@@ -239,20 +207,6 @@ function SkillGroupEditor({ group, onSave, onCancel }) {
 }
 
 /* ================================================================== *
- * SectionCard
- * ================================================================== */
-function SectionCard({ children }) {
-  return (
-    <li
-      className="admin-item"
-      style={{ alignItems: "flex-start", padding: "16px 18px" }}
-    >
-      {children}
-    </li>
-  );
-}
-
-/* ================================================================== *
  * Main ManageResume component
  * ================================================================== */
 export default function ManageResume() {
@@ -271,7 +225,7 @@ export default function ManageResume() {
     setFetchStatus("loading");
     setFetchError("");
     try {
-      const { data } = await api.get("/admin/resume");
+      const { data } = await api.get(API_ENDPOINTS.adminResume);
       const sortedSkills = [...(data.skills ?? [])]
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map((s) => ({ ...s, _tempId: s._id }));
@@ -301,7 +255,7 @@ export default function ManageResume() {
     async (section, newArray, { successMsg } = {}) => {
       setSaving(section);
       try {
-        const { data } = await api.patch("/admin/resume", {
+        const { data } = await api.patch(API_ENDPOINTS.adminResume, {
           section,
           value: stripTempIds(newArray),
         });
