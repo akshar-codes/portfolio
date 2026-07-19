@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
+} from "../../components/common/AdminStatus";
 
 export default function ManageCategories() {
   const [categories, setCategories] = useState([]);
@@ -24,7 +25,7 @@ export default function ManageCategories() {
     setStatus("loading");
     setFetchError("");
     try {
-      const { data } = await api.get("/admin/categories");
+      const { data } = await api.get(API_ENDPOINTS.adminCategories);
       setCategories(data ?? []);
       setStatus("ready");
     } catch (err) {
@@ -45,7 +46,7 @@ export default function ManageCategories() {
 
     setAdding(true);
     try {
-      await api.post("/admin/categories", { name: trimmed });
+      await api.post(API_ENDPOINTS.adminCategories, { name: trimmed });
       setNewName("");
       toast.success("Category created successfully.");
       fetchCategories();
@@ -73,7 +74,7 @@ export default function ManageCategories() {
 
     setDeletingId(id);
     try {
-      await api.delete(`/admin/categories/${id}`);
+      await api.delete(API_ENDPOINTS.adminCategoryById(id));
       toast.success(`Category "${name}" deleted.`);
       fetchCategories();
     } catch (err) {

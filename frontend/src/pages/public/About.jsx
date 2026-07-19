@@ -1,5 +1,5 @@
-import { useAbout } from "../hooks/useAbout";
-import { resolveAboutIcon } from "../utils/aboutIconMap";
+import { useAbout } from "../../hooks/useAbout";
+import { resolveAboutIcon } from "../../utils/aboutIconMap";
 
 /* ------------------------------------------------------------------ *
  * Loading skeleton — mirrors the real content structure exactly so

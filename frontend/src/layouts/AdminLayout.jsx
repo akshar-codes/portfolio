@@ -1,6 +1,18 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
+import { ROUTES } from "../constants/routes";
+import { API_ENDPOINTS } from "../constants/apiEndpoints";
+
+const SUBNAV_LINKS = [
+  { to: ROUTES.adminDashboard, label: "Dashboard" },
+  { to: ROUTES.adminProfile, label: "Profile" },
+  { to: ROUTES.adminAbout, label: "About" },
+  { to: ROUTES.adminProjects, label: "Projects" },
+  { to: ROUTES.adminCategories, label: "Categories" },
+  { to: ROUTES.adminResume, label: "Resume" },
+  { to: ROUTES.adminMessages, label: "Messages" },
+];
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -8,9 +20,9 @@ export default function AdminLayout() {
 
   const handleLogout = async () => {
     try {
-      await api.post("/admin/logout");
+      await api.post(API_ENDPOINTS.adminLogout);
       logout();
-      navigate("/admin/login");
+      navigate(ROUTES.adminLogin);
     } catch {
       alert("Logout failed. Please try again.");
     }
@@ -30,62 +42,17 @@ export default function AdminLayout() {
       </header>
 
       <nav className="admin-shell__subnav" aria-label="Admin sections">
-        <NavLink
-          to="/admin/dashboard"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Dashboard
-        </NavLink>
-        <NavLink
-          to="/admin/profile"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Profile
-        </NavLink>
-        <NavLink
-          to="/admin/about"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          About
-        </NavLink>
-        <NavLink
-          to="/admin/projects"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Projects
-        </NavLink>
-        <NavLink
-          to="/admin/categories"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Categories
-        </NavLink>
-        <NavLink
-          to="/admin/resume"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Resume
-        </NavLink>
-        <NavLink
-          to="/admin/messages"
-          className={({ isActive }) =>
-            `admin-subnav__link${isActive ? " active" : ""}`
-          }
-        >
-          Messages
-        </NavLink>
+        {SUBNAV_LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              `admin-subnav__link${isActive ? " active" : ""}`
+            }
+          >
+            {link.label}
+          </NavLink>
+        ))}
       </nav>
 
       <main className="admin-shell__body">

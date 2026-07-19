@@ -1,10 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { toast } from "sonner";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { PORTFOLIO_PAGE_SIZE } from "../../constants/pagination";
+import Pagination from "../../components/common/Pagination";
 
-const ProjectDetails = lazy(() => import("../components/ProjectDetails"));
-
-const PAGE_SIZE = 9;
+const ProjectDetails = lazy(() => import("../../utils/ProjectDetails"));
 
 export default function Portfolio() {
   const [filter, setFilter] = useState("All");
@@ -21,7 +22,7 @@ export default function Portfolio() {
   // Fetch non-empty categories once on mount
   useEffect(() => {
     api
-      .get("/categories")
+      .get(API_ENDPOINTS.categories)
       .then(({ data }) => setCategories(data ?? []))
       .catch(() => {});
   }, []);
@@ -33,10 +34,10 @@ export default function Portfolio() {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const params = { page, limit: PAGE_SIZE };
+        const params = { page, limit: PORTFOLIO_PAGE_SIZE };
         if (filter !== "All") params.category = filter;
 
-        const { data } = await api.get("/projects", {
+        const { data } = await api.get(API_ENDPOINTS.projects, {
           params,
           signal: controller.signal,
         });
@@ -67,7 +68,7 @@ export default function Portfolio() {
     if (detailLoading) return;
     setDetailLoading(true);
     try {
-      const { data } = await api.get(`/projects/${projectId}`);
+      const { data } = await api.get(API_ENDPOINTS.projectById(projectId));
       setSelectedProject(data);
     } catch (err) {
       toast.error(err.message || "Failed to load project details.");
@@ -181,37 +182,11 @@ export default function Portfolio() {
               </ul>
 
               {/* ── Pagination ──────────────────────────────────── */}
-              {totalPages > 1 && (
-                <div
-                  className="pagination"
-                  role="navigation"
-                  aria-label="Project pages"
-                >
-                  <button
-                    className="btn btn--ghost"
-                    onClick={() => setPage((p) => p - 1)}
-                    disabled={page === 1}
-                  >
-                    ← Prev
-                  </button>
-                  <span
-                    style={{
-                      color: "var(--light-gray)",
-                      fontSize: "13px",
-                      padding: "0 12px",
-                    }}
-                  >
-                    {page} / {totalPages}
-                  </span>
-                  <button
-                    className="btn btn--ghost"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={page === totalPages}
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onChange={setPage}
+              />
             </>
           )}
         </section>

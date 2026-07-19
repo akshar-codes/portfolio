@@ -1,40 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { MESSAGES_PAGE_SIZE } from "../../constants/pagination";
+import { relativeTime } from "../../utils/date";
+import { getInitials, truncate } from "../../utils/strings";
+import Pagination from "../../components/common/Pagination";
 import {
   AdminSkeleton,
   AdminEmpty,
   AdminError,
-} from "../components/AdminStatus";
-
-const PAGE_SIZE = 10;
-
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
-
-function relativeTime(dateStr) {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+} from "../../components/common/AdminStatus";
 
 export default function Messages() {
   const [messages, setMessages] = useState([]);
@@ -48,8 +24,8 @@ export default function Messages() {
     setStatus("loading");
     setError("");
     try {
-      const { data } = await api.get("/messages", {
-        params: { page: targetPage, limit: PAGE_SIZE },
+      const { data } = await api.get(API_ENDPOINTS.messages, {
+        params: { page: targetPage, limit: MESSAGES_PAGE_SIZE },
       });
       setMessages(data.messages ?? []);
       setTotal(data.total ?? 0);
@@ -69,7 +45,7 @@ export default function Messages() {
     if (!confirmed) return;
 
     try {
-      await api.delete(`/messages/${id}`);
+      await api.delete(API_ENDPOINTS.messageById(id));
       toast.success(`Message from "${fullname}" deleted.`);
       fetchMessages(page);
     } catch (err) {
@@ -148,8 +124,7 @@ export default function Messages() {
                     </span>
                   </div>
                   <span className="admin-item__preview">
-                    {msg.message?.slice(0, 110)}
-                    {msg.message?.length > 110 && "…"}
+                    {truncate(msg.message, 110)}
                   </span>
                 </div>
 
@@ -166,34 +141,11 @@ export default function Messages() {
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginTop: 8,
-              }}
-            >
-              <button
-                className="btn btn--ghost"
-                onClick={() => fetchMessages(page - 1)}
-                disabled={page === 1}
-              >
-                ← Prev
-              </button>
-              <span style={{ fontSize: 13, color: "var(--a-text-muted)" }}>
-                {page} / {totalPages}
-              </span>
-              <button
-                className="btn btn--ghost"
-                onClick={() => fetchMessages(page + 1)}
-                disabled={page === totalPages}
-              >
-                Next →
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onChange={fetchMessages}
+          />
         </>
       )}
     </div>

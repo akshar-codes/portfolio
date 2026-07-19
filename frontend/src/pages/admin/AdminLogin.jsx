@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import api from "../../services/api";
+import { useAuth } from "../../hooks/useAuth";
+import { ROUTES } from "../../constants/routes";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
-  const dest = location.state?.from?.pathname ?? "/admin/dashboard";
+  const dest = location.state?.from?.pathname ?? ROUTES.adminDashboard;
 
   const { authState, login } = useAuth();
 
@@ -32,7 +34,7 @@ export default function AdminLogin() {
     }
     setLoading(true);
     try {
-      await api.post("/admin/login", form);
+      await api.post(API_ENDPOINTS.adminLogin, form);
       login();
       navigate(dest, { replace: true });
     } catch (err) {

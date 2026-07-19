@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { IoBookOutline } from "react-icons/io5";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 
 /* ------------------------------------------------------------------ *
  * Loading skeleton — mirrors the real content structure so there's
@@ -86,7 +87,7 @@ export default function Resume() {
     const load = async () => {
       setStatus("loading");
       try {
-        const { data } = await api.get("/resume");
+        const { data } = await api.get(API_ENDPOINTS.resume);
         if (!cancelled) {
           setResume(data);
           setStatus("ready");

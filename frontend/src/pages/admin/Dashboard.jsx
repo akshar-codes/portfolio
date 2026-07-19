@@ -1,38 +1,39 @@
 import { Link } from "react-router-dom";
+import { ROUTES } from "../../constants/routes";
 
 const ACTIONS = [
   {
-    to: "/admin/profile",
+    to: ROUTES.adminProfile,
     icon: "👤",
     title: "Edit Profile",
     desc: "Update your name, contact details, avatar, and social links.",
   },
   {
-    to: "/admin/about",
+    to: ROUTES.adminAbout,
     icon: "📋",
     title: "Edit About",
     desc: "Manage your bio paragraphs and service cards displayed on the About page.",
   },
   {
-    to: "/admin/projects",
+    to: ROUTES.adminProjects,
     icon: "🗂️",
     title: "Manage Projects",
     desc: "Add, view, or delete portfolio projects and their images.",
   },
   {
-    to: "/admin/categories",
+    to: ROUTES.adminCategories,
     icon: "🏷️",
     title: "Manage Categories",
     desc: "Create or remove project categories. Unused categories can be deleted.",
   },
   {
-    to: "/admin/resume",
+    to: ROUTES.adminResume,
     icon: "📄",
     title: "Edit Resume",
     desc: "Update education history and technical skills displayed on your resume page.",
   },
   {
-    to: "/admin/messages",
+    to: ROUTES.adminMessages,
     icon: "💬",
     title: "Messages",
     desc: "Read and manage contact form submissions from visitors.",

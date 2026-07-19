@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import api from "../services/api";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { isContactFormValid } from "../../validators/contact";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -11,10 +13,7 @@ export default function Contact() {
   });
   const [loading, setLoading] = useState(false);
 
-  const isFormValid =
-    formData.fullname.trim() !== "" &&
-    formData.email.trim() !== "" &&
-    formData.message.trim() !== "";
+  const isFormValid = isContactFormValid(formData);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -26,7 +25,7 @@ export default function Contact() {
     setLoading(true);
 
     try {
-      await api.post("/messages", formData);
+      await api.post(API_ENDPOINTS.messages, formData);
       toast.success("Message sent successfully!");
       setFormData({ fullname: "", email: "", message: "", website: "" });
     } catch (err) {
