@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { ROUTES } from "../../constants/routes";
 
 export default function Navbar() {
   return (
@@ -6,7 +7,7 @@ export default function Navbar() {
       <ul className="navbar-list">
         <li className="navbar-item">
           <NavLink
-            to="/"
+            to={ROUTES.home}
             className={({ isActive }) =>
               `navbar-link ${isActive ? "active" : ""}`
             }
@@ -17,7 +18,7 @@ export default function Navbar() {
 
         <li className="navbar-item">
           <NavLink
-            to="/resume"
+            to={ROUTES.resume}
             className={({ isActive }) =>
               `navbar-link ${isActive ? "active" : ""}`
             }
@@ -28,7 +29,7 @@ export default function Navbar() {
 
         <li className="navbar-item">
           <NavLink
-            to="/portfolio"
+            to={ROUTES.portfolio}
             className={({ isActive }) =>
               `navbar-link ${isActive ? "active" : ""}`
             }
@@ -39,7 +40,7 @@ export default function Navbar() {
 
         <li className="navbar-item">
           <NavLink
-            to="/contact"
+            to={ROUTES.contact}
             className={({ isActive }) =>
               `navbar-link ${isActive ? "active" : ""}`
             }

@@ -5,8 +5,8 @@ import {
   IoPhonePortraitOutline,
   IoLocationOutline,
 } from "react-icons/io5";
-import { useProfile } from "../hooks/useProfile";
-import { resolveIcon } from "../utils/iconMap";
+import { useProfile } from "../../hooks/useProfile";
+import { resolveIcon } from "../../utils/iconMap";
 
 /* ─────────────────────────────────────────────────────────────────── *
  * Shimmer skeleton block

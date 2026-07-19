@@ -1,13 +1,3 @@
-/**
- * AdminStatus.jsx
- * Reusable loading / empty / error / skeleton states for every admin page.
- * Usage:
- *   <AdminSpinner />
- *   <AdminEmpty icon="📭" title="No projects yet" sub="Add one above." />
- *   <AdminError message={err} onRetry={fetchData} />
- *   <AdminSkeleton rows={4} />
- */
-
 export function AdminSpinner({ label = "Loading…" }) {
   return (
     <div className="a-status">
