@@ -1,206 +1,281 @@
-import { useState, useEffect } from "react";
-import { IoBookOutline } from "react-icons/io5";
-import api from "../../services/api";
-import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { useState } from "react";
 
-/* ------------------------------------------------------------------ *
- * Loading skeleton — mirrors the real content structure so there's
- * no jarring layout shift when data arrives.
- * ------------------------------------------------------------------ */
-function ResumeSkeleton() {
-  return (
-    <article className="resume active">
-      <header>
-        <h2 className="h2 article-title">Resume</h2>
-      </header>
+const TABS = ["Experience", "Education", "Certification", "Skills", "About me"];
 
-      {[1, 2].map((n) => (
-        <section key={n} className="timeline" style={{ marginBottom: 30 }}>
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <div
-              style={{
-                height: 20,
-                width: 160,
-                background: "var(--jet)",
-                borderRadius: 6,
-                animation: "a-shimmer 1.5s ease-in-out infinite",
-              }}
-            />
-          </div>
+const RESUME_DATA = {
+  Experience: {
+    heading: "My experience",
+    subheading:
+      "Demonstrated expertise through impactful internships and personal projects, delivering innovative & high-quality solutions.",
+    items: [
+      {
+        dateRange: "06 Jan. 2025 - 30 Jun. 2025",
+        role: "SDE Intern",
+        details: ["99Acres, Info Edge, Noida"],
+      },
+      {
+        dateRange: "Jul. 2024 - Aug. 2024",
+        role: "ML Intern",
+        details: ["IRDE lab, DRDO, Dehradun"],
+      },
+      {
+        dateRange: "01 Jun. 2024 - 29 Jun. 2024",
+        role: "Participant",
+        details: ["Amazon ML School, Remote"],
+      },
+      {
+        dateRange: "Apr. 24 - Aug. 24",
+        role: "External Relations Officer",
+        details: ["GEU ACM, Dehradun"],
+      },
+    ],
+  },
+  Education: {
+    heading: "My education",
+    subheading:
+      "Academic foundation built through rigorous coursework and hands-on learning experiences.",
+    items: [
+      {
+        dateRange: "2021 - 2025",
+        role: "B.Tech Computer Science",
+        details: ["Graphic Era University, Dehradun", "CGPA: 8.4 / 10"],
+      },
+      {
+        dateRange: "2019 - 2021",
+        role: "Class XII — PCM",
+        details: ["St. Joseph's Academy, Dehradun", "Percentage: 92.8%"],
+      },
+      {
+        dateRange: "2009 - 2019",
+        role: "Class X",
+        details: ["St. Joseph's Academy, Dehradun", "Percentage: 94.2%"],
+      },
+    ],
+  },
+  Certification: {
+    heading: "My certifications",
+    subheading:
+      "Industry-recognised credentials validating expertise across machine learning, development, and cloud platforms.",
+    items: [
+      {
+        dateRange: "2024",
+        role: "Machine Learning Specialization",
+        details: ["Coursera — Andrew Ng, Stanford"],
+      },
+      {
+        dateRange: "2024",
+        role: "AWS Cloud Practitioner Essentials",
+        details: ["Amazon Web Services"],
+      },
+      {
+        dateRange: "2023",
+        role: "Full Stack Web Development",
+        details: ["Udemy — Angela Yu"],
+      },
+      {
+        dateRange: "2023",
+        role: "Data Structures & Algorithms",
+        details: ["Striver A2Z DSA Course"],
+      },
+    ],
+  },
+  Skills: {
+    heading: "My skills",
+    subheading:
+      "Versatile in programming, advanced in algorithm design, and experienced in developing solutions across multiple domains.",
+    categories: [
+      {
+        label: "Languages",
+        skills: ["Python", "JavaScript", "Java", "C++", "SQL"],
+      },
+      {
+        label: "ML / AI",
+        skills: ["TensorFlow", "Keras", "Scikit-learn", "MLflow", "OpenCV"],
+      },
+      {
+        label: "Web",
+        skills: ["React", "Node.js", "Express", "MongoDB", "Tailwind CSS"],
+      },
+      {
+        label: "Tools & Cloud",
+        skills: ["Git", "Docker", "AWS", "DVC", "Postman"],
+      },
+    ],
+  },
+  "About me": {
+    heading: "About me",
+    subheading:
+      "AI enthusiast and soon-to-be graduate, driven by a passion for problem-solving and innovation in software development.",
+    info: [
+      { label: "Name", value: "Akshar Gupta" },
+      { label: "Phone", value: "(+91) 9876543210" },
+      { label: "Nationality", value: "Indian" },
+      { label: "Email", value: "akshar2024wrk@gmail.com" },
+      { label: "Freelance", value: "Available" },
+      { label: "Languages", value: "English, Hindi" },
+    ],
+  },
+};
 
-          <ol className="timeline-list">
-            {[1, 2, 3].map((i) => (
-              <li
-                key={i}
-                className="timeline-item"
-                style={{ marginBottom: 20 }}
-              >
-                <div
-                  style={{
-                    height: 16,
-                    width: "60%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                    marginBottom: 8,
-                  }}
-                />
-                <div
-                  style={{
-                    height: 13,
-                    width: "30%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                    marginBottom: 8,
-                  }}
-                />
-                <div
-                  style={{
-                    height: 13,
-                    width: "90%",
-                    background: "var(--jet)",
-                    borderRadius: 4,
-                  }}
-                />
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
-    </article>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- * Main component
- * ------------------------------------------------------------------ */
 export default function Resume() {
-  const [resume, setResume] = useState(null);
-  const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
-  const [errorMsg, setErrorMsg] = useState("");
+  const [activeTab, setActiveTab] = useState("Experience");
+  const data = RESUME_DATA[activeTab];
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setStatus("loading");
-      try {
-        const { data } = await api.get(API_ENDPOINTS.resume);
-        if (!cancelled) {
-          setResume(data);
-          setStatus("ready");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setErrorMsg(err.message || "Failed to load resume data.");
-          setStatus("error");
-        }
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /* ── Loading state ──────────────────────────────────────────── */
-  if (status === "loading") return <ResumeSkeleton />;
-
-  /* ── Error state ────────────────────────────────────────────── */
-  if (status === "error") {
-    return (
-      <article className="resume active">
-        <header>
-          <h2 className="h2 article-title">Resume</h2>
-        </header>
-        <p
-          style={{
-            color: "var(--bittersweet-shimmer)",
-            fontSize: "var(--fs-6)",
-            marginTop: 20,
-          }}
-        >
-          Could not load resume data: {errorMsg}
-        </p>
-      </article>
-    );
-  }
-
-  /* ── Empty state ────────────────────────────────────────────── */
-  const hasEducation = resume?.education?.length > 0;
-  const hasSkills = resume?.skills?.length > 0;
-
-  if (!hasEducation && !hasSkills) {
-    return (
-      <article className="resume active">
-        <header>
-          <h2 className="h2 article-title">Resume</h2>
-        </header>
-        <p
-          style={{
-            color: "var(--light-gray)",
-            fontSize: "var(--fs-6)",
-            marginTop: 20,
-          }}
-        >
-          Resume content coming soon.
-        </p>
-      </article>
-    );
-  }
-
-  /* ── Ready state ────────────────────────────────────────────── */
   return (
-    <article className="resume active">
-      <header>
-        <h2 className="h2 article-title">Resume</h2>
-      </header>
+    <div className="page-enter">
+      <section className="section-container py-16">
+        <div className="flex flex-col md:flex-row gap-12 min-h-[500px]">
+          {/* Sidebar Tabs */}
+          <aside className="flex flex-col gap-3 md:w-72 flex-shrink-0">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="w-full py-4 px-5 rounded-lg text-center text-sm font-semibold cursor-pointer border-0 transition-all duration-200"
+                  style={{
+                    backgroundColor: isActive
+                      ? "var(--accent)"
+                      : "var(--bg-card)",
+                    color: isActive ? "#1c1c1e" : "var(--text-primary)",
+                    fontFamily: "Inter, sans-serif",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "#333336";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "var(--bg-card)";
+                    }
+                  }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </aside>
 
-      {/* ── Education ─────────────────────────────────────────── */}
-      {hasEducation && (
-        <section className="timeline">
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <h3 className="h3">Education</h3>
+          {/* Content Panel */}
+          <div className="flex-1 min-w-0">
+            <h2
+              className="font-mono text-3xl md:text-4xl font-bold mb-3"
+              style={{ color: "var(--accent)" }}
+            >
+              {data.heading}
+            </h2>
+            <p
+              className="font-mono text-sm leading-relaxed mb-8 max-w-2xl"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              {data.subheading}
+            </p>
+
+            {/* Experience / Education / Certification */}
+            {data.items && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {data.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl p-7 flex flex-col gap-3 transition-all duration-200"
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(0,255,136,0.3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                    }}
+                  >
+                    <span
+                      className="font-mono text-sm"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      {item.dateRange}
+                    </span>
+                    <h3
+                      className="font-mono text-lg font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {item.role}
+                    </h3>
+                    <ul className="list-none flex flex-col gap-1 mt-1">
+                      {item.details.map((d, j) => (
+                        <li
+                          key={j}
+                          className="flex items-start gap-2 font-mono text-sm"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <span style={{ color: "var(--accent)" }}>•</span>
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skills */}
+            {data.categories && (
+              <div className="flex flex-col gap-6">
+                {data.categories.map((cat) => (
+                  <div key={cat.label}>
+                    <p
+                      className="font-mono text-xs font-semibold mb-3 tracking-widest uppercase"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      {cat.label}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {cat.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
+                          style={{
+                            backgroundColor: "var(--bg-card)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border)",
+                          }}
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* About me — structured info grid */}
+            {data.info && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 max-w-2xl">
+                {data.info.map((item, i) => (
+                  <div key={i} className="flex items-baseline gap-3">
+                    <span
+                      className="font-mono text-sm"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      className="font-mono text-sm font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-
-          <ol className="timeline-list">
-            {resume.education.map((entry) => (
-              <li key={entry._id} className="timeline-item">
-                <h4 className="h4 timeline-item-title">{entry.institution}</h4>
-                <span>{entry.duration}</span>
-                <p className="timeline-text">{entry.description}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      {/* ── Technical Skills ──────────────────────────────────── */}
-      {hasSkills && (
-        <section className="timeline">
-          <div className="title-wrapper">
-            <div className="icon-box">
-              <IoBookOutline />
-            </div>
-            <h3 className="h3">Technical Skills</h3>
-          </div>
-
-          <ol className="timeline-list">
-            {resume.skills.map((group) => (
-              <li key={group._id} className="timeline-item">
-                <h4 className="h4 timeline-item-title">{group.category}</h4>
-                <p className="timeline-text">{group.items.join(", ")}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-    </article>
+        </div>
+      </section>
+    </div>
   );
 }
+

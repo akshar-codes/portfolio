@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #00ff88;
+  --accent-dark: #00cc6a;
+  --bg-primary: #1c1c1e;
+  --bg-secondary: #252527;
+  --bg-card: #2a2a2d;
+  --border: #3a3a3d;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #6b6b6e;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Typography utilities */
+.font-mono {
+  font-family: "JetBrains Mono", "Courier New", monospace !important;
+}
+
+/* Accent text */
+.text-accent {
+  color: var(--accent) !important;
+}
+
+/* Page transition */
+.page-enter {
+  animation: pageEnter 0.4s ease-out forwards;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section base */
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Green underline for active nav */
+.nav-active::after {
+  content: "";
+  display: block;
+  height: 2px;
+  background: var(--accent);
+  margin-top: 2px;
+  border-radius: 1px;
+}
+
+/* Outlined number style (from services/work pages) */
+.outlined-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 3.5rem;
+  font-weight: 700;
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.25);
+  color: transparent;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+/* Arrow button circle */
+.arrow-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.arrow-btn-white {
+  background: #ffffff;
+  color: #1c1c1e;
+}
+
+.arrow-btn-white:hover {
+  background: var(--accent);
+  color: #1c1c1e;
+}
+
+.arrow-btn-accent {
+  background: var(--accent);
+  color: #1c1c1e;
+}
+
+.arrow-btn-accent:hover {
+  background: var(--accent-dark);
+}
+
+/* Dark/outlined variant — used for the live-link & GitHub buttons on Work */
+.arrow-btn-dark {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.arrow-btn-dark:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Carousel pagination button (Work page prev/next) */
+.pagination-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--accent);
+  color: #1c1c1e;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.pagination-btn:hover {
+  background: var(--accent-dark);
+}
+
+/* Carousel progress dot (Work page) */
+.progress-dot {
+  height: 8px;
+  border: none;
+  padding: 0;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Divider */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+/* Stat item */
+.stat-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+/* Profile image frame — animated rotating dashed ring */
+.profile-frame {
+  position: relative;
+}
+
+.profile-ring {
+  animation: profileSpin 12s linear infinite;
+}
+
+@keyframes drawCircle {
+  0% {
+    stroke-dashoffset: 918;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw-circle {
+  animation: drawCircle 2s ease-in-out forwards;
+}
+
+@keyframes profileSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Cursor blink */
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* MUI override — prevent CssBaseline conflicts */
+.MuiCssBaseline-root body {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Mobile bottom tab bar — pad for devices with a gesture/home indicator */
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
