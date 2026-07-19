@@ -1,22 +1,17 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
+import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
+/** authState: "pending" | "authenticated" | "unauthenticated" | "error" */
 export function AuthProvider({ children }) {
-  /* pending | authenticated | unauthenticated | error */
   const [authState, setAuthState] = useState("pending");
 
   const verify = useCallback(async () => {
     setAuthState("pending");
     try {
-      await api.get("/admin/verify");
+      await api.get(API_ENDPOINTS.adminVerify);
       setAuthState("authenticated");
     } catch (err) {
       setAuthState(err.statusCode === 401 ? "unauthenticated" : "error");
@@ -43,10 +38,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
-  return ctx;
 }

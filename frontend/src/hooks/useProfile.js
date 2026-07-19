@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
+import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
 export const PROFILE_QUERY_KEY = ["profile"];
 
@@ -9,7 +10,7 @@ export function useProfile() {
   return useQuery({
     queryKey: PROFILE_QUERY_KEY,
     queryFn: async () => {
-      const { data } = await api.get("/profile");
+      const { data } = await api.get(API_ENDPOINTS.profile);
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes — profile changes rarely
@@ -23,7 +24,7 @@ export function useAdminProfile() {
   return useQuery({
     queryKey: [...PROFILE_QUERY_KEY, "admin"],
     queryFn: async () => {
-      const { data } = await api.get("/admin/profile");
+      const { data } = await api.get(API_ENDPOINTS.adminProfile);
       return data;
     },
     staleTime: 0, // always fresh in the admin panel
@@ -37,7 +38,7 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (updates) => {
-      const { data } = await api.patch("/admin/profile", updates);
+      const { data } = await api.patch(API_ENDPOINTS.adminProfile, updates);
       return data;
     },
     onSuccess: (updatedProfile) => {
