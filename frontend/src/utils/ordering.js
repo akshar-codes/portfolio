@@ -16,6 +16,8 @@ export function stripTempIds(arr) {
 
 /**
  * Compares the local `_id`/`_tempId` sequence against the last
+ * server-confirmed sequence to determine whether a manual reorder is
+ * "dirty" (unsaved).
  */
 export function isOrderDirty(local, server) {
   if (!local || !server || local.length !== server.length) return false;
