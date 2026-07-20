@@ -21,6 +21,10 @@ import adminMessageRoutes from "./routes/admin/messageRoutes.js";
 import adminResumeRoutes from "./routes/admin/resumeRoutes.js";
 import adminProfileRoutes from "./routes/admin/profileRoutes.js";
 import adminAboutRoutes from "./routes/admin/aboutRoutes.js";
+import adminSiteSettingsRoutes from "./routes/admin/siteSettingsRoutes.js";
+import adminNavigationRoutes from "./routes/admin/navigationRoutes.js";
+import adminFooterRoutes from "./routes/admin/footerRoutes.js";
+import adminSeoRoutes from "./routes/admin/seoRoutes.js";
 
 // ── General (public) routes ──────────────────────────────────────────
 import healthRoutes from "./routes/general/healthRoutes.js";
@@ -30,6 +34,10 @@ import messageRoutes from "./routes/general/messageRoutes.js";
 import resumeRoutes from "./routes/general/resumeRoutes.js";
 import profileRoutes from "./routes/general/profileRoutes.js";
 import aboutRoutes from "./routes/general/aboutRoutes.js";
+import siteSettingsRoutes from "./routes/general/siteSettingsRoutes.js";
+import navigationRoutes from "./routes/general/navigationRoutes.js";
+import footerRoutes from "./routes/general/footerRoutes.js";
+import seoRoutes from "./routes/general/seoRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -134,6 +142,16 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/admin/profile", adminProfileRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/admin/about", adminAboutRoutes);
+
+// ── CMS foundation: singleton site-configuration resources ─────────
+app.use("/api/site-settings", siteSettingsRoutes);
+app.use("/api/admin/site-settings", adminSiteSettingsRoutes);
+app.use("/api/navigation", navigationRoutes);
+app.use("/api/admin/navigation", adminNavigationRoutes);
+app.use("/api/footer", footerRoutes);
+app.use("/api/admin/footer", adminFooterRoutes);
+app.use("/api/seo", seoRoutes);
+app.use("/api/admin/seo", adminSeoRoutes);
 
 /* ------------------------------------------------------------------ *
  * 12. Central error handler
