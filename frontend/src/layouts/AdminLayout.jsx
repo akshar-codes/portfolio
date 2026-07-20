@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useAdminStyles } from "../hooks/useAdminStyles";
 import { ROUTES } from "../constants/routes";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
@@ -15,6 +16,7 @@ const SUBNAV_LINKS = [
 ];
 
 export default function AdminLayout() {
+  useAdminStyles();
   const navigate = useNavigate();
   const { logout } = useAuth();
 
