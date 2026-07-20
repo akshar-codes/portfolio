@@ -21,6 +21,7 @@ import adminMessageRoutes from "./routes/admin/messageRoutes.js";
 import adminResumeRoutes from "./routes/admin/resumeRoutes.js";
 import adminProfileRoutes from "./routes/admin/profileRoutes.js";
 import adminAboutRoutes from "./routes/admin/aboutRoutes.js";
+import adminMediaRoutes from "./routes/admin/mediaRoutes.js";
 import adminSiteSettingsRoutes from "./routes/admin/siteSettingsRoutes.js";
 import adminNavigationRoutes from "./routes/admin/navigationRoutes.js";
 import adminFooterRoutes from "./routes/admin/footerRoutes.js";
@@ -142,6 +143,9 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/admin/profile", adminProfileRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/admin/about", adminAboutRoutes);
+
+// ── Centralized media library (admin-only; no public read route) ───
+app.use("/api/admin/media", adminMediaRoutes);
 
 // ── CMS foundation: singleton site-configuration resources ─────────
 app.use("/api/site-settings", siteSettingsRoutes);
