@@ -6,6 +6,7 @@ export const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 1 day
 /* ── Pagination defaults ─────────────────────────────────────────── */
 export const DEFAULT_PROJECTS_PAGE_SIZE = 9;
 export const DEFAULT_MESSAGES_PAGE_SIZE = 10;
+export const DEFAULT_MEDIA_PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 50;
 
 /* ── Cache TTLs (ms) ──────────────────────────────────────────────── */
@@ -28,6 +29,10 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+
+/* ── Media library ────────────────────────────────────────────────── */
+export const MEDIA_DEFAULT_FOLDER = "general";
+export const MAX_MEDIA_TAGS = 20;
 
 /* ── Contact messages ─────────────────────────────────────────────── */
 export const MESSAGE_CAP = 500;
