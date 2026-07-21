@@ -1,7 +1,6 @@
 import Resume from "../models/Resume.js";
+import { createSingletonRepository } from "./SingletonRepository.js";
 
-export const getSingleton = () => Resume.getSingleton();
+const { getSingleton, findDefault, create } = createSingletonRepository(Resume);
 
-export const findDefault = () => Resume.findOne({ owner: "default" });
-
-export const create = (data) => Resume.create(data);
+export { getSingleton, findDefault, create };
