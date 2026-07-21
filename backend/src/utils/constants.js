@@ -34,6 +34,38 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
 export const MEDIA_DEFAULT_FOLDER = "general";
 export const MAX_MEDIA_TAGS = 20;
 
+/* ── Resume CMS ────────────────────────────────────────────────────
+ * Centralized here (rather than inlined separately in the Mongoose
+ * schema and the express-validator chain) so both validation layers
+ * stay in lockstep — a drift between them would mean the API accepts
+ * a value the schema then silently rejects (or vice versa).
+ * ------------------------------------------------------------------ */
+export const RESUME_AVAILABILITY_STATUSES = [
+  "available",
+  "unavailable",
+  "open_to_offers",
+];
+
+export const RESUME_LANGUAGE_PROFICIENCIES = [
+  "basic",
+  "intermediate",
+  "professional",
+  "fluent",
+  "native",
+];
+
+export const RESUME_DOWNLOAD_FILE_TYPES = ["pdf", "docx", "other"];
+
+export const RESUME_LIMITS = {
+  EXPERIENCE_MAX: 30,
+  EDUCATION_MAX: 20,
+  CERTIFICATIONS_MAX: 30,
+  SKILLS_MAX: 15,
+  LANGUAGES_MAX: 15,
+  INTERESTS_MAX: 20,
+  DOWNLOADS_MAX: 5,
+};
+
 /* ── Contact messages ─────────────────────────────────────────────── */
 export const MESSAGE_CAP = 500;
 
