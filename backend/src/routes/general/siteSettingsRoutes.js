@@ -1,9 +1,9 @@
 import express from "express";
-import { getSiteSettings } from "../../controllers/siteSettingsController.js";
+import { getPublicSiteSettings } from "../../controllers/siteSettingsController.js";
 
 const router = express.Router();
 
 // GET /api/site-settings
-router.get("/", getSiteSettings);
+router.get("/", getPublicSiteSettings);
 
 export default router;

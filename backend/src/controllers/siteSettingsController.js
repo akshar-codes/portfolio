@@ -1,18 +1,30 @@
 import {
-  fetchSiteSettings,
+  fetchSiteSettingsAdmin,
+  fetchSiteSettingsPublic,
   patchSiteSettings,
+  setSiteSettingsStatus,
 } from "../services/siteSettingsService.js";
 import { createSingletonController } from "./SingletonController.js";
 
 const service = {
-  fetchSingleton: fetchSiteSettings,
+  fetchAdmin: fetchSiteSettingsAdmin,
+  fetchPublic: fetchSiteSettingsPublic,
   patchSingleton: patchSiteSettings,
+  setStatus: setSiteSettingsStatus,
 };
 
-const { getResource: getSiteSettings, updateResource: updateSiteSettings } =
-  createSingletonController({
-    service,
-    resourceName: "Site settings",
-  });
+const {
+  getPublicResource: getPublicSiteSettings,
+  getAdminResource: getAdminSiteSettings,
+  updateResource: updateSiteSettings,
+  publishResource: publishSiteSettings,
+  unpublishResource: unpublishSiteSettings,
+} = createSingletonController({ service, resourceName: "Site settings" });
 
-export { getSiteSettings, updateSiteSettings };
+export {
+  getPublicSiteSettings,
+  getAdminSiteSettings,
+  updateSiteSettings,
+  publishSiteSettings,
+  unpublishSiteSettings,
+};
