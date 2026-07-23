@@ -1,9 +1,9 @@
 import express from "express";
-import { getAbout } from "../../controllers/aboutController.js";
+import { getPublicAbout } from "../../controllers/aboutController.js";
 
 const router = express.Router();
 
 // GET /api/about
-router.get("/", getAbout);
+router.get("/", getPublicAbout);
 
 export default router;
