@@ -11,14 +11,23 @@ const PATCHABLE_FIELDS = ["items", "ctaEnabled", "ctaLabel", "ctaUrl"];
 const ORDERED_ARRAY_FIELDS = ["items"];
 
 const {
-  fetchSingleton: fetchNavigation,
+  fetchAdmin: fetchNavigationAdmin,
+  fetchPublic: fetchNavigationPublic,
   patchSingleton: patchNavigation,
+  setStatus: setNavigationStatus,
   invalidateCache: invalidateNavigationCache,
 } = createSingletonService({
   repository,
   cacheKey: "navigation:public",
   patchableFields: PATCHABLE_FIELDS,
   orderedArrayFields: ORDERED_ARRAY_FIELDS,
+  resourceName: "Navigation",
 });
 
-export { fetchNavigation, patchNavigation, invalidateNavigationCache };
+export {
+  fetchNavigationAdmin,
+  fetchNavigationPublic,
+  patchNavigation,
+  setNavigationStatus,
+  invalidateNavigationCache,
+};

@@ -1,18 +1,30 @@
 import {
-  fetchNavigation,
+  fetchNavigationAdmin,
+  fetchNavigationPublic,
   patchNavigation,
+  setNavigationStatus,
 } from "../services/navigationService.js";
 import { createSingletonController } from "./SingletonController.js";
 
 const service = {
-  fetchSingleton: fetchNavigation,
+  fetchAdmin: fetchNavigationAdmin,
+  fetchPublic: fetchNavigationPublic,
   patchSingleton: patchNavigation,
+  setStatus: setNavigationStatus,
 };
 
-const { getResource: getNavigation, updateResource: updateNavigation } =
-  createSingletonController({
-    service,
-    resourceName: "Navigation",
-  });
+const {
+  getPublicResource: getPublicNavigation,
+  getAdminResource: getAdminNavigation,
+  updateResource: updateNavigation,
+  publishResource: publishNavigation,
+  unpublishResource: unpublishNavigation,
+} = createSingletonController({ service, resourceName: "Navigation" });
 
-export { getNavigation, updateNavigation };
+export {
+  getPublicNavigation,
+  getAdminNavigation,
+  updateNavigation,
+  publishNavigation,
+  unpublishNavigation,
+};
