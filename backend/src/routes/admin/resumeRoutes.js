@@ -1,6 +1,11 @@
 import express from "express";
 import { protect } from "../../middleware/authMiddleware.js";
-import { getResume, updateResume } from "../../controllers/resumeController.js";
+import {
+  getAdminResume,
+  updateResume,
+  publishResume,
+  unpublishResume,
+} from "../../controllers/resumeController.js";
 import { updateResumeValidator } from "../../validators/resumeValidators.js";
 
 const router = express.Router();
@@ -11,7 +16,7 @@ router.use(protect);
 /* ------------------------------------------------------------------ *
  * GET /api/admin/resume
  * ------------------------------------------------------------------ */
-router.get("/", getResume);
+router.get("/", getAdminResume);
 
 /* ------------------------------------------------------------------ *
  * PATCH /api/admin/resume
@@ -19,5 +24,11 @@ router.get("/", getResume);
  * certifications, skills, languages, interests, downloads.
  * ------------------------------------------------------------------ */
 router.patch("/", updateResumeValidator, updateResume);
+
+/* ------------------------------------------------------------------ *
+ * PATCH /api/admin/resume/publish | /unpublish
+ * ------------------------------------------------------------------ */
+router.patch("/publish", publishResume);
+router.patch("/unpublish", unpublishResume);
 
 export default router;

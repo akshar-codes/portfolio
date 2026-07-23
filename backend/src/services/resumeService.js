@@ -27,8 +27,7 @@ const PATCHABLE_FIELDS = [
 /**
  * Subset of PATCHABLE_FIELDS that are arrays of orderable items —
  * order is re-numbered and any client-only `_tempId` is stripped
- * before persisting (mirrors aboutService/resumeService's previous
- * per-section handling, now applied uniformly across every list).
+ * before persisting.
  */
 const ORDERED_ARRAY_FIELDS = [
   "experience",
@@ -41,14 +40,23 @@ const ORDERED_ARRAY_FIELDS = [
 ];
 
 const {
-  fetchSingleton: fetchResume,
+  fetchAdmin: fetchResumeAdmin,
+  fetchPublic: fetchResumePublic,
   patchSingleton: patchResume,
+  setStatus: setResumeStatus,
   invalidateCache: invalidateResumeCache,
 } = createSingletonService({
   repository,
   cacheKey: "resume:public",
   patchableFields: PATCHABLE_FIELDS,
   orderedArrayFields: ORDERED_ARRAY_FIELDS,
+  resourceName: "Resume",
 });
 
-export { fetchResume, patchResume, invalidateResumeCache };
+export {
+  fetchResumeAdmin,
+  fetchResumePublic,
+  patchResume,
+  setResumeStatus,
+  invalidateResumeCache,
+};
