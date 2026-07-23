@@ -22,12 +22,17 @@ import {
 import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
+import { buildSearchFilter } from "../utils/queryHelpers.js";
 import logger from "../utils/logger.js";
 import {
   CACHE_TTL_MS,
   DEFAULT_PROJECTS_PAGE_SIZE,
+  DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
   MAX_PAGE_SIZE,
   MAX_GALLERY_IMAGES,
+  CONTENT_STATUSES,
+  CONTENT_STATUS_DRAFT,
+  DEFAULT_CONTENT_STATUS,
 } from "../utils/constants.js";
 
 /* ================================================================== *
@@ -36,8 +41,8 @@ import {
 
 const CACHE_PREFIX = "projects:";
 
-function buildCacheKey(page, limit, category) {
-  return `${CACHE_PREFIX}page=${page}:limit=${limit}:cat=${category}`;
+function buildCacheKey(page, limit, category, search) {
+  return `${CACHE_PREFIX}page=${page}:limit=${limit}:cat=${category}:search=${search}`;
 }
 
 export function invalidateProjectsCache() {
@@ -133,24 +138,25 @@ async function resolveCategoryFilter(category) {
 }
 
 /* ================================================================== *
- * fetchAllProjects  (public)
+ * fetchAllProjects  (public — published projects only)
  * ================================================================== */
 
 export const fetchAllProjects = async ({
   page = 1,
   limit = DEFAULT_PROJECTS_PAGE_SIZE,
   category = "",
+  search = "",
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
   const skip = (safePage - 1) * safeLimit;
 
-  const cacheKey = buildCacheKey(safePage, safeLimit, category);
+  const cacheKey = buildCacheKey(safePage, safeLimit, category, search);
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const filter = await resolveCategoryFilter(category);
-  if (filter === null) {
+  const categoryFilter = await resolveCategoryFilter(category);
+  if (categoryFilter === null) {
     return {
       projects: [],
       total: 0,
@@ -159,6 +165,15 @@ export const fetchAllProjects = async ({
       totalPages: 0,
     };
   }
+
+  // Excludes only EXPLICIT drafts — a document without a status field
+  // (i.e. seeded before this feature existed) is still public. See the
+  // note on CONTENT_STATUS_DRAFT in utils/constants.js.
+  const filter = {
+    ...categoryFilter,
+    status: { $ne: CONTENT_STATUS_DRAFT },
+    ...buildSearchFilter(search, ["title", "description"]),
+  };
 
   const [projects, total] = await Promise.all([
     findPaginated({ filter, skip, limit: safeLimit }),
@@ -177,10 +192,82 @@ export const fetchAllProjects = async ({
 };
 
 /* ================================================================== *
- * fetchProjectById  (public)
+ * fetchAllProjectsAdmin  (admin — every status unless filtered)
+ * ================================================================== */
+
+export const fetchAllProjectsAdmin = async ({
+  page = 1,
+  limit = DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
+  category = "",
+  search = "",
+  status = "",
+} = {}) => {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
+  const skip = (safePage - 1) * safeLimit;
+
+  const categoryFilter = await resolveCategoryFilter(category);
+  if (categoryFilter === null) {
+    return {
+      projects: [],
+      total: 0,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: 0,
+    };
+  }
+
+  const filter = { ...categoryFilter };
+  if (status && CONTENT_STATUSES.includes(status)) {
+    filter.status = status;
+  }
+  Object.assign(filter, buildSearchFilter(search, ["title", "description"]));
+
+  // Deliberately not cached: the admin panel needs read-your-own-write
+  // consistency immediately after a create/edit/publish action.
+  const [projects, total] = await Promise.all([
+    findPaginated({ filter, skip, limit: safeLimit }),
+    countAll(filter),
+  ]);
+
+  return {
+    projects,
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit),
+  };
+};
+
+/* ================================================================== *
+ * fetchProjectById  (public — 404s for drafts)
  * ================================================================== */
 
 export const fetchProjectById = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ServiceError("Invalid project ID.", 400, "PROJECT_INVALID_ID");
+  }
+
+  const project = await findByIdPublic(id);
+
+  if (!project || project.status === CONTENT_STATUS_DRAFT) {
+    throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
+  }
+
+  if (project.gallery?.length) {
+    project.gallery = [...project.gallery].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    );
+  }
+
+  return project;
+};
+
+/* ================================================================== *
+ * fetchProjectByIdAdmin  (admin — returns regardless of status)
+ * ================================================================== */
+
+export const fetchProjectByIdAdmin = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ServiceError("Invalid project ID.", 400, "PROJECT_INVALID_ID");
   }
@@ -215,6 +302,7 @@ export const addProject = async ({
   features,
   challenge,
   solution,
+  status,
   file,
   bannerFile,
   galleryFiles,
@@ -231,6 +319,10 @@ export const addProject = async ({
       "PROJECT_INVALID_CATEGORY",
     );
   }
+
+  const safeStatus = CONTENT_STATUSES.includes(status)
+    ? status
+    : DEFAULT_CONTENT_STATUS;
 
   const uploadedPublicIds = [];
 
@@ -271,6 +363,7 @@ export const addProject = async ({
       title,
       description,
       category: category._id,
+      status: safeStatus,
       projectUrl: liveUrl || projectUrl || "",
       liveUrl: liveUrl || projectUrl || "",
       githubUrl: githubUrl || "",
@@ -339,6 +432,17 @@ export const updateProject = async (id, updates) => {
   ];
   for (const key of SCALAR_UPDATABLE) {
     if (updates[key] !== undefined) project[key] = updates[key];
+  }
+
+  if (updates.status !== undefined) {
+    if (!CONTENT_STATUSES.includes(updates.status)) {
+      throw new ServiceError(
+        `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+        400,
+        "PROJECT_INVALID_STATUS",
+      );
+    }
+    project.status = updates.status;
   }
 
   if (updates.technologies !== undefined) {
@@ -482,6 +586,31 @@ export const updateProject = async (id, updates) => {
   if (galleryPublicIdsToDestroy.length > 0) {
     await destroyManyFromCloudinary(galleryPublicIdsToDestroy, logger);
   }
+
+  invalidateProjectsCache();
+  return project;
+};
+
+/* ================================================================== *
+ * setProjectStatus  (publish / unpublish)
+ * ================================================================== */
+
+export const setProjectStatus = async (id, status) => {
+  if (!CONTENT_STATUSES.includes(status)) {
+    throw new ServiceError(
+      `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+      400,
+      "PROJECT_INVALID_STATUS",
+    );
+  }
+
+  const project = await findById(id);
+  if (!project) {
+    throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
+  }
+
+  project.status = status;
+  await project.save();
 
   invalidateProjectsCache();
   return project;

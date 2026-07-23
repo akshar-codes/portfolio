@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema: one technology group (e.g. "Frontend": ["React","Vite"])
@@ -51,6 +52,14 @@ const projectSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: [true, "Category is required"],
+    },
+    status: {
+      type: String,
+      enum: {
+        values: CONTENT_STATUSES,
+        message: `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+      },
+      default: DEFAULT_CONTENT_STATUS,
     },
     image: {
       url: {
@@ -204,5 +213,7 @@ const projectSchema = new mongoose.Schema(
 
 projectSchema.index({ order: 1 });
 projectSchema.index({ category: 1 });
+projectSchema.index({ status: 1 });
+projectSchema.index({ title: 1 });
 
 export default mongoose.model("Project", projectSchema);
