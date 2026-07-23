@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { generateSlug } from "../utils/slug.js";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 const categorySchema = new mongoose.Schema(
   {
@@ -19,6 +20,15 @@ const categorySchema = new mongoose.Schema(
       lowercase: true,
       maxlength: [120, "Slug must not exceed 120 characters"],
     },
+
+    status: {
+      type: String,
+      enum: {
+        values: CONTENT_STATUSES,
+        message: `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+      },
+      default: DEFAULT_CONTENT_STATUS,
+    },
   },
   { timestamps: true },
 );
@@ -26,6 +36,7 @@ const categorySchema = new mongoose.Schema(
 // Compound indexes
 categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
+categorySchema.index({ status: 1 });
 
 categorySchema.pre("save", async function () {
   if (!this.slug && this.name) {
