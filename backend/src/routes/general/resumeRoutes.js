@@ -1,9 +1,9 @@
 import express from "express";
-import { getResume } from "../../controllers/resumeController.js";
+import { getPublicResume } from "../../controllers/resumeController.js";
 
 const router = express.Router();
 
 // GET /api/resume
-router.get("/", getResume);
+router.get("/", getPublicResume);
 
 export default router;
