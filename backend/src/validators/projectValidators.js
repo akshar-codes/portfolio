@@ -1,4 +1,5 @@
-import { body, param } from "express-validator";
+import { body, param, query } from "express-validator";
+import { CONTENT_STATUSES } from "../utils/constants.js";
 
 export const projectIdParamValidator = [
   param("id").isMongoId().withMessage("Invalid project ID"),
@@ -52,6 +53,11 @@ export const projectCreateValidators = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage("Solution must not exceed 1000 characters"),
+
+  body("status")
+    .optional()
+    .isIn(CONTENT_STATUSES)
+    .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
 ];
 
 export const projectUpdateValidators = [
@@ -103,6 +109,11 @@ export const projectUpdateValidators = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage("Solution must not exceed 1000 characters"),
+
+  body("status")
+    .optional()
+    .isIn(CONTENT_STATUSES)
+    .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
 ];
 
 export const reorderProjectsValidator = [
@@ -112,4 +123,20 @@ export const reorderProjectsValidator = [
   body("orderedIds.*")
     .isMongoId()
     .withMessage("Each orderedId must be a valid MongoDB ObjectId"),
+];
+
+/**
+ * Query validators for GET /api/admin/projects — the admin-only
+ * listing that, unlike the public listing, can filter by status and
+ * see drafts.
+ */
+export const projectAdminListValidators = [
+  query("page").optional().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
+  query("limit").optional().isInt({ min: 1 }).withMessage("limit must be a positive integer").toInt(),
+  query("status")
+    .optional()
+    .isIn(CONTENT_STATUSES)
+    .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
+  query("search").optional().trim().isLength({ max: 200 }).withMessage("search must not exceed 200 characters"),
+  query("category").optional().trim(),
 ];
