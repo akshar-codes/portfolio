@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema — one entry in the social links array
@@ -49,6 +50,15 @@ const profileSchema = new mongoose.Schema(
       default: "default",
       immutable: true,
       match: [/^[a-z0-9_-]+$/, "Invalid owner value"],
+    },
+
+    status: {
+      type: String,
+      enum: {
+        values: CONTENT_STATUSES,
+        message: `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+      },
+      default: DEFAULT_CONTENT_STATUS,
     },
 
     name: {
@@ -117,6 +127,7 @@ const profileSchema = new mongoose.Schema(
 );
 
 profileSchema.index({ owner: 1 }, { unique: true, sparse: true });
+profileSchema.index({ status: 1 });
 
 /* ------------------------------------------------------------------ *
  * Static helper — always returns the singleton, creating it if absent
