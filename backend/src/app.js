@@ -17,6 +17,7 @@ import { JSON_BODY_LIMIT } from "./utils/constants.js";
 import adminAuthRoutes from "./routes/admin/authRoutes.js";
 import adminCategoryRoutes from "./routes/admin/categoryRoutes.js";
 import adminProjectRoutes from "./routes/admin/projectRoutes.js";
+import adminProjectListRoutes from "./routes/admin/projectAdminRoutes.js";
 import adminMessageRoutes from "./routes/admin/messageRoutes.js";
 import adminResumeRoutes from "./routes/admin/resumeRoutes.js";
 import adminProfileRoutes from "./routes/admin/profileRoutes.js";
@@ -133,6 +134,10 @@ app.use("/api/categories", categoryRoutes);
 
 app.use("/api/projects", projectRoutes);
 app.use("/api/projects", adminProjectRoutes);
+// Dedicated admin listing mount — kept separate from /api/projects so
+// its GET / and GET /:id can never be shadowed by the public router's
+// identically-shaped routes registered on that same prefix above.
+app.use("/api/admin/projects", adminProjectListRoutes);
 
 app.use("/api/messages", messageRoutes);
 app.use("/api/messages", adminMessageRoutes);
