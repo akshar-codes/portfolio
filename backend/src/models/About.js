@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas
@@ -71,6 +72,15 @@ const aboutSchema = new mongoose.Schema(
       match: [/^[a-z0-9_-]+$/, "Invalid owner value"],
     },
 
+    status: {
+      type: String,
+      enum: {
+        values: CONTENT_STATUSES,
+        message: `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
+      },
+      default: DEFAULT_CONTENT_STATUS,
+    },
+
     paragraphs: {
       type: [paragraphSchema],
       validate: {
@@ -93,6 +103,7 @@ const aboutSchema = new mongoose.Schema(
 );
 
 aboutSchema.index({ owner: 1 }, { unique: true, sparse: true });
+aboutSchema.index({ status: 1 });
 
 /* ------------------------------------------------------------------ *
  * Static helper — always returns the singleton, creating it if absent
