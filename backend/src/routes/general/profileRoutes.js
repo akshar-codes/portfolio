@@ -1,9 +1,9 @@
 import express from "express";
-import { getProfile } from "../../controllers/profileController.js";
+import { getPublicProfile } from "../../controllers/profileController.js";
 
 const router = express.Router();
 
 // GET /api/profile
-router.get("/", getProfile);
+router.get("/", getPublicProfile);
 
 export default router;
