@@ -28,14 +28,23 @@ const DEFAULTS = {
 };
 
 const {
-  fetchSingleton: fetchSiteSettings,
+  fetchAdmin: fetchSiteSettingsAdmin,
+  fetchPublic: fetchSiteSettingsPublic,
   patchSingleton: patchSiteSettings,
+  setStatus: setSiteSettingsStatus,
   invalidateCache: invalidateSiteSettingsCache,
 } = createSingletonService({
   repository,
   cacheKey: "siteSettings:public",
   patchableFields: PATCHABLE_FIELDS,
   defaults: DEFAULTS,
+  resourceName: "Site settings",
 });
 
-export { fetchSiteSettings, patchSiteSettings, invalidateSiteSettingsCache };
+export {
+  fetchSiteSettingsAdmin,
+  fetchSiteSettingsPublic,
+  patchSiteSettings,
+  setSiteSettingsStatus,
+  invalidateSiteSettingsCache,
+};
