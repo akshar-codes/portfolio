@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { MESSAGE_STATUSES, DEFAULT_MESSAGE_STATUS } from "../utils/constants.js";
 
 const messageSchema = new mongoose.Schema(
   {
@@ -27,6 +28,14 @@ const messageSchema = new mongoose.Schema(
       minlength: [10, "Message must be at least 10 characters"],
       maxlength: [2000, "Message must not exceed 2000 characters"],
     },
+    status: {
+      type: String,
+      enum: {
+        values: MESSAGE_STATUSES,
+        message: `status must be one of: ${MESSAGE_STATUSES.join(", ")}`,
+      },
+      default: DEFAULT_MESSAGE_STATUS,
+    },
   },
   {
     timestamps: true,
@@ -34,6 +43,7 @@ const messageSchema = new mongoose.Schema(
 );
 
 messageSchema.index({ createdAt: -1 });
+messageSchema.index({ status: 1, createdAt: -1 });
 
 const Message = mongoose.model("Message", messageSchema);
 

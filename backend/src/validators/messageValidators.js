@@ -1,4 +1,5 @@
-import { body } from "express-validator";
+import { body, param } from "express-validator";
+import { MESSAGE_STATUSES } from "../utils/constants.js";
 
 export const sendMessageValidator = [
   body("fullname")
@@ -21,4 +22,11 @@ export const sendMessageValidator = [
     .withMessage("Message must be at least 10 characters"),
 
   body("website").optional().equals("").withMessage("Bot detected"),
+];
+
+export const updateMessageStatusValidator = [
+  param("id").isMongoId().withMessage("Invalid message ID"),
+  body("status")
+    .isIn(MESSAGE_STATUSES)
+    .withMessage(`status must be one of: ${MESSAGE_STATUSES.join(", ")}`),
 ];
