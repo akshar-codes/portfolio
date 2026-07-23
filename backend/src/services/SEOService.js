@@ -29,14 +29,23 @@ const DEFAULTS = {
 };
 
 const {
-  fetchSingleton: fetchSeo,
+  fetchAdmin: fetchSeoAdmin,
+  fetchPublic: fetchSeoPublic,
   patchSingleton: patchSeo,
+  setStatus: setSeoStatus,
   invalidateCache: invalidateSeoCache,
 } = createSingletonService({
   repository,
   cacheKey: "seo:public",
   patchableFields: PATCHABLE_FIELDS,
   defaults: DEFAULTS,
+  resourceName: "SEO settings",
 });
 
-export { fetchSeo, patchSeo, invalidateSeoCache };
+export {
+  fetchSeoAdmin,
+  fetchSeoPublic,
+  patchSeo,
+  setSeoStatus,
+  invalidateSeoCache,
+};

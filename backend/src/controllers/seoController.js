@@ -1,15 +1,24 @@
-import { fetchSeo, patchSeo } from "../services/seoService.js";
+import {
+  fetchSeoAdmin,
+  fetchSeoPublic,
+  patchSeo,
+  setSeoStatus,
+} from "../services/seoService.js";
 import { createSingletonController } from "./SingletonController.js";
 
 const service = {
-  fetchSingleton: fetchSeo,
+  fetchAdmin: fetchSeoAdmin,
+  fetchPublic: fetchSeoPublic,
   patchSingleton: patchSeo,
+  setStatus: setSeoStatus,
 };
 
-const { getResource: getSeo, updateResource: updateSeo } =
-  createSingletonController({
-    service,
-    resourceName: "SEO settings",
-  });
+const {
+  getPublicResource: getPublicSeo,
+  getAdminResource: getAdminSeo,
+  updateResource: updateSeo,
+  publishResource: publishSeo,
+  unpublishResource: unpublishSeo,
+} = createSingletonController({ service, resourceName: "SEO settings" });
 
-export { getSeo, updateSeo };
+export { getPublicSeo, getAdminSeo, updateSeo, publishSeo, unpublishSeo };
