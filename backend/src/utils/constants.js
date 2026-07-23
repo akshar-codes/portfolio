@@ -5,6 +5,7 @@ export const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 1 day
 
 /* ── Pagination defaults ─────────────────────────────────────────── */
 export const DEFAULT_PROJECTS_PAGE_SIZE = 9;
+export const DEFAULT_PROJECTS_ADMIN_PAGE_SIZE = 10;
 export const DEFAULT_MESSAGES_PAGE_SIZE = 10;
 export const DEFAULT_MEDIA_PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 50;
@@ -33,6 +34,41 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
 /* ── Media library ────────────────────────────────────────────────── */
 export const MEDIA_DEFAULT_FOLDER = "general";
 export const MAX_MEDIA_TAGS = 20;
+
+/* ── Content publish/draft workflow ───────────────────────────────────
+ * Applies to every CMS resource with a public-facing representation:
+ * singleton pages (SiteSettings, Navigation, Footer, SEO, Profile,
+ * About, Resume) and list resources (Project, Category).
+ *
+ * Deliberately NOT applied to Media (admin-only asset registry, no
+ * public route — "publish" has no meaning for a raw asset) or to
+ * Messages (transactional records, not content — see MESSAGE_STATUSES
+ * below for their own read/unread concept instead).
+ *
+ * IMPORTANT: public-read gating checks `status === CONTENT_STATUS_DRAFT`
+ * (never `!== CONTENT_STATUS_PUBLISHED`). Mongoose does not backfill
+ * schema defaults onto already-persisted documents read via `.lean()`,
+ * so any document that existed before this field was introduced will
+ * have `status === undefined`. Gating on "is it explicitly draft" keeps
+ * every pre-existing document publicly visible without requiring a
+ * migration to run first; `scripts/migrateContentStatus.js` backfills
+ * the field for cleanliness, but the application does not depend on it.
+ * ------------------------------------------------------------------ */
+export const CONTENT_STATUS_DRAFT = "draft";
+export const CONTENT_STATUS_PUBLISHED = "published";
+export const CONTENT_STATUSES = [CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED];
+export const DEFAULT_CONTENT_STATUS = CONTENT_STATUS_PUBLISHED;
+
+/* ── Category listing (admin) ─────────────────────────────────────── */
+export const CATEGORY_SORT_FIELDS = ["name", "createdAt", "projectCount"];
+export const DEFAULT_CATEGORY_SORT_FIELD = "name";
+
+/* ── Contact messages ─────────────────────────────────────────────── */
+export const MESSAGE_CAP = 500;
+export const MESSAGE_STATUS_UNREAD = "unread";
+export const MESSAGE_STATUS_READ = "read";
+export const MESSAGE_STATUSES = [MESSAGE_STATUS_UNREAD, MESSAGE_STATUS_READ];
+export const DEFAULT_MESSAGE_STATUS = MESSAGE_STATUS_UNREAD;
 
 /* ── Resume CMS ────────────────────────────────────────────────────
  * Centralized here (rather than inlined separately in the Mongoose
@@ -65,9 +101,6 @@ export const RESUME_LIMITS = {
   INTERESTS_MAX: 20,
   DOWNLOADS_MAX: 5,
 };
-
-/* ── Contact messages ─────────────────────────────────────────────── */
-export const MESSAGE_CAP = 500;
 
 /* ── Body size limits ─────────────────────────────────────────────── */
 export const JSON_BODY_LIMIT = "150kb";
