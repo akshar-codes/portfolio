@@ -1,15 +1,30 @@
-import { fetchFooter, patchFooter } from "../services/footerService.js";
+import {
+  fetchFooterAdmin,
+  fetchFooterPublic,
+  patchFooter,
+  setFooterStatus,
+} from "../services/footerService.js";
 import { createSingletonController } from "./SingletonController.js";
 
 const service = {
-  fetchSingleton: fetchFooter,
+  fetchAdmin: fetchFooterAdmin,
+  fetchPublic: fetchFooterPublic,
   patchSingleton: patchFooter,
+  setStatus: setFooterStatus,
 };
 
-const { getResource: getFooter, updateResource: updateFooter } =
-  createSingletonController({
-    service,
-    resourceName: "Footer",
-  });
+const {
+  getPublicResource: getPublicFooter,
+  getAdminResource: getAdminFooter,
+  updateResource: updateFooter,
+  publishResource: publishFooter,
+  unpublishResource: unpublishFooter,
+} = createSingletonController({ service, resourceName: "Footer" });
 
-export { getFooter, updateFooter };
+export {
+  getPublicFooter,
+  getAdminFooter,
+  updateFooter,
+  publishFooter,
+  unpublishFooter,
+};
