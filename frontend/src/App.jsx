@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
 import { AuthProvider } from "./contexts/AuthContext";
+import { PermissionsProvider } from "./contexts/PermissionsContext";
+import { ConfirmDialogProvider } from "./contexts/ConfirmDialogContext";
+import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import PrivateRoute from "./components/common/PrivateRoute";
 import PublicLayout from "./layouts/PublicLayout";
@@ -15,7 +18,7 @@ import { ROUTES } from "./constants/routes";
 
 // Admin lazy loads
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
-const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
+const AdminLayout = lazy(() => import("./layouts/AdminLayout/AdminLayout"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
 const AddProject = lazy(() => import("./pages/admin/AddProject"));
@@ -24,6 +27,8 @@ const Messages = lazy(() => import("./pages/admin/Messages"));
 const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
 const ManageAbout = lazy(() => import("./pages/admin/ManageAbout"));
+const Unauthorized = lazy(() => import("./pages/admin/Unauthorized"));
+const AdminNotFound = lazy(() => import("./pages/admin/NotFound"));
 
 const Fallback = () => (
   <div className="admin-shell__loading">
@@ -34,116 +39,138 @@ const Fallback = () => (
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          toastOptions={{
-            style: { fontFamily: "var(--ff-poppins, Inter, sans-serif)", fontSize: "14px" },
-            duration: 4000,
-          }}
-        />
+      <ConfirmDialogProvider>
+        <GlobalLoadingProvider>
+          <AuthProvider>
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              toastOptions={{
+                style: { fontFamily: "var(--ff-poppins, Inter, sans-serif)", fontSize: "14px" },
+                duration: 4000,
+              }}
+            />
 
-        <Routes>
-          {/* ── PUBLIC ─────────────────────────────────────────── */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/work" element={<Work />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
+            <Routes>
+              {/* ── PUBLIC ─────────────────────────────────────────── */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/resume" element={<Resume />} />
+                <Route path="/work" element={<Work />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
 
-          {/* ── ADMIN LOGIN ────────────────────────────────────── */}
-          <Route
-            path={ROUTES.adminLogin}
-            element={
-              <Suspense fallback={<Fallback />}>
-                <AdminLogin />
-              </Suspense>
-            }
-          />
+              {/* ── ADMIN LOGIN ────────────────────────────────────── */}
+              <Route
+                path={ROUTES.adminLogin}
+                element={
+                  <Suspense fallback={<Fallback />}>
+                    <AdminLogin />
+                  </Suspense>
+                }
+              />
 
-          {/* ── PROTECTED ADMIN ────────────────────────────────── */}
-          <Route
-            path={ROUTES.adminRoot}
-            element={
-              <PrivateRoute>
-                <Suspense fallback={<Fallback />}>
-                  <AdminLayout />
-                </Suspense>
-              </PrivateRoute>
-            }
-          >
-            <Route
-              path="dashboard"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <Dashboard />
-                </Suspense>
-              }
-            />
-            <Route
-              path="profile"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ManageProfile />
-                </Suspense>
-              }
-            />
-            <Route
-              path="about"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ManageAbout />
-                </Suspense>
-              }
-            />
-            <Route
-              path="projects"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ManageProjects />
-                </Suspense>
-              }
-            />
-            <Route
-              path="projects/new"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <AddProject />
-                </Suspense>
-              }
-            />
-            <Route
-              path="categories"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ManageCategories />
-                </Suspense>
-              }
-            />
-            <Route
-              path="resume"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ManageResume />
-                </Suspense>
-              }
-            />
-            <Route
-              path="messages"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <Messages />
-                </Suspense>
-              }
-            />
-          </Route>
-        </Routes>
-      </AuthProvider>
+              {/* ── PROTECTED ADMIN ────────────────────────────────── */}
+              <Route
+                path={ROUTES.adminRoot}
+                element={
+                  <PrivateRoute>
+                    <PermissionsProvider>
+                      <Suspense fallback={<Fallback />}>
+                        <AdminLayout />
+                      </Suspense>
+                    </PermissionsProvider>
+                  </PrivateRoute>
+                }
+              >
+                <Route
+                  path="dashboard"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <Dashboard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageProfile />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="about"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageAbout />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="projects"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageProjects />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="projects/new"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <AddProject />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="categories"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageCategories />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="resume"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageResume />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="messages"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <Messages />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="unauthorized"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <Unauthorized />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <AdminNotFound />
+                    </Suspense>
+                  }
+                />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </GlobalLoadingProvider>
+      </ConfirmDialogProvider>
     </ErrorBoundary>
   );
 }
