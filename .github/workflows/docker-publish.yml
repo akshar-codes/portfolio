@@ -45,7 +45,7 @@ jobs:
 
       - name: Build & push backend
         if: matrix.service == 'backend'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
@@ -56,7 +56,7 @@ jobs:
 
       - name: Build & push frontend
         if: matrix.service == 'frontend'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: true
