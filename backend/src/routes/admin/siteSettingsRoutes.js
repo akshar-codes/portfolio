@@ -11,13 +11,8 @@ import {
   uploadSiteSettingsFavicon,
   deleteSiteSettingsFavicon,
 } from "../../controllers/siteSettingsController.js";
-// NOTE: previously imported from "../../validators/siteSettingsValidators.js",
-// which does not exist on disk (the real file is siteSettings.validator.js,
-// same ".x.validator.js" convention as footer.validator.js/seo.validator.js/
-// navigation.validator.js) — fixed here. The same mismatch exists in
-// footerRoutes.js/navigationRoutes.js/seoRoutes.js and should be reconciled
-// separately; flagged in docs/architecture.md's existing "Known issue" note.
-import { updateSiteSettingsValidator } from "../../validators/siteSettings.validator.js";
+
+import { updateSiteSettingsValidator } from "../../validators/siteSettingsValidators.js";
 
 const router = express.Router();
 
@@ -31,9 +26,6 @@ router.get("/", getAdminSiteSettings);
 
 /* ------------------------------------------------------------------ *
  * PATCH /api/admin/site-settings
- * Accepts any subset of the patchable top-level fields (see
- * PATCHABLE_FIELDS in services/SiteSettingsService.js). Does NOT
- * accept logo/favicon — see the dedicated routes below.
  * ------------------------------------------------------------------ */
 router.patch("/", updateSiteSettingsValidator, updateSiteSettings);
 
@@ -45,11 +37,6 @@ router.patch("/unpublish", unpublishSiteSettings);
 
 /* ------------------------------------------------------------------ *
  * Logo — dedicated upload/delete routes (Stage → Save → Destroy; see
- * services/SiteSettingsService.js). Kept out of the generic PATCH
- * above because the Cloudinary public_id must stay tied to whatever
- * asset was actually uploaded — reused `upload` single-file multer
- * instance from config/cloudinary.js (5 MB limit, image-only
- * fileFilter), same as the media library.
  * ------------------------------------------------------------------ */
 router.patch("/logo", upload.single("file"), uploadSiteSettingsLogo);
 router.delete("/logo", deleteSiteSettingsLogo);

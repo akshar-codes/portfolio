@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { ConfirmDialogContext } from "../contexts/ConfirmDialogContext";
+import { ConfirmDialogContext } from "../context/ConfirmDialogContext";
 
 /**
  * @returns {(options: { title: string, description?: string, confirmLabel?: string, cancelLabel?: string, tone?: 'default'|'danger' }) => Promise<boolean>}

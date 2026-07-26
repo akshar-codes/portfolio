@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { ROUTES } from "../../constants/routes";
+import { ROUTES } from "../constants/routes";
 
 export default function Unauthorized() {
   return (

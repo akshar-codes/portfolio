@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { GlobalLoadingContext } from "../contexts/GlobalLoadingContext";
+import { GlobalLoadingContext } from "../context/GlobalLoadingContext";
 
 export function useGlobalLoading() {
   const ctx = useContext(GlobalLoadingContext);

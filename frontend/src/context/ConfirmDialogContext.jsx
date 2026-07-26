@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useState } from "react";
-import ConfirmDialog from "../components/admin/ConfirmDialog";
+import ConfirmDialog from "../components/dialogs/ConfirmDialog";
 
 export const ConfirmDialogContext = createContext(null);
 

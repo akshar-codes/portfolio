@@ -2,10 +2,10 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
-import { AuthProvider } from "./contexts/AuthContext";
-import { PermissionsProvider } from "./contexts/PermissionsContext";
-import { ConfirmDialogProvider } from "./contexts/ConfirmDialogContext";
-import { GlobalLoadingProvider } from "./contexts/GlobalLoadingContext";
+import { AuthProvider } from "./context/AuthContext";
+import { PermissionsProvider } from "./context/PermissionsContext";
+import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
+import { GlobalLoadingProvider } from "./context/GlobalLoadingContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import PrivateRoute from "./components/common/PrivateRoute";
 import PublicLayout from "./layouts/PublicLayout";
@@ -28,8 +28,8 @@ const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
 const ManageAbout = lazy(() => import("./pages/admin/ManageAbout"));
 const ManageSiteSettings = lazy(() => import("./pages/admin/ManageSiteSettings"));
-const Unauthorized = lazy(() => import("./pages/admin/Unauthorized"));
-const AdminNotFound = lazy(() => import("./pages/admin/NotFound"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
+const AdminNotFound = lazy(() => import("./pages/NotFound"));
 
 const Fallback = () => (
   <div className="admin-shell__loading">
