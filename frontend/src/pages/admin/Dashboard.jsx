@@ -38,6 +38,12 @@ const ACTIONS = [
     title: "Messages",
     desc: "Read and manage contact form submissions from visitors.",
   },
+  {
+    to: ROUTES.adminSettings,
+    icon: "⚙️",
+    title: "Site Settings",
+    desc: "Logo, favicon, brand colors, announcement bar, contact info, and more.",
+  },
 ];
 
 export default function Dashboard() {

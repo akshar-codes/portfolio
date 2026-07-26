@@ -27,6 +27,7 @@ const Messages = lazy(() => import("./pages/admin/Messages"));
 const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
 const ManageAbout = lazy(() => import("./pages/admin/ManageAbout"));
+const ManageSiteSettings = lazy(() => import("./pages/admin/ManageSiteSettings"));
 const Unauthorized = lazy(() => import("./pages/admin/Unauthorized"));
 const AdminNotFound = lazy(() => import("./pages/admin/NotFound"));
 
@@ -147,6 +148,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<Fallback />}>
                       <Messages />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageSiteSettings />
                     </Suspense>
                   }
                 />
