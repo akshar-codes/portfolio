@@ -30,6 +30,14 @@ export const API_ENDPOINTS = {
   messages: "/messages",
   messageById: (id) => `/messages/${id}`,
 
+  // Site Settings
+  siteSettings: "/site-settings",
+  adminSiteSettings: "/admin/site-settings",
+  adminSiteSettingsPublish: "/admin/site-settings/publish",
+  adminSiteSettingsUnpublish: "/admin/site-settings/unpublish",
+  adminSiteSettingsLogo: "/admin/site-settings/logo",
+  adminSiteSettingsFavicon: "/admin/site-settings/favicon",
+
   // Admin auth
   adminLogin: "/admin/login",
   adminLogout: "/admin/logout",
