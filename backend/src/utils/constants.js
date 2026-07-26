@@ -102,5 +102,20 @@ export const RESUME_LIMITS = {
   DOWNLOADS_MAX: 5,
 };
 
+/* ── Site Settings CMS ─────────────────────────────────────────────
+ * Same centralization rationale as RESUME_LIMITS above: THEME_MODES
+ * and SITE_SETTINGS_LIMITS are consumed by both
+ * models/SiteSettings.js (Mongoose enum/array validators) and
+ * validators/siteSettings.validator.js (express-validator chains) so
+ * the two layers cannot drift apart.
+ * ------------------------------------------------------------------ */
+export const THEME_MODES = ["light", "dark", "system"];
+export const DEFAULT_THEME_MODE = "dark";
+
+export const SITE_SETTINGS_LIMITS = {
+  CONTACT_EMAILS_MAX: 5,
+  CONTACT_PHONES_MAX: 5,
+};
+
 /* ── Body size limits ─────────────────────────────────────────────── */
 export const JSON_BODY_LIMIT = "150kb";
