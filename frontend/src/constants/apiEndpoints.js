@@ -38,6 +38,27 @@ export const API_ENDPOINTS = {
   adminSiteSettingsLogo: "/admin/site-settings/logo",
   adminSiteSettingsFavicon: "/admin/site-settings/favicon",
 
+  // Navigation
+  navigation: "/navigation",
+  adminNavigation: "/admin/navigation",
+  adminNavigationPublish: "/admin/navigation/publish",
+  adminNavigationUnpublish: "/admin/navigation/unpublish",
+
+  // Footer
+  footer: "/footer",
+  adminFooter: "/admin/footer",
+  adminFooterPublish: "/admin/footer/publish",
+  adminFooterUnpublish: "/admin/footer/unpublish",
+
+  // SEO
+  seo: "/seo",
+  adminSeo: "/admin/seo",
+  adminSeoPublish: "/admin/seo/publish",
+  adminSeoUnpublish: "/admin/seo/unpublish",
+
+  // Media library (admin-only)
+  adminMedia: "/admin/media",
+
   // Admin auth
   adminLogin: "/admin/login",
   adminLogout: "/admin/logout",

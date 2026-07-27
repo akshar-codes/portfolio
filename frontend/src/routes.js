@@ -20,4 +20,7 @@ export const ROUTES = {
   adminResume: "/admin/resume",
   adminMessages: "/admin/messages",
   adminSettings: "/admin/settings",
+  adminNavigation: "/admin/navigation",
+  adminFooter: "/admin/footer",
+  adminSeo: "/admin/seo",
 };
