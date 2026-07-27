@@ -5,6 +5,9 @@ import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
+import ViewAgendaOutlinedIcon from "@mui/icons-material/ViewAgendaOutlined";
+import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 import { ROUTES } from "./routes";
@@ -82,6 +85,27 @@ export const ADMIN_NAV_TREE = [
     path: ROUTES.adminMessages,
     icon: MailOutlineIcon,
     permission: PERMISSIONS.MESSAGES_VIEW,
+  },
+  {
+    id: "navigation",
+    label: "Navigation",
+    path: ROUTES.adminNavigation,
+    icon: RouteOutlinedIcon,
+    permission: PERMISSIONS.NAVIGATION_EDIT,
+  },
+  {
+    id: "footer",
+    label: "Footer",
+    path: ROUTES.adminFooter,
+    icon: ViewAgendaOutlinedIcon,
+    permission: PERMISSIONS.FOOTER_EDIT,
+  },
+  {
+    id: "seo",
+    label: "SEO",
+    path: ROUTES.adminSeo,
+    icon: TravelExploreOutlinedIcon,
+    permission: PERMISSIONS.SEO_EDIT,
   },
   {
     id: "settings",

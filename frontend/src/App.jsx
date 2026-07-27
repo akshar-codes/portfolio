@@ -28,6 +28,9 @@ const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
 const ManageAbout = lazy(() => import("./pages/admin/ManageAbout"));
 const ManageSiteSettings = lazy(() => import("./pages/admin/ManageSiteSettings"));
+const ManageNavigation = lazy(() => import("./pages/admin/ManageNavigation"));
+const ManageFooter = lazy(() => import("./pages/admin/ManageFooter"));
+const ManageSeo = lazy(() => import("./pages/admin/ManageSeo"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const AdminNotFound = lazy(() => import("./pages/NotFound"));
 
@@ -148,6 +151,30 @@ export default function App() {
                   element={
                     <Suspense fallback={<Fallback />}>
                       <Messages />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="navigation"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageNavigation />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="footer"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageFooter />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="seo"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageSeo />
                     </Suspense>
                   }
                 />
