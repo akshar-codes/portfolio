@@ -1,0 +1,56 @@
+import {
+  getSingleton,
+  findDefault,
+  create,
+} from "../repositories/seoRepository.js";
+import { createSingletonService } from "./SingletonService.js";
+
+const repository = { getSingleton, findDefault, create };
+
+const PATCHABLE_FIELDS = [
+  "defaultMetaTitle",
+  "defaultMetaDescription",
+  "defaultKeywords",
+  "defaultOgImage",
+  "twitterHandle",
+  "canonicalBaseUrl",
+  "robotsIndex",
+  "robotsFollow",
+  "sitemapEnabled",
+  "googleAnalyticsId",
+  "googleSiteVerification",
+  "bingSiteVerification",
+  "openGraph",
+  "twitterCard",
+  "structuredData",
+  "organization",
+];
+
+// Required-by-schema fields need a default so the singleton can be
+// created on first read/write without the caller having to supply them.
+const DEFAULTS = {
+  defaultMetaTitle: "My Portfolio",
+  defaultMetaDescription: "B.Tech CSE student and Full Stack MERN developer.",
+};
+
+const {
+  fetchAdmin: fetchSeoAdmin,
+  fetchPublic: fetchSeoPublic,
+  patchSingleton: patchSeo,
+  setStatus: setSeoStatus,
+  invalidateCache: invalidateSeoCache,
+} = createSingletonService({
+  repository,
+  cacheKey: "seo:public",
+  patchableFields: PATCHABLE_FIELDS,
+  defaults: DEFAULTS,
+  resourceName: "SEO settings",
+});
+
+export {
+  fetchSeoAdmin,
+  fetchSeoPublic,
+  patchSeo,
+  setSeoStatus,
+  invalidateSeoCache,
+};
