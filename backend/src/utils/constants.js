@@ -119,3 +119,29 @@ export const SITE_SETTINGS_LIMITS = {
 
 /* ── Body size limits ─────────────────────────────────────────────── */
 export const JSON_BODY_LIMIT = "150kb";
+
+/* ── Navigation CMS ────────────────────────────────────────────────
+ * NAV_MAX_ITEMS matches the limit that used to be hardcoded inline on
+ * Navigation.items (models/Navigation.js) — centralized now that a
+ * second, per-item limit (dropdown children) needs to live alongside
+ * it, for the same drift-prevention reason as RESUME_LIMITS above.
+ * ------------------------------------------------------------------ */
+export const NAV_MAX_ITEMS = 20;
+export const NAV_MAX_CHILDREN_PER_ITEM = 10;
+
+/* ── Footer CMS ────────────────────────────────────────────────────── */
+export const FOOTER_DESCRIPTION_MAX = 1000;
+
+export const FOOTER_NEWSLETTER_LIMITS = {
+  HEADING_MAX: 100,
+  DESCRIPTION_MAX: 1000,
+  PLACEHOLDER_MAX: 100,
+  BUTTON_LABEL_MAX: 40,
+};
+
+/* ── SEO CMS ───────────────────────────────────────────────────────── */
+export const SEO_KEYWORDS_MAX = 20;
+export const SEO_KEYWORD_MAX_LENGTH = 60;
+export const OG_TYPES = ["website", "article", "profile"];
+export const TWITTER_CARD_TYPES = ["summary", "summary_large_image"];
+export const STRUCTURED_DATA_MAX_LENGTH = 5000;

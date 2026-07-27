@@ -20,3 +20,4 @@ public/uploads/
 .vscode/
 .idea/
 .DS_Store
+clone-db.js
