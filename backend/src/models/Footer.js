@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 import singletonPlugin from "../utils/singletonPlugin.js";
+import {
+  FOOTER_DESCRIPTION_MAX,
+  FOOTER_NEWSLETTER_LIMITS,
+} from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas
@@ -54,6 +58,62 @@ const footerColumnSchema = new mongoose.Schema(
   { _id: true },
 );
 
+/**
+ * Newsletter signup block rendered in the site footer. Sending actual
+ * subscription emails is out of scope here (no email-provider
+ * integration exists in this codebase yet) — this schema only owns
+ * the on/off switch and the copy shown around the signup form.
+ */
+const newsletterSchema = new mongoose.Schema(
+  {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    heading: {
+      type: String,
+      trim: true,
+      default: "Subscribe to our newsletter",
+      maxlength: [
+        FOOTER_NEWSLETTER_LIMITS.HEADING_MAX,
+        `Newsletter heading must not exceed ${FOOTER_NEWSLETTER_LIMITS.HEADING_MAX} characters`,
+      ],
+    },
+    // May contain sanitized HTML (the admin editor uses the same
+    // Tiptap + DOMPurify rich-text pipeline as About/Resume long-form
+    // fields) — the higher character ceiling vs. a plain-text field
+    // of similar visual length leaves room for markup overhead.
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [
+        FOOTER_NEWSLETTER_LIMITS.DESCRIPTION_MAX,
+        `Newsletter description must not exceed ${FOOTER_NEWSLETTER_LIMITS.DESCRIPTION_MAX} characters`,
+      ],
+    },
+    placeholder: {
+      type: String,
+      trim: true,
+      default: "Enter your email",
+      maxlength: [
+        FOOTER_NEWSLETTER_LIMITS.PLACEHOLDER_MAX,
+        `Placeholder must not exceed ${FOOTER_NEWSLETTER_LIMITS.PLACEHOLDER_MAX} characters`,
+      ],
+    },
+    buttonLabel: {
+      type: String,
+      trim: true,
+      default: "Subscribe",
+      maxlength: [
+        FOOTER_NEWSLETTER_LIMITS.BUTTON_LABEL_MAX,
+        `Button label must not exceed ${FOOTER_NEWSLETTER_LIMITS.BUTTON_LABEL_MAX} characters`,
+      ],
+    },
+  },
+  { _id: false },
+);
+
 /* ------------------------------------------------------------------ *
  * Root schema — ONE document, global site footer
  * ------------------------------------------------------------------ */
@@ -69,6 +129,18 @@ const footerSchema = new mongoose.Schema(
       default: [],
     },
 
+    // May contain sanitized HTML — same rationale as
+    // newsletter.description above.
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [
+        FOOTER_DESCRIPTION_MAX,
+        `Footer description must not exceed ${FOOTER_DESCRIPTION_MAX} characters`,
+      ],
+    },
+
     copyrightText: {
       type: String,
       trim: true,
@@ -81,6 +153,21 @@ const footerSchema = new mongoose.Schema(
     showSocialLinks: {
       type: Boolean,
       default: true,
+    },
+
+    // Visibility switch only — the underlying data (emails, phones,
+    // address) is owned by SiteSettings.contactEmails/contactPhones/
+    // contactAddress (models/SiteSettings.js), mirroring how
+    // showSocialLinks gates Profile.socialLinks without duplicating
+    // it. Manage the actual contact details under Site Settings.
+    showContactInfo: {
+      type: Boolean,
+      default: true,
+    },
+
+    newsletter: {
+      type: newsletterSchema,
+      default: () => ({}),
     },
   },
   { timestamps: true },
