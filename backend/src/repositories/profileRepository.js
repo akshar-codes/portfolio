@@ -1,5 +1,6 @@
 import Profile from "../models/Profile.js";
+import { createSingletonRepository } from "./SingletonRepository.js";
 
-export const getSingleton = () => Profile.getSingleton();
+const { getSingleton, findDefault, create } = createSingletonRepository(Profile);
 
-export const findDefault = () => Profile.findOne({ owner: "default" });
+export { getSingleton, findDefault, create };

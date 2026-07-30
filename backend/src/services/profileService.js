@@ -1,113 +1,71 @@
 import {
   getSingleton,
   findDefault,
+  create,
 } from "../repositories/profileRepository.js";
-import { ServiceError } from "./ServiceError.js";
-import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
-import { CONTENT_STATUSES, CONTENT_STATUS_DRAFT } from "../utils/constants.js";
+import { createSingletonService } from "./SingletonService.js";
+import { sanitizeRichText } from "../utils/htmlSanitizer.js";
 
-const PATCHABLE_FIELDS = new Set([
+const repository = { getSingleton, findDefault, create };
+
+const PATCHABLE_FIELDS = [
   "name",
   "title",
+  "introduction",
   "email",
   "phone",
   "location",
   "avatar",
   "socialLinks",
-]);
+  "ctaButtons",
+  "statistics",
+];
 
-const sortSocialLinks = (doc) => ({
-  ...doc,
-  socialLinks: [...(doc.socialLinks ?? [])].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0),
-  ),
+const ORDERED_ARRAY_FIELDS = ["socialLinks", "ctaButtons", "statistics"];
+
+// Required-by-schema fields need a default so the singleton can be
+// created on first read/write without the caller having to supply
+// them — mirrors the fallback the old Profile.getSingleton() static
+// used to provide directly on the model.
+const DEFAULTS = {
+  name: "Your Name",
+  title: "Web Developer",
+  email: "you@example.com",
+};
+
+const {
+  fetchAdmin: fetchAdminProfile,
+  fetchPublic: fetchPublicProfile,
+  patchSingleton: patchProfileRaw,
+  setStatus: setProfileStatus,
+  invalidateCache: invalidateProfileCache,
+} = createSingletonService({
+  repository,
+  cacheKey: "profile:public",
+  patchableFields: PATCHABLE_FIELDS,
+  orderedArrayFields: ORDERED_ARRAY_FIELDS,
+  defaults: DEFAULTS,
+  resourceName: "Profile",
 });
 
-/* ── ADMIN read — always returns the full document ────────────────── */
-
-export const fetchAdminProfile = async () => {
-  const doc = await getSingleton();
-  return sortSocialLinks(doc);
+/**
+ * Sanitizes rich text before delegating to the generic singleton PATCH.
+ * Client-side DOMPurify (RichTextEditor.jsx) is a UX safeguard, not a
+ * security boundary — this is the real defense against stored XSS for
+ * a field rendered with dangerouslySetInnerHTML on the public site.
+ */
+const patchProfile = async (updates) => {
+  const sanitized = { ...updates };
+  if (typeof sanitized.introduction === "string") {
+    sanitized.introduction = sanitizeRichText(sanitized.introduction);
+  }
+  return patchProfileRaw(sanitized);
 };
 
-/* ── PUBLIC read — 404s only while explicitly in draft status ──────── */
-
-export const fetchPublicProfile = async () => {
-  const doc = await getSingleton();
-
-  if (doc.status === CONTENT_STATUS_DRAFT) {
-    throw new ServiceError(
-      "Profile is not currently published.",
-      404,
-      "CONTENT_NOT_PUBLISHED",
-    );
-  }
-
-  return sortSocialLinks(doc);
-};
-
-/* ── patchProfile ──────────────────────────────────────────────────── */
-
-export const patchProfile = async (updates) => {
-  const sanitized = Object.fromEntries(
-    Object.entries(updates).filter(([key]) => PATCHABLE_FIELDS.has(key)),
-  );
-
-  if (Object.keys(sanitized).length === 0) {
-    throw new ServiceError(
-      "No valid fields provided for update.",
-      400,
-      "PROFILE_NO_VALID_FIELDS",
-    );
-  }
-
-  if (Array.isArray(sanitized.socialLinks)) {
-    sanitized.socialLinks = normaliseOrder(stripTempIds(sanitized.socialLinks));
-  }
-
-  const existing = await findDefault();
-
-  if (!existing) {
-    throw new ServiceError(
-      "Profile not found. Run the seed script first.",
-      404,
-      "PROFILE_NOT_FOUND",
-    );
-  }
-
-  for (const [key, value] of Object.entries(sanitized)) {
-    existing[key] = value;
-  }
-
-  await existing.validate();
-  await existing.save();
-
-  return sortSocialLinks(existing.toObject());
-};
-
-/* ── setProfileStatus — publish / unpublish ─────────────────────────── */
-
-export const setProfileStatus = async (status) => {
-  if (!CONTENT_STATUSES.includes(status)) {
-    throw new ServiceError(
-      `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-      400,
-      "PROFILE_INVALID_STATUS",
-    );
-  }
-
-  const existing = await findDefault();
-  if (!existing) {
-    throw new ServiceError(
-      "Profile not found. Run the seed script first.",
-      404,
-      "PROFILE_NOT_FOUND",
-    );
-  }
-
-  existing.status = status;
-  await existing.validate();
-  await existing.save();
-
-  return sortSocialLinks(existing.toObject());
+export {
+  fetchAdminProfile,
+  fetchPublicProfile,
+  patchProfile,
+  setProfileStatus,
+  invalidateProfileCache,
 };
