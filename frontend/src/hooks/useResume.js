@@ -1,18 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
-import { aboutApi } from "../api/aboutApi";
+import { resumeApi } from "../api/resumeApi";
 
-export const ABOUT_QUERY_KEY = ["about"];
-export const ADMIN_ABOUT_QUERY_KEY = ["about", "admin"];
+export const RESUME_QUERY_KEY = ["resume"];
+export const ADMIN_RESUME_QUERY_KEY = ["resume", "admin"];
 
 /* ── Public read ───────────────────────────────────────────────────── */
 
-export function useAbout() {
+export function useResume() {
   return useQuery({
-    queryKey: ABOUT_QUERY_KEY,
+    queryKey: RESUME_QUERY_KEY,
     queryFn: async () => {
-      const { data } = await api.get(API_ENDPOINTS.about);
+      const { data } = await api.get(API_ENDPOINTS.resume);
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes — content changes rarely
@@ -22,36 +22,36 @@ export function useAbout() {
 
 /* ── Admin read ────────────────────────────────────────────────────── */
 
-export function useAdminAboutQuery() {
+export function useAdminResumeQuery() {
   return useQuery({
-    queryKey: ADMIN_ABOUT_QUERY_KEY,
-    queryFn: aboutApi.get,
+    queryKey: ADMIN_RESUME_QUERY_KEY,
+    queryFn: resumeApi.get,
     staleTime: 0, // always fresh in the admin panel
   });
 }
 
 /* ── Shared mutation factory ──────────────────────────────────────── */
 
-function useAboutMutation(mutationFn) {
+function useResumeMutation(mutationFn) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn,
     onSuccess: (updated) => {
-      queryClient.setQueryData(ADMIN_ABOUT_QUERY_KEY, updated);
-      queryClient.setQueryData(ABOUT_QUERY_KEY, updated);
+      queryClient.setQueryData(ADMIN_RESUME_QUERY_KEY, updated);
+      queryClient.setQueryData(RESUME_QUERY_KEY, updated);
     },
   });
 }
 
-export function useUpdateAbout() {
-  return useAboutMutation((payload) => aboutApi.update(payload));
+export function useUpdateResume() {
+  return useResumeMutation((payload) => resumeApi.update(payload));
 }
 
-export function usePublishAbout() {
-  return useAboutMutation(() => aboutApi.publish());
+export function usePublishResume() {
+  return useResumeMutation(() => resumeApi.publish());
 }
 
-export function useUnpublishAbout() {
-  return useAboutMutation(() => aboutApi.unpublish());
+export function useUnpublishResume() {
+  return useResumeMutation(() => resumeApi.unpublish());
 }

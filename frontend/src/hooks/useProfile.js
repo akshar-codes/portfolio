@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
+import { profileApi } from "../api/profileApi";
 
 export const PROFILE_QUERY_KEY = ["profile"];
+export const ADMIN_PROFILE_QUERY_KEY = ["profile", "admin"];
 
 /* ── Public read ───────────────────────────────────────────────────── */
 
@@ -20,31 +22,37 @@ export function useProfile() {
 
 /* ── Admin read ────────────────────────────────────────────────────── */
 
-export function useAdminProfile() {
+export function useAdminProfileQuery() {
   return useQuery({
-    queryKey: [...PROFILE_QUERY_KEY, "admin"],
-    queryFn: async () => {
-      const { data } = await api.get(API_ENDPOINTS.adminProfile);
-      return data;
-    },
+    queryKey: ADMIN_PROFILE_QUERY_KEY,
+    queryFn: profileApi.get,
     staleTime: 0, // always fresh in the admin panel
   });
 }
 
-/* ── PATCH mutation ────────────────────────────────────────────────── */
+/* ── Shared mutation factory — every mutation replaces both cached
+ * documents with the server's confirmed response. ─────────────────── */
 
-export function useUpdateProfile() {
+function useProfileMutation(mutationFn) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (updates) => {
-      const { data } = await api.patch(API_ENDPOINTS.adminProfile, updates);
-      return data;
-    },
-    onSuccess: (updatedProfile) => {
-      // Update both query caches so Sidebar reflects changes immediately
-      queryClient.setQueryData(PROFILE_QUERY_KEY, updatedProfile);
-      queryClient.setQueryData([...PROFILE_QUERY_KEY, "admin"], updatedProfile);
+    mutationFn,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(ADMIN_PROFILE_QUERY_KEY, updated);
+      queryClient.setQueryData(PROFILE_QUERY_KEY, updated);
     },
   });
+}
+
+export function useUpdateProfile() {
+  return useProfileMutation((payload) => profileApi.update(payload));
+}
+
+export function usePublishProfile() {
+  return useProfileMutation(() => profileApi.publish());
+}
+
+export function useUnpublishProfile() {
+  return useProfileMutation(() => profileApi.unpublish());
 }
