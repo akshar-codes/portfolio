@@ -6,7 +6,7 @@ import IconButton from "@mui/material/IconButton";
 import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 
-import MediaPickerDialog from "../cms/MediaPickerDialog";
+import MediaPickerDialog from "./cms/MediaPickerDialog";
 
 /**
  * Reusable "pick an image from the centralized Media Library" field.

@@ -10,7 +10,7 @@ import {
   RESUME_LANGUAGE_PROFICIENCIES,
   RESUME_DOWNLOAD_FILE_TYPES,
   RESUME_LIMITS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /** Optional field that must be empty or a valid http(s) URL — used for
  * Media-Library-picked images (heroImage/companyLogo/badgeImage),

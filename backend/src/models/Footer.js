@@ -3,7 +3,7 @@ import singletonPlugin from "../utils/singletonPlugin.js";
 import {
   FOOTER_DESCRIPTION_MAX,
   FOOTER_NEWSLETTER_LIMITS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas
@@ -79,10 +79,7 @@ const newsletterSchema = new mongoose.Schema(
         `Newsletter heading must not exceed ${FOOTER_NEWSLETTER_LIMITS.HEADING_MAX} characters`,
       ],
     },
-    // May contain sanitized HTML (the admin editor uses the same
-    // Tiptap + DOMPurify rich-text pipeline as About/Resume long-form
-    // fields) — the higher character ceiling vs. a plain-text field
-    // of similar visual length leaves room for markup overhead.
+
     description: {
       type: String,
       trim: true,
@@ -144,8 +141,7 @@ const footerSchema = new mongoose.Schema(
     copyrightText: {
       type: String,
       trim: true,
-      // Function default: evaluated per-document (not once at schema
-      // load time), so the year is always accurate.
+
       default: () => `© ${new Date().getFullYear()} All rights reserved.`,
       maxlength: [300, "Copyright text must not exceed 300 characters"],
     },
@@ -155,11 +151,6 @@ const footerSchema = new mongoose.Schema(
       default: true,
     },
 
-    // Visibility switch only — the underlying data (emails, phones,
-    // address) is owned by SiteSettings.contactEmails/contactPhones/
-    // contactAddress (models/SiteSettings.js), mirroring how
-    // showSocialLinks gates Profile.socialLinks without duplicating
-    // it. Manage the actual contact details under Site Settings.
     showContactInfo: {
       type: Boolean,
       default: true,

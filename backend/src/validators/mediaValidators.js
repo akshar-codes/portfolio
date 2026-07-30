@@ -1,5 +1,5 @@
 import { body, param } from "express-validator";
-import { MAX_MEDIA_TAGS } from "../utils/constants.js";
+import { MAX_MEDIA_TAGS } from "../constants/index.js";
 
 export const mediaIdParamValidator = [
   param("id").isMongoId().withMessage("Invalid media ID"),

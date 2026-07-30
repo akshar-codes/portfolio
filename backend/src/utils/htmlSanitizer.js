@@ -1,5 +1,5 @@
 import sanitizeHtml from "sanitize-html";
-import { RICH_TEXT_ALLOWED_TAGS } from "./constants.js";
+import { RICH_TEXT_ALLOWED_TAGS } from "../constants/index.js";
 
 /**
  * Server-side sanitizer for rich text fields persisted from the admin
@@ -10,10 +10,6 @@ import { RICH_TEXT_ALLOWED_TAGS } from "./constants.js";
  * bypasses it entirely. Every rich text field that is later rendered
  * with `dangerouslySetInnerHTML` on the public site MUST be sanitized
  * here before it reaches Mongoose, not just in the browser.
- *
- * The allow-list mirrors RichTextEditor.jsx's SANITIZE_CONFIG exactly
- * so admin-authored content never renders differently than what the
- * editor showed at save time.
  */
 const ALLOWED_ATTRIBUTES = {
   a: ["href", "target", "rel"],

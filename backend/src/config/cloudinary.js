@@ -5,7 +5,7 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_PROJECT_UPLOAD_FILES,
   ALLOWED_IMAGE_MIME_TYPES,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 dotenv.config();
 

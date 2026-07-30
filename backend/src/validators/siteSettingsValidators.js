@@ -6,7 +6,7 @@ import {
   optionalBoolean,
   optionalOrder,
 } from "./common.js";
-import { THEME_MODES, SITE_SETTINGS_LIMITS } from "../utils/constants.js";
+import { THEME_MODES, SITE_SETTINGS_LIMITS } from "../constants/index.js";
 
 const PATH_OR_URL_PATTERN = /^\/|^https?:\/\/.+/;
 

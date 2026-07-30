@@ -8,7 +8,7 @@ import {
 } from "../services/messageService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { DEFAULT_MESSAGES_PAGE_SIZE } from "../utils/constants.js";
+import { DEFAULT_MESSAGES_PAGE_SIZE } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * POST /api/messages  (public)

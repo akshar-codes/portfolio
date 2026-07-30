@@ -9,8 +9,8 @@ import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
 
-import ImagePicker from "../ImagePicker";
-import RichTextEditor from "../RichTextEditor";
+import ImagePicker from "./ImagePicker";
+import RichTextEditor from "./RichTextEditor";
 
 /**
  * Reusable form field primitives, all bound to the nearest

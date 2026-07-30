@@ -11,7 +11,7 @@ import mongoSanitize from "./middleware/sanitizeMiddleware.js";
 import { globalLimiter } from "./middleware/rateLimiters.js";
 import logger, { morganStream } from "./utils/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
-import { JSON_BODY_LIMIT } from "./utils/constants.js";
+import { JSON_BODY_LIMIT } from "./constants/index.js";
 
 // ── Admin (protected) routes ────────────────────────────────────────
 import adminAuthRoutes from "./routes/admin/authRoutes.js";

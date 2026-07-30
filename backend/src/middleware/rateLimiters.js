@@ -4,7 +4,7 @@ import {
   LOGIN_RATE_LIMIT_MAX,
   CONTACT_FORM_RATE_LIMIT_MAX,
   GLOBAL_RATE_LIMIT_MAX,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /**
  * Shared rate limiter instances. Extracted here so limits and response

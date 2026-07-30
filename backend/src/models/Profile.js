@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import singletonPlugin from "../utils/singletonPlugin.js";
-import { PROFILE_LIMITS, CTA_BUTTON_STYLES } from "../utils/constants.js";
+import { PROFILE_LIMITS, CTA_BUTTON_STYLES } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas

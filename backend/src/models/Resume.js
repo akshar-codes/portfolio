@@ -5,7 +5,7 @@ import {
   RESUME_LANGUAGE_PROFICIENCIES,
   RESUME_DOWNLOAD_FILE_TYPES,
   RESUME_LIMITS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ================================================================== *
  * Sub-schemas

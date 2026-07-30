@@ -18,7 +18,7 @@ import {
   DEFAULT_CONTENT_STATUS,
   CATEGORY_SORT_FIELDS,
   DEFAULT_CATEGORY_SORT_FIELD,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 

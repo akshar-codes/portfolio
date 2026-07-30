@@ -1,5 +1,5 @@
 import { body } from "express-validator";
-import { ABOUT_LIMITS } from "../utils/constants.js";
+import { ABOUT_LIMITS } from "../constants/index.js";
 import { optionalOrder, optionalTrimmedString } from "./common.js";
 
 export const updateAboutValidator = [

@@ -5,22 +5,11 @@ import asyncHandler from "../utils/asyncHandler.js";
 import {
   CONTENT_STATUS_DRAFT,
   CONTENT_STATUS_PUBLISHED,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /**
  * Factory that builds the standard GET (public + admin) / PATCH /
  * publish / unpublish controller set for a singleton CMS resource.
- *
- * `getPublicResource` is mounted on the public route (`/api/<resource>`)
- * and 404s while the resource is in draft status. `getAdminResource` is
- * mounted on the protected admin route and always returns the full
- * document regardless of status, matching the existing About/Profile
- * convention where the admin panel must be able to see and edit content
- * that isn't live yet.
- *
- * @param {object} options
- * @param {{fetchAdmin: Function, fetchPublic: Function, patchSingleton: Function, setStatus: Function}} options.service
- * @param {string} options.resourceName - human-readable name used in response messages
  */
 export function createSingletonController({ service, resourceName }) {
   if (!service || typeof service.fetchAdmin !== "function") {

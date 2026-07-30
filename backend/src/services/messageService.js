@@ -12,7 +12,7 @@ import {
   DEFAULT_MESSAGES_PAGE_SIZE,
   MAX_PAGE_SIZE,
   MESSAGE_STATUSES,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 export const createMessage = async ({ fullname, email, message }) => {
   const total = await countAll();

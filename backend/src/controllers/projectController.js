@@ -18,7 +18,7 @@ import {
   DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
   CONTENT_STATUS_DRAFT,
   CONTENT_STATUS_PUBLISHED,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * GET /api/projects  (public — published only, supports ?search)
@@ -41,9 +41,6 @@ export const getProjects = asyncHandler(async (req, res) => {
 
 /* ------------------------------------------------------------------ *
  * GET /api/admin/projects  (protected — every status, filterable)
- * Mounted at a dedicated prefix (not /api/projects) so it can't be
- * shadowed by the public router's `GET /`, which is already registered
- * on that same path.
  * ------------------------------------------------------------------ */
 export const getAdminProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -184,7 +181,10 @@ export const reorderProjectsHandler = asyncHandler(async (req, res) => {
  * PATCH /api/projects/:id/publish  (protected)
  * ------------------------------------------------------------------ */
 export const publishProjectHandler = asyncHandler(async (req, res) => {
-  const project = await setProjectStatus(req.params.id, CONTENT_STATUS_PUBLISHED);
+  const project = await setProjectStatus(
+    req.params.id,
+    CONTENT_STATUS_PUBLISHED,
+  );
   return sendSuccess(res, project, "Project published successfully");
 });
 

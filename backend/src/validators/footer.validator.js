@@ -7,7 +7,7 @@ import {
 import {
   FOOTER_DESCRIPTION_MAX,
   FOOTER_NEWSLETTER_LIMITS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 const PATH_OR_URL_PATTERN = /^\/|^https?:\/\/.+/;
 

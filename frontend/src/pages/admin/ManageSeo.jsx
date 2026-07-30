@@ -15,8 +15,8 @@ import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 
 import PageHeader from "../../components/common/PageHeader";
-import MediaPickerDialog from "../../components/common/MediaPickerDialog";
-import { SerpPreview, SocialCardPreview } from "../../components/common/SeoPreview";
+import MediaPickerDialog from "../../components/cms/MediaPickerDialog";
+import { SerpPreview, SocialCardPreview } from "../../components/cms/SeoPreview";
 import TagInput from "../../components/common/TagInput";
 import { TextField as RHFTextField, SwitchField, SelectField } from "../../components/form/fields";
 import {

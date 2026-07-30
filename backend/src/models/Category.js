@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { generateSlug } from "../utils/slug.js";
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
 
 const categorySchema = new mongoose.Schema(
   {

@@ -19,7 +19,7 @@ import {
   MAX_PAGE_SIZE,
   MEDIA_DEFAULT_FOLDER,
   MAX_MEDIA_TAGS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ================================================================== *
  * Cache helpers — mirrors projectService.js's cache-key-per-query-shape

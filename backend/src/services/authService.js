@@ -7,7 +7,7 @@ import {
   COOKIE_NAME,
   JWT_EXPIRES_IN,
   COOKIE_MAX_AGE_MS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 export { ServiceError };
 export { COOKIE_NAME };

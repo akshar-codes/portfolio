@@ -21,7 +21,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
-import LibraryImageField from "../../components/form/LibraryImageField";
+import LibraryImageField from "../../components/LibraryImageField";
 import TagInput from "../../components/common/TagInput";
 import {
   TextField as RHFTextField,

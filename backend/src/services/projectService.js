@@ -33,7 +33,7 @@ import {
   CONTENT_STATUSES,
   CONTENT_STATUS_DRAFT,
   DEFAULT_CONTENT_STATUS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ================================================================== *
  * Cache helpers

@@ -1,5 +1,5 @@
 import { body, param, query } from "express-validator";
-import { CONTENT_STATUSES } from "../utils/constants.js";
+import { CONTENT_STATUSES } from "../constants/index.js";
 
 export const projectIdParamValidator = [
   param("id").isMongoId().withMessage("Invalid project ID"),

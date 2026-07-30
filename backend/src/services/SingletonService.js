@@ -5,34 +5,11 @@ import {
   CACHE_TTL_MS,
   CONTENT_STATUSES,
   CONTENT_STATUS_DRAFT,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /**
  * Factory that builds the standard business-logic layer for a singleton
  * CMS resource (SiteSettings, Navigation, Footer, SEO, Resume, ...).
- *
- * Wraps a `SingletonRepository` instance with:
- *   - a TTL-cached PUBLIC read that 404s while the resource is explicitly
- *     in "draft" status (see the note on CONTENT_STATUS_DRAFT in
- *     utils/constants.js for why this checks "=== draft" rather than
- *     "!== published")
- *   - an always-fresh ADMIN read that ignores status entirely
- *   - whole-object PATCH semantics restricted to an explicit allow-list
- *     of top-level fields (mirrors profileService), which never touches
- *     `status`
- *   - `setStatus()` for the dedicated publish/unpublish actions
- *   - order re-numbering + `_tempId` stripping for any array fields that
- *     represent orderable sub-lists (nav items, footer columns, ...)
- *
- * @param {object} options
- * @param {{getSingleton: Function, findDefault: Function, create: Function}} options.repository
- * @param {string} options.cacheKey - cache key used for the public read
- * @param {string[]} options.patchableFields - top-level fields a PATCH may modify
- * @param {string[]} [options.orderedArrayFields] - subset of patchableFields that are
- *   arrays of orderable items (order re-numbered, `_tempId` stripped before persisting)
- * @param {object} [options.defaults] - default values used the first time the
- *   singleton document is created, so schema-required fields are always satisfied
- * @param {string} [options.resourceName] - human-readable name used in error/status messages
  */
 export function createSingletonService({
   repository,
@@ -196,7 +173,13 @@ export function createSingletonService({
     return sortOrderedFields(resultDoc);
   };
 
-  return { fetchAdmin, fetchPublic, patchSingleton, setStatus, invalidateCache };
+  return {
+    fetchAdmin,
+    fetchPublic,
+    patchSingleton,
+    setStatus,
+    invalidateCache,
+  };
 }
 
 export default createSingletonService;

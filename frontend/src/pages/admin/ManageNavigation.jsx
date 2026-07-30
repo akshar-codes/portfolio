@@ -25,7 +25,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 
 import PageHeader from "../../components/common/PageHeader";
-import DragReorderList from "../../components/common/DragReorderList";
+import DragReorderList from "../../components/cms/DragReorderList";
 import { TextField as RHFTextField, SwitchField } from "../../components/form/fields";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import {

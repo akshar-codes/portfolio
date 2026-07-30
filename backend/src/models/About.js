@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import singletonPlugin from "../utils/singletonPlugin.js";
-import { ABOUT_LIMITS } from "../utils/constants.js";
+import { ABOUT_LIMITS } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas

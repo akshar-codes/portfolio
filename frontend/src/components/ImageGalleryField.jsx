@@ -8,8 +8,8 @@ import Button from "@mui/material/Button";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
 
-import DragReorderList from "../cms/DragReorderList";
-import MediaPickerDialog from "../cms/MediaPickerDialog";
+import DragReorderList from "./cms/DragReorderList";
+import MediaPickerDialog from "./cms/MediaPickerDialog";
 
 /**
  * Reusable ordered image-gallery editor: pick from the Media Library,

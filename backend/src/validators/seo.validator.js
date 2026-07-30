@@ -10,7 +10,7 @@ import {
   OG_TYPES,
   TWITTER_CARD_TYPES,
   STRUCTURED_DATA_MAX_LENGTH,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 export const updateSeoValidator = [
   body("defaultMetaTitle")

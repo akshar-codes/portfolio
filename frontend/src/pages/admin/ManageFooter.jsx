@@ -21,7 +21,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import LaunchIcon from "@mui/icons-material/Launch";
 
 import PageHeader from "../../components/common/PageHeader";
-import DragReorderList from "../../components/common/DragReorderList";
+import DragReorderList from "../../components/cms/DragReorderList";
 import { TextField as RHFTextField, SwitchField, RichTextField } from "../../components/form/fields";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import {

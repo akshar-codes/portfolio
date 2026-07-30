@@ -8,13 +8,10 @@ import {
 } from "../services/mediaService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { DEFAULT_MEDIA_PAGE_SIZE } from "../utils/constants.js";
+import { DEFAULT_MEDIA_PAGE_SIZE } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * GET /api/admin/media  (protected)
- * Query params: page, limit, folder, search — list, search, folder
- * filtering, and pagination are all served by this one endpoint, the
- * same convention getProjects() uses for category filter + pagination.
  * ------------------------------------------------------------------ */
 export const getMedia = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;

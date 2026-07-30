@@ -4,7 +4,7 @@ import {
   optionalOrder,
   optionalTrimmedString,
 } from "./common.js";
-import { NAV_MAX_ITEMS, NAV_MAX_CHILDREN_PER_ITEM } from "../utils/constants.js";
+import { NAV_MAX_ITEMS, NAV_MAX_CHILDREN_PER_ITEM } from "../constants/index.js";
 
 const PATH_OR_URL_PATTERN = /^\/|^https?:\/\/.+/;
 

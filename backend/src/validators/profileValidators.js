@@ -1,5 +1,5 @@
 import { body } from "express-validator";
-import { PROFILE_LIMITS, CTA_BUTTON_STYLES } from "../utils/constants.js";
+import { PROFILE_LIMITS, CTA_BUTTON_STYLES } from "../constants/index.js";
 
 export const updateProfileValidator = [
   body("name")

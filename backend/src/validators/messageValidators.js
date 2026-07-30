@@ -1,5 +1,5 @@
 import { body, param } from "express-validator";
-import { MESSAGE_STATUSES } from "../utils/constants.js";
+import { MESSAGE_STATUSES } from "../constants/index.js";
 
 export const sendMessageValidator = [
   body("fullname")

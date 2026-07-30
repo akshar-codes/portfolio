@@ -22,7 +22,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
-import LibraryImageField from "../../components/form/LibraryImageField";
+import LibraryImageField from "../../components/LibraryImageField";
 import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
 import { resolveIcon } from "../../utils/iconMap";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";

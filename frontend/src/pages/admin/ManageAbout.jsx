@@ -20,7 +20,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
-import ImageGalleryField from "../../components/form/ImageGalleryField";
+import ImageGalleryField from "../../components/ImageGalleryField";
 import TagInput from "../../components/common/TagInput";
 import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
 import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../../utils/aboutIconMap";

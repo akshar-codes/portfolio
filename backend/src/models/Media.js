@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { MAX_MEDIA_TAGS } from "../utils/constants.js";
+import { MAX_MEDIA_TAGS } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Media — centralized media library.
@@ -29,9 +29,6 @@ const mediaSchema = new mongoose.Schema(
       maxlength: [500, "public_id must not exceed 500 characters"],
     },
 
-    // Logical grouping, independent of the physical Cloudinary path.
-    // Mapped to an actual Cloudinary folder via cloudinaryFolder()
-    // at upload time (see mediaService.js).
     folder: {
       type: String,
       trim: true,
@@ -59,10 +56,6 @@ const mediaSchema = new mongoose.Schema(
       maxlength: [100, "MIME type must not exceed 100 characters"],
     },
 
-    // Scoped to "image" only for now — matches the existing
-    // ALLOWED_IMAGE_MIME_TYPES / magic-byte constraints in
-    // config/cloudinary.js. Extend both together if video/raw
-    // support is ever added.
     resourceType: {
       type: String,
       enum: {
@@ -123,12 +116,8 @@ const mediaSchema = new mongoose.Schema(
 // Every Cloudinary asset is registered at most once.
 mediaSchema.index({ public_id: 1 }, { unique: true, name: "public_id_unique" });
 
-// Folder-scoped pagination, newest first — matches the default list sort.
 mediaSchema.index({ folder: 1, createdAt: -1 });
 
-// Single compound text index — MongoDB allows only one per collection,
-// so filename/alt-text/tags all live in the same index for the search
-// endpoint (see mediaService.fetchMediaLibrary).
 mediaSchema.index(
   { originalName: "text", altText: "text", tags: "text" },
   { name: "media_text_search" },

@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { findByIdSafe } from "../repositories/adminRepository.js";
-import { COOKIE_NAME } from "../utils/constants.js";
+import { COOKIE_NAME } from "../constants/index.js";
 
 function extractToken(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];

@@ -4,7 +4,7 @@ import {
   THEME_MODES,
   DEFAULT_THEME_MODE,
   SITE_SETTINGS_LIMITS,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schemas

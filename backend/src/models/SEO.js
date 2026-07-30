@@ -6,7 +6,7 @@ import {
   SEO_KEYWORDS_MAX,
   SEO_KEYWORD_MAX_LENGTH,
   STRUCTURED_DATA_MAX_LENGTH,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema — JSON-LD "Organization" fields
