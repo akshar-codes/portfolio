@@ -8,20 +8,13 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const SEED_DATA = {
-  paragraphs: [
-    {
-      text: "I'm a B.Tech Computer Science student at Lovely Professional University focused on Full-Stack MERN development. I build structured, scalable web applications using React.js, Node.js, Express, and MongoDB.",
-      order: 0,
-    },
-    {
-      text: "My focus is backend-driven architecture — authentication systems, role-based access control, REST APIs, and clean MVC structure. I prioritize writing maintainable code over building flashy interfaces.",
-      order: 1,
-    },
-    {
-      text: "Currently, I'm working on production-style projects including admin CMS systems, trading platform simulations, and AI-integrated web applications to strengthen real-world problem solving and system design skills.",
-      order: 2,
-    },
-  ],
+  biography:
+    "<p>I'm a B.Tech Computer Science student at Lovely Professional University focused on Full-Stack MERN development. I build structured, scalable web applications using React.js, Node.js, Express, and MongoDB.</p>" +
+    "<p>My focus is backend-driven architecture — authentication systems, role-based access control, REST APIs, and clean MVC structure. I prioritize writing maintainable code over building flashy interfaces.</p>" +
+    "<p>Currently, I'm working on production-style projects including admin CMS systems, trading platform simulations, and AI-integrated web applications to strengthen real-world problem solving and system design skills.</p>",
+
+  skillsSummary: ["React", "Node.js", "Express", "MongoDB", "Python", "Java"],
+
   services: [
     {
       title: "Full-Stack Web Development",
@@ -52,6 +45,13 @@ const SEED_DATA = {
       order: 3,
     },
   ],
+
+  // Left empty intentionally — genuinely new content types with no
+  // prior data to backfill. Fill in via the admin CMS.
+  timeline: [],
+  highlights: [],
+  personalInfo: [],
+  images: [],
 };
 
 const seed = async () => {
