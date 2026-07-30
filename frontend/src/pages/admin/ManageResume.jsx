@@ -1,208 +1,697 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, FormProvider, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import api from "../../services/api";
-import { API_ENDPOINTS } from "../../constants/apiEndpoints";
-import { moveItem, stripTempIds, isOrderDirty } from "../../utils/ordering";
-import ReorderButtons from "../../components/common/ReorderButtons";
-import SectionCard from "../../components/common/SectionCard";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Stack from "@mui/material/Stack";
+import AddIcon from "@mui/icons-material/Add";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+
+import PageHeader from "../../components/common/PageHeader";
+import LoadingSkeleton from "../../components/common/LoadingSkeleton";
+import DragReorderList from "../../components/cms/DragReorderList";
+import LibraryImageField from "../../components/form/LibraryImageField";
+import TagInput from "../../components/common/TagInput";
 import {
-  AdminSkeleton,
-  AdminEmpty,
-  AdminError,
-} from "../../components/common/AdminStatus";
+  TextField as RHFTextField,
+  SelectField,
+  SwitchField,
+  RichTextField,
+} from "../../components/form/fields";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import {
+  useAdminResumeQuery,
+  useUpdateResume,
+  usePublishResume,
+  useUnpublishResume,
+} from "../../hooks/useResume";
+import {
+  AVAILABILITY_STATUS_OPTIONS,
+  heroFormSchema,
+  heroFormDefaults,
+  aboutMeFormSchema,
+  aboutMeFormDefaults,
+  experienceFormSchema,
+  experienceFormDefaults,
+  educationFormSchema,
+  educationFormDefaults,
+  certificationFormSchema,
+  certificationFormDefaults,
+  skillGroupFormSchema,
+  skillGroupFormDefaults,
+  LANGUAGE_PROFICIENCY_OPTIONS,
+  languageFormSchema,
+  languageFormDefaults,
+  interestFormSchema,
+  interestFormDefaults,
+  DOWNLOAD_FILE_TYPE_OPTIONS,
+  downloadFormSchema,
+  downloadFormDefaults,
+} from "../../schemas/resumeSchema";
+
+const MAX_EXPERIENCE = 30;
+const MAX_EDUCATION = 20;
+const MAX_CERTIFICATIONS = 30;
+const MAX_SKILLS = 15;
+const MAX_LANGUAGES = 15;
+const MAX_INTERESTS = 20;
+const MAX_DOWNLOADS = 5;
 
 /* ================================================================== *
  * Helpers
  * ================================================================== */
 
-function newEducationEntry() {
-  return {
-    _tempId: crypto.randomUUID(),
-    institution: "",
-    duration: "",
-    description: "",
-  };
+function withTempIds(arr = []) {
+  return [...arr]
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item) => ({ ...item, _tempId: item._id ?? crypto.randomUUID() }));
 }
 
-function newSkillGroup(order = 0) {
-  return { _tempId: crypto.randomUUID(), category: "", items: [], order };
+function stripForCompare(arr = [], fields) {
+  return arr.map((item) => Object.fromEntries(fields.map((f) => [f, item[f]])));
+}
+
+function stripForSubmit(arr = [], fields) {
+  return arr.map((item, order) => ({
+    ...(item._id ? { _id: item._id } : {}),
+    ...Object.fromEntries(fields.map((f) => [f, item[f]])),
+    order,
+  }));
 }
 
 /* ================================================================== *
- * EducationEditor
+ * Hero form
  * ================================================================== */
-function EducationEditor({ entry, onSave, onCancel }) {
-  const [form, setForm] = useState({
-    institution: entry.institution,
-    duration: entry.duration,
-    description: entry.description,
-  });
-  const firstRef = useRef(null);
+function HeroSection({ resume, onSave, saving }) {
+  const form = useForm({ resolver: zodResolver(heroFormSchema), defaultValues: heroFormDefaults });
 
   useEffect(() => {
-    firstRef.current?.focus();
-  }, []);
-
-  const set = (field) => (e) =>
-    setForm((p) => ({ ...p, [field]: e.target.value }));
+    form.reset({
+      greeting: resume.hero?.greeting ?? "Hello, I'm",
+      headline: resume.hero?.headline ?? "",
+      summary: resume.hero?.summary ?? "",
+      availabilityStatus: resume.hero?.availabilityStatus ?? "available",
+      ctaLabel: resume.hero?.ctaLabel ?? "Download CV",
+      ctaEnabled: resume.hero?.ctaEnabled ?? true,
+      heroImage: resume.hero?.heroImage ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.hero]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-      <input
-        ref={firstRef}
-        className="form-input"
-        placeholder="Institution"
-        value={form.institution}
-        onChange={set("institution")}
-        style={{ fontSize: 13 }}
-      />
-      <input
-        className="form-input"
-        placeholder="Duration (e.g. 2025 — 2029)"
-        value={form.duration}
-        onChange={set("duration")}
-        style={{ fontSize: 13 }}
-      />
-      <textarea
-        className="form-input"
-        placeholder="Description"
-        value={form.description}
-        onChange={set("description")}
-        style={{ fontSize: 13, minHeight: 80, resize: "vertical" }}
-      />
-      <div style={{ display: "flex", gap: 8 }}>
-        <button
-          className="btn btn--primary"
-          onClick={() => onSave(form)}
-          disabled={
-            !form.institution.trim() ||
-            !form.duration.trim() ||
-            !form.description.trim()
-          }
-        >
-          Save
-        </button>
-        <button className="btn btn--ghost" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </div>
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        Hero
+      </Typography>
+      <FormProvider {...form}>
+        <Box component="form" onSubmit={form.handleSubmit((v) => onSave({ hero: v }))} noValidate>
+          <Stack spacing={2.5}>
+            <Box className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <RHFTextField name="greeting" label="Greeting" maxLength={60} />
+              <RHFTextField name="headline" label="Headline" maxLength={100} />
+            </Box>
+            <RichTextField name="summary" label="Hero summary" maxLength={300} />
+            <Box className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectField name="availabilityStatus" label="Availability" options={AVAILABILITY_STATUS_OPTIONS} />
+              <RHFTextField name="ctaLabel" label="CTA button label" maxLength={40} />
+            </Box>
+            <SwitchField name="ctaEnabled" label="Show the download-CV button" />
+            <Controller
+              name="heroImage"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <LibraryImageField
+                  label="Hero image"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={fieldState.error?.message}
+                  hint="Optional — a resume-page-specific image, distinct from the profile avatar."
+                />
+              )}
+            />
+            <Box>
+              <Button type="submit" variant="contained" disabled={saving}>
+                {saving ? "Saving…" : "Save hero"}
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      </FormProvider>
+    </Paper>
   );
 }
 
 /* ================================================================== *
- * SkillGroupEditor
+ * About Me form
  * ================================================================== */
-function SkillGroupEditor({ group, onSave, onCancel }) {
-  const [category, setCategory] = useState(group.category);
-  const [items, setItems] = useState([...group.items]);
-  const [newItem, setNewItem] = useState("");
-  const firstRef = useRef(null);
-  const newItemRef = useRef(null);
+function AboutMeSection({ resume, onSave, saving }) {
+  const form = useForm({ resolver: zodResolver(aboutMeFormSchema), defaultValues: aboutMeFormDefaults });
 
   useEffect(() => {
-    firstRef.current?.focus();
-  }, []);
-
-  const addItem = () => {
-    const trimmed = newItem.trim();
-    if (!trimmed || items.includes(trimmed)) return;
-    setItems((p) => [...p, trimmed]);
-    setNewItem("");
-    newItemRef.current?.focus();
-  };
-
-  const removeItem = (idx) => setItems((p) => p.filter((_, i) => i !== idx));
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addItem();
-    }
-  };
+    form.reset({ summary: resume.aboutMe?.summary ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.aboutMe]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-      <input
-        ref={firstRef}
-        className="form-input"
-        placeholder="Category name (e.g. Frontend)"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        style={{ fontSize: 13 }}
-      />
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        About me
+      </Typography>
+      <FormProvider {...form}>
+        <Box component="form" onSubmit={form.handleSubmit((v) => onSave({ aboutMe: v }))} noValidate>
+          <Stack spacing={2.5}>
+            <RichTextField name="summary" label="Summary" maxLength={4000} />
+            <Box>
+              <Button type="submit" variant="contained" disabled={saving}>
+                {saving ? "Saving…" : "Save about me"}
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      </FormProvider>
+    </Paper>
+  );
+}
 
-      {items.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {items.map((item, idx) => (
-            <span
-              key={idx}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "3px 10px",
-                borderRadius: 100,
-                background: "hsla(45,100%,72%,0.10)",
-                border: "1px solid hsla(45,100%,72%,0.20)",
-                color: "var(--a-accent)",
-                fontSize: 12,
-              }}
-            >
-              {item}
-              <button
-                onClick={() => removeItem(idx)}
-                aria-label={`Remove ${item}`}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--a-danger)",
-                  padding: "0 2px",
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
+/* ================================================================== *
+ * Dialogs
+ * ================================================================== */
+function ExperienceDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(experienceFormSchema), defaultValues: experienceFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? experienceFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  const current = form.watch("current");
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave({ ...v, endDate: v.current ? "" : v.endDate });
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Experience</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="role" label="Role / Title" required maxLength={100} />
+              <RHFTextField name="company" label="Company" required maxLength={150} />
+              <RHFTextField name="location" label="Location" maxLength={120} />
+              <Box className="grid grid-cols-2 gap-3">
+                <RHFTextField name="startDate" label="Start date" required maxLength={40} placeholder="Jan 2025" />
+                <RHFTextField name="endDate" label="End date" maxLength={40} placeholder="Jun 2025" disabled={current} />
+              </Box>
+              <SwitchField name="current" label="I currently work here" />
+              <RichTextField name="description" label="Description" maxLength={3000} />
+              <Controller
+                name="companyLogo"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <LibraryImageField label="Company logo (optional)" value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+                )}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function EducationDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(educationFormSchema), defaultValues: educationFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? educationFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Education</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="institution" label="Institution" required maxLength={200} />
+              <RHFTextField name="duration" label="Duration" required maxLength={80} placeholder="2025 — 2029" />
+              <RHFTextField name="description" label="Description" required multiline rows={3} maxLength={1000} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function CertificationDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(certificationFormSchema), defaultValues: certificationFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? certificationFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Certification</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="title" label="Title" required maxLength={150} />
+              <RHFTextField name="issuer" label="Issuer" required maxLength={150} />
+              <RHFTextField name="issueDate" label="Issue date" maxLength={40} placeholder="2024" />
+              <RHFTextField name="credentialUrl" label="Credential URL" maxLength={2048} />
+              <Controller
+                name="badgeImage"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <LibraryImageField label="Badge image (optional)" value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+                )}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function SkillGroupDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(skillGroupFormSchema), defaultValues: skillGroupFormDefaults });
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    if (open) {
+      form.reset(initialValues ? { category: initialValues.category } : skillGroupFormDefaults);
+      setItems(initialValues?.items ?? []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave({ ...v, items });
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Skill category</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="category" label="Category name" required maxLength={80} placeholder="Frontend" />
+              <TagInput
+                id="resume-skill-items"
+                label="Skills in this category"
+                placeholder="e.g. React (press Enter)"
+                items={items}
+                onChange={setItems}
+                maxItems={30}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function LanguageDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(languageFormSchema), defaultValues: languageFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? languageFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Language</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="name" label="Language" required maxLength={60} />
+              <SelectField name="proficiency" label="Proficiency" options={LANGUAGE_PROFICIENCY_OPTIONS} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function InterestDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(interestFormSchema), defaultValues: interestFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? interestFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Interest</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="name" label="Name" required maxLength={60} />
+              <RHFTextField name="icon" label="Icon key (optional)" maxLength={60} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+function DownloadDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(downloadFormSchema), defaultValues: downloadFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? downloadFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Download file</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="label" label="Label" required maxLength={80} placeholder="Resume (PDF)" />
+              <RHFTextField
+                name="url"
+                label="File URL"
+                required
+                placeholder="https://res.cloudinary.com/…/resume.pdf"
+              />
+              <SelectField name="fileType" label="File type" options={DOWNLOAD_FILE_TYPE_OPTIONS} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+/* ================================================================== *
+ * Ordered-list section shell — shared by Experience / Education /
+ * Certifications / Skills / Languages / Interests / Downloads.
+ * ================================================================== */
+function OrderedListSection({
+  title,
+  items,
+  setItems,
+  serverItems,
+  compareFields,
+  maxItems,
+  saving,
+  onAdd,
+  onSaveOrder,
+  renderRow,
+  emptyLabel,
+}) {
+  const dirty = useMemo(() => {
+    return (
+      JSON.stringify(stripForCompare(items, compareFields)) !==
+      JSON.stringify(stripForCompare(serverItems, compareFields))
+    );
+  }, [items, serverItems, compareFields]);
+
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Box className="flex items-center justify-between mb-3">
+        <Typography variant="subtitle1" fontWeight={700}>
+          {title}
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          {dirty && (
+            <Button size="small" variant="contained" onClick={onSaveOrder} disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          )}
+          <Button size="small" startIcon={<AddIcon fontSize="small" />} onClick={onAdd} disabled={items.length >= maxItems}>
+            Add
+          </Button>
+        </Stack>
+      </Box>
+
+      {items.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" className="py-6 text-center">
+          {emptyLabel}
+        </Typography>
+      ) : (
+        <DragReorderList items={items} getId={(item) => item._tempId} onReorder={setItems} renderItem={renderRow} />
+      )}
+    </Paper>
+  );
+}
+
+/* ================================================================== *
+ * Preview
+ * ================================================================== */
+function ResumePreview({ resume, experience, skills }) {
+  const hero = resume.hero ?? {};
+
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        Resume preview
+      </Typography>
+
+      <Box className="flex items-center gap-4 mb-3">
+        {hero.heroImage && (
+          <Box sx={{ width: 56, height: 56, borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
+            <img src={hero.heroImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </Box>
+        )}
+        <Box>
+          <Typography variant="caption" color="text.secondary">
+            {hero.greeting}
+          </Typography>
+          <Typography variant="h6" fontWeight={700}>
+            {hero.headline || "Your headline"}
+          </Typography>
+        </Box>
+        {hero.ctaEnabled && <Chip label={hero.ctaLabel || "Download CV"} color="primary" size="small" className="ml-auto" />}
+      </Box>
+
+      {hero.summary && (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          className="mb-4"
+          component="div"
+          dangerouslySetInnerHTML={{ __html: hero.summary }}
+        />
       )}
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <input
-          ref={newItemRef}
-          className="form-input"
-          placeholder="Add skill (press Enter)"
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{ fontSize: 13, flex: 1 }}
-        />
-        <button
-          className="btn btn--ghost"
-          onClick={addItem}
-          disabled={!newItem.trim()}
-          style={{ flexShrink: 0 }}
-        >
-          + Add
-        </button>
-      </div>
+      {resume.aboutMe?.summary && (
+        <Box className="mb-4">
+          <Typography variant="subtitle2" fontWeight={700} className="mb-1">
+            About me
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            component="div"
+            dangerouslySetInnerHTML={{ __html: resume.aboutMe.summary }}
+          />
+        </Box>
+      )}
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button
-          className="btn btn--primary"
-          onClick={() => onSave({ category, items })}
-          disabled={!category.trim()}
-        >
-          Save
-        </button>
-        <button className="btn btn--ghost" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </div>
+      {experience.length > 0 && (
+        <Box className="mb-4">
+          <Typography variant="subtitle2" fontWeight={700} className="mb-2">
+            Experience
+          </Typography>
+          <Stack spacing={1}>
+            {experience.slice(0, 3).map((e) => (
+              <Box key={e._tempId} className="flex items-center gap-2">
+                <Typography fontWeight={600} fontSize={14}>
+                  {e.role}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {e.company} · {e.startDate} — {e.current ? "Present" : e.endDate}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      {skills.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700} className="mb-2">
+            Skills
+          </Typography>
+          <Stack spacing={1}>
+            {skills.map((group) => (
+              <Box key={group._tempId}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                  {group.category}
+                </Typography>
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" className="mt-0.5">
+                  {group.items.map((i) => (
+                    <Chip key={i} label={i} size="small" />
+                  ))}
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </Paper>
+  );
+}
+
+function RowShell({ title, subtitle, logo, onEdit, onDelete }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+      <Box className="flex items-center justify-between gap-2">
+        <Box className="flex items-center gap-2 min-w-0">
+          {logo && (
+            <Box sx={{ width: 32, height: 32, borderRadius: 1, overflow: "hidden", flexShrink: 0, border: "1px solid", borderColor: "divider" }}>
+              <img src={logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </Box>
+          )}
+          <Box className="min-w-0">
+            <Typography fontWeight={600} noWrap>
+              {title}
+            </Typography>
+            {subtitle && (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+        <Stack direction="row" spacing={0.5}>
+          <IconButton size="small" onClick={onEdit} aria-label={`Edit ${title}`}>
+            <EditOutlinedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error" onClick={onDelete} aria-label={`Delete ${title}`}>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      </Box>
+    </Paper>
   );
 }
 
@@ -210,421 +699,394 @@ function SkillGroupEditor({ group, onSave, onCancel }) {
  * Main ManageResume component
  * ================================================================== */
 export default function ManageResume() {
-  const [resume, setResume] = useState(null);
-  const [fetchStatus, setFetchStatus] = useState("loading");
-  const [fetchError, setFetchError] = useState("");
+  const { data, isLoading, isError, error, refetch } = useAdminResumeQuery();
+  const { mutateAsync: updateResume, isPending: savingScalar } = useUpdateResume();
+  const { mutateAsync: publish, isPending: publishing } = usePublishResume();
+  const { mutateAsync: unpublish, isPending: unpublishing } = useUnpublishResume();
+  const confirm = useConfirmDialog();
 
-  const [editing, setEditing] = useState(null);
-  const [saving, setSaving] = useState(null);
+  const sections = [
+    { key: "experience", max: MAX_EXPERIENCE, fields: ["role", "company", "location", "startDate", "endDate", "current", "description", "companyLogo"] },
+    { key: "education", max: MAX_EDUCATION, fields: ["institution", "duration", "description"] },
+    { key: "certifications", max: MAX_CERTIFICATIONS, fields: ["title", "issuer", "issueDate", "credentialUrl", "badgeImage"] },
+    { key: "skills", max: MAX_SKILLS, fields: ["category", "items"] },
+    { key: "languages", max: MAX_LANGUAGES, fields: ["name", "proficiency"] },
+    { key: "interests", max: MAX_INTERESTS, fields: ["name", "icon"] },
+    { key: "downloads", max: MAX_DOWNLOADS, fields: ["label", "url", "fileType"] },
+  ];
 
-  // Server-confirmed skill order for dirty-check
-  const [serverSkills, setServerSkills] = useState(null);
-
-  /* ── Fetch ──────────────────────────────────────────────────── */
-  const loadResume = useCallback(async () => {
-    setFetchStatus("loading");
-    setFetchError("");
-    try {
-      const { data } = await api.get(API_ENDPOINTS.adminResume);
-      const sortedSkills = [...(data.skills ?? [])]
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((s) => ({ ...s, _tempId: s._id }));
-
-      setResume({
-        ...data,
-        education: (data.education ?? []).map((e) => ({
-          ...e,
-          _tempId: e._id,
-        })),
-        skills: sortedSkills,
-      });
-      setServerSkills(sortedSkills);
-      setFetchStatus("ready");
-    } catch (err) {
-      setFetchError(err.message);
-      setFetchStatus("error");
-    }
-  }, []);
+  const [local, setLocal] = useState({});
+  const [server, setServer] = useState({});
+  const [saving, setSaving] = useState({});
+  const [dialogs, setDialogs] = useState({});
 
   useEffect(() => {
-    queueMicrotask(() => loadResume());
-  }, [loadResume]);
-
-  /* ── PATCH helper ───────────────────────────────────────────── */
-  const patchSection = useCallback(
-    async (section, newArray, { successMsg } = {}) => {
-      setSaving(section);
-      try {
-        const { data } = await api.patch(API_ENDPOINTS.adminResume, {
-          section,
-          value: stripTempIds(newArray),
-        });
-        const refreshedSkills =
-          section === "skills"
-            ? [...(data.skills ?? [])]
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                .map((item) => ({ ...item, _tempId: item._id }))
-            : null;
-
-        setResume((prev) => ({
-          ...prev,
-          ...data,
-          [section]:
-            section === "skills"
-              ? refreshedSkills
-              : (data[section] ?? []).map((item) => ({
-                  ...item,
-                  _tempId: item._id,
-                })),
-        }));
-
-        if (section === "skills" && refreshedSkills) {
-          setServerSkills(refreshedSkills);
+    if (!data) return;
+    setLocal((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const { key } of sections) {
+        if (next[key] === undefined) {
+          next[key] = withTempIds(data[key]);
+          changed = true;
         }
-
-        setEditing(null);
-        toast.success(
-          successMsg ??
-            (section === "education"
-              ? "Education updated."
-              : "Skills updated."),
-        );
-      } catch (err) {
-        toast.error(err.message);
-      } finally {
-        setSaving(null);
       }
-    },
-    [],
-  );
+      return changed ? next : prev;
+    });
+    setServer((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const { key } of sections) {
+        if (next[key] === undefined) {
+          next[key] = withTempIds(data[key]);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
-  /* ── Education handlers ─────────────────────────────────────── */
-  const saveEducationEntry = (tempId) => (formData) => {
-    const updated = resume.education.map((e) =>
-      e._tempId === tempId ? { ...e, ...formData } : e,
-    );
-    patchSection("education", updated);
-  };
+  const ready = data && sections.every(({ key }) => local[key] !== undefined);
 
-  const deleteEducationEntry = (tempId) => {
-    if (!window.confirm("Delete this education entry?")) return;
-    const updated = resume.education.filter((e) => e._tempId !== tempId);
-    patchSection("education", updated);
-  };
+  const anyDirty = useMemo(() => {
+    if (!ready) return false;
+    return sections.some(({ key, fields }) => {
+      return (
+        JSON.stringify(stripForCompare(local[key], fields)) !==
+        JSON.stringify(stripForCompare(server[key], fields))
+      );
+    });
+  }, [ready, local, server]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addEducationEntry = () => {
-    const entry = newEducationEntry();
-    const updated = [...resume.education, entry];
-    setResume((p) => ({ ...p, education: updated }));
-    setEditing({ section: "education", id: entry._tempId });
-  };
+  useEffect(() => {
+    const handler = (e) => {
+      if (!anyDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [anyDirty]);
 
-  const cancelEducationEdit = (tempId) => {
-    const item = resume.education.find((e) => e._tempId === tempId);
-    if (item && !item._id) {
-      setResume((p) => ({
-        ...p,
-        education: p.education.filter((e) => e._tempId !== tempId),
-      }));
+  const saveSection = async (key, fields) => {
+    setSaving((prev) => ({ ...prev, [key]: true }));
+    try {
+      const payload = { [key]: stripForSubmit(local[key], fields) };
+      const updated = await updateResume(payload);
+      const seeded = withTempIds(updated[key]);
+      setLocal((prev) => ({ ...prev, [key]: seeded }));
+      setServer((prev) => ({ ...prev, [key]: seeded }));
+      toast.success(`${key[0].toUpperCase()}${key.slice(1)} saved.`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
-    setEditing(null);
   };
 
-  /* ── Skills handlers ────────────────────────────────────────── */
-  const saveSkillGroup = (tempId) => (formData) => {
-    const updated = resume.skills.map((s) =>
-      s._tempId === tempId ? { ...s, ...formData } : s,
-    );
-    patchSection("skills", updated);
-  };
-
-  const deleteSkillGroup = (tempId) => {
-    if (!window.confirm("Delete this skill category?")) return;
-    const updated = resume.skills
-      .filter((s) => s._tempId !== tempId)
-      .map((s, i) => ({ ...s, order: i }));
-    patchSection("skills", updated);
-  };
-
-  const addSkillGroup = () => {
-    const group = newSkillGroup(resume.skills.length);
-    const updated = [...resume.skills, group];
-    setResume((p) => ({ ...p, skills: updated }));
-    setEditing({ section: "skills", id: group._tempId });
-  };
-
-  const cancelSkillEdit = (tempId) => {
-    const item = resume.skills.find((s) => s._tempId === tempId);
-    if (item && !item._id) {
-      setResume((p) => ({
-        ...p,
-        skills: p.skills.filter((s) => s._tempId !== tempId),
-      }));
-    }
-    setEditing(null);
-  };
-
-  /* ── Skill reorder ──────────────────────────────────────────── */
-  const handleMoveSkill = (index, direction) => {
-    setResume((prev) => ({
+  const addOrUpdate = (key, dialogState, values) => {
+    setLocal((prev) => ({
       ...prev,
-      skills: moveItem(prev.skills, index, direction),
+      [key]:
+        dialogState.mode === "add"
+          ? [...prev[key], { _tempId: crypto.randomUUID(), ...values }]
+          : prev[key].map((item) => (item._tempId === dialogState.tempId ? { ...item, ...values } : item)),
     }));
   };
 
-  const handleSaveSkillOrder = () => {
-    patchSection("skills", resume.skills, { successMsg: "Skill order saved." });
+  const removeItem = async (key, item, label) => {
+    const confirmed = await confirm({ title: `Delete "${label}"?`, confirmLabel: "Delete", tone: "danger" });
+    if (!confirmed) return;
+    setLocal((prev) => ({ ...prev, [key]: prev[key].filter((i) => i._tempId !== item._tempId) }));
   };
 
-  // Dirty: compare local ID sequence against last server-confirmed sequence
-  const skillOrderDirty =
-    saving !== "skills" &&
-    !editing &&
-    resume !== null &&
-    isOrderDirty(resume.skills, serverSkills);
+  const handleSaveScalar = async (payload, successMsg) => {
+    try {
+      await updateResume(payload);
+      toast.success(successMsg);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
-  /* ── Render guards ──────────────────────────────────────────── */
-  if (fetchStatus === "loading")
+  const handleTogglePublish = async () => {
+    try {
+      if (data.status === "draft") {
+        await publish();
+        toast.success("Resume published.");
+      } else {
+        await unpublish();
+        toast.success("Resume unpublished.");
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  if (isLoading || !ready) {
     return (
-      <div className="admin-page">
-        <div className="admin-page__header">
-          <h2 className="admin-page__title">Resume</h2>
-        </div>
-        <AdminSkeleton rows={4} />
-      </div>
+      <>
+        <PageHeader title="Resume" subtitle="Hero, experience, education, certifications, skills, languages, interests, and downloads." />
+        <LoadingSkeleton rows={8} />
+      </>
     );
+  }
 
-  if (fetchStatus === "error")
+  if (isError) {
     return (
-      <div className="admin-page">
-        <div className="admin-page__header">
-          <h2 className="admin-page__title">Resume</h2>
-        </div>
-        <AdminError message={fetchError} onRetry={loadResume} />
-      </div>
+      <Box className="py-12 text-center">
+        <Typography color="error" className="mb-3">
+          {error?.message}
+        </Typography>
+        <Button variant="outlined" onClick={refetch}>
+          Try again
+        </Button>
+      </Box>
     );
+  }
 
-  const isEditingSection = (section, id) =>
-    editing?.section === section && editing?.id === id;
+  const isDraft = data.status === "draft";
 
-  /* ── Main render ────────────────────────────────────────────── */
   return (
-    <div className="admin-page">
-      {/* ════════════════════════════════════════════════════════
-          EDUCATION
-      ════════════════════════════════════════════════════════ */}
-      <div className="admin-page__header">
-        <h2 className="admin-page__title">Education</h2>
-        <button
-          className="btn btn--primary"
-          onClick={addEducationEntry}
-          disabled={saving === "education"}
-        >
-          + Add Entry
-        </button>
-      </div>
+    <>
+      <PageHeader
+        title="Resume"
+        subtitle="Every section of the public résumé page — hero through downloads."
+        badge={
+          <Chip size="small" variant={isDraft ? "outlined" : "filled"} color={isDraft ? "default" : "success"} label={isDraft ? "Draft" : "Published"} />
+        }
+        actions={
+          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
+            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+          </Button>
+        }
+      />
 
-      {resume.education.length === 0 ? (
-        <AdminEmpty
-          icon="🎓"
-          title="No education entries yet"
-          sub="Click Add Entry above to add your first one."
-        />
-      ) : (
-        <ul className="admin-list" aria-label="Education entries">
-          {resume.education.map((entry) => {
-            const isEditing = isEditingSection("education", entry._tempId);
+      <Stack spacing={3}>
+        <HeroSection resume={data} onSave={(p) => handleSaveScalar(p, "Hero updated.")} saving={savingScalar} />
+        <AboutMeSection resume={data} onSave={(p) => handleSaveScalar(p, "About me updated.")} saving={savingScalar} />
 
-            return (
-              <SectionCard key={entry._tempId}>
-                <div className="admin-item__body">
-                  {isEditing ? (
-                    <EducationEditor
-                      entry={entry}
-                      onSave={saveEducationEntry(entry._tempId)}
-                      onCancel={() => cancelEducationEdit(entry._tempId)}
-                    />
-                  ) : (
-                    <>
-                      <span className="admin-item__name">
-                        {entry.institution || (
-                          <em style={{ color: "var(--a-text-d)" }}>Untitled</em>
-                        )}
-                      </span>
-                      <div className="admin-item__meta">
-                        <span
-                          style={{ fontSize: 12, color: "var(--a-text-m)" }}
-                        >
-                          {entry.duration}
-                        </span>
-                      </div>
-                      <span
-                        className="admin-item__preview"
-                        style={{ whiteSpace: "normal", lineHeight: 1.5 }}
-                      >
-                        {entry.description}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {!isEditing && (
-                  <div className="admin-item__actions">
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() =>
-                        setEditing({ section: "education", id: entry._tempId })
-                      }
-                      disabled={!!saving || !!editing}
-                      aria-label={`Edit ${entry.institution}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn--danger"
-                      onClick={() => deleteEducationEntry(entry._tempId)}
-                      disabled={!!saving}
-                      aria-label={`Delete ${entry.institution}`}
-                    >
-                      {saving === "education" ? "…" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </SectionCard>
-            );
-          })}
-        </ul>
-      )}
-
-      {/* ════════════════════════════════════════════════════════
-          TECHNICAL SKILLS
-      ════════════════════════════════════════════════════════ */}
-      <div className="admin-page__header" style={{ marginTop: 8 }}>
-        <h2 className="admin-page__title">Technical Skills</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {skillOrderDirty && (
-            <button
-              className="btn btn--ghost"
-              onClick={handleSaveSkillOrder}
-              disabled={!!saving}
-            >
-              Save Order
-            </button>
+        <OrderedListSection
+          title="Experience"
+          items={local.experience}
+          setItems={(v) => setLocal((p) => ({ ...p, experience: typeof v === "function" ? v(p.experience) : v }))}
+          serverItems={server.experience}
+          compareFields={sections[0].fields}
+          maxItems={MAX_EXPERIENCE}
+          saving={saving.experience}
+          emptyLabel="No experience entries yet."
+          onAdd={() => setDialogs((p) => ({ ...p, experience: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("experience", sections[0].fields)}
+          renderRow={({ item }) => (
+            <RowShell
+              title={item.role}
+              subtitle={`${item.company} · ${item.startDate} — ${item.current ? "Present" : item.endDate}`}
+              logo={item.companyLogo}
+              onEdit={() => setDialogs((p) => ({ ...p, experience: { mode: "edit", tempId: item._tempId, initialValues: item } }))}
+              onDelete={() => removeItem("experience", item, item.role)}
+            />
           )}
-          <button
-            className="btn btn--primary"
-            onClick={addSkillGroup}
-            disabled={saving === "skills"}
-          >
-            + Add Category
-          </button>
-        </div>
-      </div>
-
-      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
-        Use ↑ ↓ to reorder skill categories, then click{" "}
-        <strong>Save Order</strong>.
-      </p>
-
-      {resume.skills.length === 0 ? (
-        <AdminEmpty
-          icon="⚙️"
-          title="No skill categories yet"
-          sub="Click Add Category to create your first skill group."
         />
-      ) : (
-        <ul className="admin-list" aria-label="Skill categories">
-          {resume.skills.map((group, index) => {
-            const isEditing = isEditingSection("skills", group._tempId);
 
-            return (
-              <SectionCard key={group._tempId}>
-                {!isEditing && (
-                  <ReorderButtons
-                    index={index}
-                    total={resume.skills.length}
-                    onMove={handleMoveSkill}
-                    disabled={!!editing || !!saving}
-                  />
-                )}
+        <OrderedListSection
+          title="Education"
+          items={local.education}
+          setItems={(v) => setLocal((p) => ({ ...p, education: typeof v === "function" ? v(p.education) : v }))}
+          serverItems={server.education}
+          compareFields={sections[1].fields}
+          maxItems={MAX_EDUCATION}
+          saving={saving.education}
+          emptyLabel="No education entries yet."
+          onAdd={() => setDialogs((p) => ({ ...p, education: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("education", sections[1].fields)}
+          renderRow={({ item }) => (
+            <RowShell
+              title={item.institution}
+              subtitle={item.duration}
+              onEdit={() => setDialogs((p) => ({ ...p, education: { mode: "edit", tempId: item._tempId, initialValues: item } }))}
+              onDelete={() => removeItem("education", item, item.institution)}
+            />
+          )}
+        />
 
-                <div className="admin-item__body">
-                  {isEditing ? (
-                    <SkillGroupEditor
-                      group={group}
-                      onSave={saveSkillGroup(group._tempId)}
-                      onCancel={() => cancelSkillEdit(group._tempId)}
-                    />
-                  ) : (
-                    <>
-                      <span className="admin-item__name">
-                        {group.category || (
-                          <em style={{ color: "var(--a-text-d)" }}>Untitled</em>
-                        )}
-                      </span>
-                      <div
-                        className="admin-item__meta"
-                        style={{
-                          flexWrap: "wrap",
-                          gap: "5px 6px",
-                          marginTop: 6,
-                        }}
-                      >
-                        {group.items.map((item, idx) => (
-                          <span key={idx} className="admin-item__badge">
-                            {item}
-                          </span>
-                        ))}
-                        {group.items.length === 0 && (
-                          <span
-                            style={{ fontSize: 12, color: "var(--a-text-d)" }}
-                          >
-                            No skills added yet
-                          </span>
-                        )}
-                        <span
-                          className="admin-item__badge"
-                          style={{
-                            background: "transparent",
-                            color: "var(--a-text-dim)",
-                            borderColor: "var(--a-border)",
-                            fontSize: 10,
-                          }}
-                        >
-                          #{index + 1}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
+        <OrderedListSection
+          title="Certifications"
+          items={local.certifications}
+          setItems={(v) => setLocal((p) => ({ ...p, certifications: typeof v === "function" ? v(p.certifications) : v }))}
+          serverItems={server.certifications}
+          compareFields={sections[2].fields}
+          maxItems={MAX_CERTIFICATIONS}
+          saving={saving.certifications}
+          emptyLabel="No certifications yet."
+          onAdd={() => setDialogs((p) => ({ ...p, certifications: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("certifications", sections[2].fields)}
+          renderRow={({ item }) => (
+            <RowShell
+              title={item.title}
+              subtitle={`${item.issuer}${item.issueDate ? ` · ${item.issueDate}` : ""}`}
+              logo={item.badgeImage}
+              onEdit={() => setDialogs((p) => ({ ...p, certifications: { mode: "edit", tempId: item._tempId, initialValues: item } }))}
+              onDelete={() => removeItem("certifications", item, item.title)}
+            />
+          )}
+        />
 
-                {!isEditing && (
-                  <div className="admin-item__actions">
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() =>
-                        setEditing({ section: "skills", id: group._tempId })
-                      }
-                      disabled={!!saving || !!editing}
-                      aria-label={`Edit ${group.category}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn--danger"
-                      onClick={() => deleteSkillGroup(group._tempId)}
-                      disabled={!!saving}
-                      aria-label={`Delete ${group.category}`}
-                    >
-                      {saving === "skills" ? "…" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </SectionCard>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+        <OrderedListSection
+          title="Skills"
+          items={local.skills}
+          setItems={(v) => setLocal((p) => ({ ...p, skills: typeof v === "function" ? v(p.skills) : v }))}
+          serverItems={server.skills}
+          compareFields={sections[3].fields}
+          maxItems={MAX_SKILLS}
+          saving={saving.skills}
+          emptyLabel="No skill categories yet."
+          onAdd={() => setDialogs((p) => ({ ...p, skills: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("skills", sections[3].fields)}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="min-w-0">
+                  <Typography fontWeight={600}>{item.category}</Typography>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap" className="mt-1">
+                    {item.items.map((i) => (
+                      <Chip key={i} label={i} size="small" />
+                    ))}
+                  </Stack>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton size="small" onClick={() => setDialogs((p) => ({ ...p, skills: { mode: "edit", tempId: item._tempId, initialValues: item } }))} aria-label={`Edit ${item.category}`}>
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => removeItem("skills", item, item.category)} aria-label={`Delete ${item.category}`}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
+
+        <OrderedListSection
+          title="Languages"
+          items={local.languages}
+          setItems={(v) => setLocal((p) => ({ ...p, languages: typeof v === "function" ? v(p.languages) : v }))}
+          serverItems={server.languages}
+          compareFields={sections[4].fields}
+          maxItems={MAX_LANGUAGES}
+          saving={saving.languages}
+          emptyLabel="No languages yet."
+          onAdd={() => setDialogs((p) => ({ ...p, languages: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("languages", sections[4].fields)}
+          renderRow={({ item }) => (
+            <RowShell
+              title={item.name}
+              subtitle={item.proficiency}
+              onEdit={() => setDialogs((p) => ({ ...p, languages: { mode: "edit", tempId: item._tempId, initialValues: item } }))}
+              onDelete={() => removeItem("languages", item, item.name)}
+            />
+          )}
+        />
+
+        <OrderedListSection
+          title="Interests"
+          items={local.interests}
+          setItems={(v) => setLocal((p) => ({ ...p, interests: typeof v === "function" ? v(p.interests) : v }))}
+          serverItems={server.interests}
+          compareFields={sections[5].fields}
+          maxItems={MAX_INTERESTS}
+          saving={saving.interests}
+          emptyLabel="No interests yet."
+          onAdd={() => setDialogs((p) => ({ ...p, interests: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("interests", sections[5].fields)}
+          renderRow={({ item }) => (
+            <RowShell
+              title={item.name}
+              onEdit={() => setDialogs((p) => ({ ...p, interests: { mode: "edit", tempId: item._tempId, initialValues: item } }))}
+              onDelete={() => removeItem("interests", item, item.name)}
+            />
+          )}
+        />
+
+        <OrderedListSection
+          title="Downloads"
+          items={local.downloads}
+          setItems={(v) => setLocal((p) => ({ ...p, downloads: typeof v === "function" ? v(p.downloads) : v }))}
+          serverItems={server.downloads}
+          compareFields={sections[6].fields}
+          maxItems={MAX_DOWNLOADS}
+          saving={saving.downloads}
+          emptyLabel="No downloadable files yet."
+          onAdd={() => setDialogs((p) => ({ ...p, downloads: { mode: "add" } }))}
+          onSaveOrder={() => saveSection("downloads", sections[6].fields)}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="flex items-center gap-2 min-w-0">
+                  <Chip size="small" label={item.fileType} />
+                  <Typography fontWeight={600} noWrap>
+                    {item.label}
+                  </Typography>
+                  <OpenInNewIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton size="small" onClick={() => setDialogs((p) => ({ ...p, downloads: { mode: "edit", tempId: item._tempId, initialValues: item } }))} aria-label={`Edit ${item.label}`}>
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => removeItem("downloads", item, item.label)} aria-label={`Delete ${item.label}`}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
+
+        <ResumePreview resume={data} experience={local.experience} skills={local.skills} />
+      </Stack>
+
+      <ExperienceDialog
+        open={!!dialogs.experience}
+        initialValues={dialogs.experience?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, experience: null }))}
+        onSave={(v) => addOrUpdate("experience", dialogs.experience, v)}
+      />
+      <EducationDialog
+        open={!!dialogs.education}
+        initialValues={dialogs.education?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, education: null }))}
+        onSave={(v) => addOrUpdate("education", dialogs.education, v)}
+      />
+      <CertificationDialog
+        open={!!dialogs.certifications}
+        initialValues={dialogs.certifications?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, certifications: null }))}
+        onSave={(v) => addOrUpdate("certifications", dialogs.certifications, v)}
+      />
+      <SkillGroupDialog
+        open={!!dialogs.skills}
+        initialValues={dialogs.skills?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, skills: null }))}
+        onSave={(v) => addOrUpdate("skills", dialogs.skills, v)}
+      />
+      <LanguageDialog
+        open={!!dialogs.languages}
+        initialValues={dialogs.languages?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, languages: null }))}
+        onSave={(v) => addOrUpdate("languages", dialogs.languages, v)}
+      />
+      <InterestDialog
+        open={!!dialogs.interests}
+        initialValues={dialogs.interests?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, interests: null }))}
+        onSave={(v) => addOrUpdate("interests", dialogs.interests, v)}
+      />
+      <DownloadDialog
+        open={!!dialogs.downloads}
+        initialValues={dialogs.downloads?.initialValues}
+        onClose={() => setDialogs((p) => ({ ...p, downloads: null }))}
+        onSave={(v) => addOrUpdate("downloads", dialogs.downloads, v)}
+      />
+    </>
   );
 }
