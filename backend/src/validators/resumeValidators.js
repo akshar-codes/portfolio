@@ -12,6 +12,19 @@ import {
   RESUME_LIMITS,
 } from "../utils/constants.js";
 
+/** Optional field that must be empty or a valid http(s) URL — used for
+ * Media-Library-picked images (heroImage/companyLogo/badgeImage),
+ * which are always full URLs rather than relative paths. */
+function optionalImageUrl(field) {
+  return body(field)
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^https?:\/\/.+/)
+    .withMessage(`${field} must be a valid HTTP/HTTPS image URL`)
+    .isLength({ max: 2048 })
+    .withMessage(`${field} must not exceed 2048 characters`);
+}
+
 export const updateResumeValidator = [
   /* ══════════════════════════════════════════════════════════════
    * HERO
@@ -28,6 +41,7 @@ export const updateResumeValidator = [
     ),
   optionalTrimmedString("hero.ctaLabel", { max: 40 }),
   optionalBoolean("hero.ctaEnabled"),
+  optionalImageUrl("hero.heroImage"),
 
   /* ══════════════════════════════════════════════════════════════
    * ABOUT ME
@@ -36,7 +50,13 @@ export const updateResumeValidator = [
     .optional()
     .isObject()
     .withMessage("aboutMe must be an object"),
-  optionalTrimmedString("aboutMe.summary", { max: 2000 }),
+  // Rich text — authoritative 4000-char ceiling enforced by Mongoose
+  // AFTER server-side sanitization (services/resumeService.js); this
+  // is a generous pre-sanitization safety ceiling only.
+  body("aboutMe.summary")
+    .optional({ checkFalsy: true })
+    .isLength({ max: 20000 })
+    .withMessage("aboutMe.summary is too long"),
 
   /* ══════════════════════════════════════════════════════════════
    * EXPERIENCE
@@ -87,11 +107,14 @@ export const updateResumeValidator = [
     .withMessage("current must be a boolean")
     .toBoolean(),
 
+  // Rich text — authoritative 3000-char ceiling enforced by Mongoose
+  // after sanitization; generous pre-sanitization ceiling here.
   body("experience.*.description")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1500 })
-    .withMessage("Description must not exceed 1500 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Description is too long"),
+
+  optionalImageUrl("experience.*.companyLogo"),
 
   optionalOrder("experience.*.order"),
 
@@ -159,6 +182,8 @@ export const updateResumeValidator = [
     .withMessage("Issue date must not exceed 40 characters"),
 
   optionalUrl("certifications.*.credentialUrl"),
+
+  optionalImageUrl("certifications.*.badgeImage"),
 
   optionalOrder("certifications.*.order"),
 

@@ -11,6 +11,11 @@ import {
  * Sub-schemas
  * ================================================================== */
 
+const IMAGE_URL_MATCH = [
+  /^$|^https?:\/\/.+/,
+  "Must be empty or a valid HTTP/HTTPS URL",
+];
+
 /* ── Hero — resume-page presentation content only.
  * Identity fields (name/title/email/phone/avatar) already live on
  * Profile and are intentionally NOT duplicated here. ────────────── */
@@ -52,19 +57,31 @@ const heroSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Resume-page-specific hero image, picked from the Media Library.
+    // Distinct from Profile.avatar (site-wide identity image).
+    heroImage: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2048, "Hero image URL must not exceed 2048 characters"],
+      match: IMAGE_URL_MATCH,
+    },
   },
   { _id: false },
 );
 
 /* ── About Me — resume-specific long-form summary. Distinct from the
- * site-wide About model (paragraphs/services shown on the About page). */
+ * site-wide About model (biography/services shown on the About page). */
 const aboutMeSchema = new mongoose.Schema(
   {
+    // Rich text (Tiptap), sanitized server-side in services/resumeService.js
+    // before persistence — see utils/htmlSanitizer.js. Limit widened
+    // from the original plain-text ceiling to leave room for markup.
     summary: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [2000, "About Me summary must not exceed 2000 characters"],
+      maxlength: [4000, "About Me summary must not exceed 4000 characters"],
     },
   },
   { _id: false },
@@ -108,11 +125,20 @@ const experienceEntrySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Rich text, sanitized server-side — see aboutMeSchema.summary note.
     description: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [1500, "Description must not exceed 1500 characters"],
+      maxlength: [3000, "Description must not exceed 3000 characters"],
+    },
+    // Company logo, picked from the Media Library.
+    companyLogo: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2048, "Company logo URL must not exceed 2048 characters"],
+      match: IMAGE_URL_MATCH,
     },
     order: {
       type: Number,
@@ -185,6 +211,14 @@ const certificationEntrySchema = new mongoose.Schema(
         /^$|^https?:\/\/.+/,
         "Credential URL must be empty or a valid HTTP/HTTPS URL",
       ],
+    },
+    // Certification badge/logo, picked from the Media Library.
+    badgeImage: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2048, "Badge image URL must not exceed 2048 characters"],
+      match: IMAGE_URL_MATCH,
     },
     order: {
       type: Number,
