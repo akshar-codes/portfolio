@@ -1,250 +1,466 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, FormProvider, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useAdminAbout, useUpdateAbout } from "../../hooks/useAbout";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Stack from "@mui/material/Stack";
+import AddIcon from "@mui/icons-material/Add";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+
+import PageHeader from "../../components/common/PageHeader";
+import LoadingSkeleton from "../../components/common/LoadingSkeleton";
+import DragReorderList from "../../components/cms/DragReorderList";
+import ImageGalleryField from "../../components/form/ImageGalleryField";
+import TagInput from "../../components/common/TagInput";
+import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
 import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../../utils/aboutIconMap";
-import { moveItem, stripTempIds, isOrderDirty } from "../../utils/ordering";
-import ReorderButtons from "../../components/common/ReorderButtons";
-import SectionCard from "../../components/common/SectionCard";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import {
-  AdminSkeleton,
-  AdminEmpty,
-  AdminError,
-} from "../../components/common/AdminStatus";
+  useAdminAboutQuery,
+  useUpdateAbout,
+  usePublishAbout,
+  useUnpublishAbout,
+} from "../../hooks/useAbout";
+import {
+  serviceFormSchema,
+  serviceFormDefaults,
+  timelineFormSchema,
+  timelineFormDefaults,
+  highlightFormSchema,
+  highlightFormDefaults,
+  personalInfoFormSchema,
+  personalInfoFormDefaults,
+} from "../../schemas/aboutSchema";
+
+const MAX_SERVICES = 12;
+const MAX_TIMELINE = 20;
+const MAX_SKILLS_SUMMARY = 20;
+const MAX_HIGHLIGHTS = 8;
+const MAX_PERSONAL_INFO = 10;
+const MAX_IMAGES = 12;
 
 /* ================================================================== *
- * Tiny helpers
+ * Helpers
  * ================================================================== */
 
-function newParagraph(order = 0) {
-  return { _tempId: crypto.randomUUID(), text: "", order };
+function withTempIds(arr = []) {
+  return [...arr]
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item) => ({ ...item, _tempId: item._id ?? crypto.randomUUID() }));
 }
 
-function newService(order = 0) {
-  return {
-    _tempId: crypto.randomUUID(),
-    title: "",
-    description: "",
-    icon: "web",
+function stripForCompare(arr = [], fields) {
+  return arr.map((item) => Object.fromEntries(fields.map((f) => [f, item[f]])));
+}
+
+function stripForSubmit(arr = [], fields) {
+  return arr.map((item, order) => ({
+    ...(item._id ? { _id: item._id } : {}),
+    ...Object.fromEntries(fields.map((f) => [f, item[f]])),
     order,
-  };
+  }));
 }
 
 /* ================================================================== *
- * ParagraphEditor — inline editor for a single paragraph
+ * Biography form
  * ================================================================== */
-function ParagraphEditor({ paragraph, onSave, onCancel }) {
-  const [text, setText] = useState(paragraph.text);
-  const textareaRef = useRef(null);
+function BiographySection({ about, onSave, saving }) {
+  const form = useForm({ defaultValues: { biography: about.biography ?? "" } });
 
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  const isValid = text.trim().length >= 10;
+    form.reset({ biography: about.biography ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [about.biography]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-      <textarea
-        ref={textareaRef}
-        className="form-input"
-        placeholder="Write a paragraph about yourself… (min 10 characters)"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        maxLength={1000}
-        style={{ minHeight: 100, resize: "vertical", fontSize: 13 }}
-      />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 11,
-            color: text.length > 950 ? "var(--a-danger)" : "var(--a-text-dim)",
-          }}
-        >
-          {text.length} / 1000
-        </span>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            className="btn btn--primary"
-            onClick={() => onSave({ text: text.trim() })}
-            disabled={!isValid}
-          >
-            Save
-          </button>
-          <button className="btn btn--ghost" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        Biography
+      </Typography>
+      <FormProvider {...form}>
+        <Box component="form" onSubmit={form.handleSubmit(onSave)} noValidate>
+          <Stack spacing={2}>
+            <RichTextField name="biography" maxLength={8000} />
+            <Box>
+              <Button type="submit" variant="contained" disabled={saving || !form.formState.isDirty}>
+                {saving ? "Saving…" : "Save biography"}
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      </FormProvider>
+    </Paper>
   );
 }
 
 /* ================================================================== *
- * IconPicker — visual grid of icon options
+ * Skills summary (flat tag list)
  * ================================================================== */
-function IconPicker({ value, onChange }) {
+function SkillsSummarySection({ about, onSave, saving }) {
+  const [items, setItems] = useState(about.skillsSummary ?? []);
+
+  useEffect(() => {
+    setItems(about.skillsSummary ?? []);
+  }, [about.skillsSummary]);
+
+  const dirty = JSON.stringify(items) !== JSON.stringify(about.skillsSummary ?? []);
+
   return (
-    <div>
-      <p
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "var(--a-text-m)",
-          textTransform: "uppercase",
-          letterSpacing: "0.6px",
-          marginBottom: 8,
-        }}
-      >
-        Icon
-      </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {ABOUT_ICON_OPTIONS.map((opt) => {
-          const isSelected = value === opt.key;
-          return (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => onChange(opt.key)}
-              title={opt.label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-                padding: "8px 12px",
-                borderRadius: "var(--a-r-sm)",
-                border: isSelected
-                  ? "1px solid hsla(45,100%,72%,0.6)"
-                  : "1px solid var(--a-border)",
-                background: isSelected
-                  ? "hsla(45,100%,72%,0.12)"
-                  : "var(--a-surface)",
-                cursor: "pointer",
-                transition: "border-color 0.2s, background 0.2s",
-                minWidth: 72,
-              }}
-            >
-              <img
-                src={opt.src}
-                alt={opt.label}
-                width={28}
-                height={28}
-                style={{ objectFit: "contain" }}
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        Skills summary
+      </Typography>
+      <TagInput
+        id="skills-summary"
+        label="Top skills shown as tags on the About page"
+        placeholder="e.g. React (press Enter)"
+        items={items}
+        onChange={setItems}
+        maxItems={MAX_SKILLS_SUMMARY}
+      />
+      <Box className="mt-2">
+        <Button variant="contained" disabled={!dirty || saving} onClick={() => onSave({ skillsSummary: items })}>
+          {saving ? "Saving…" : "Save skills summary"}
+        </Button>
+      </Box>
+    </Paper>
+  );
+}
+
+/* ================================================================== *
+ * Service dialog
+ * ================================================================== */
+function ServiceDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(serviceFormSchema), defaultValues: serviceFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? serviceFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Service card</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="title" label="Title" required maxLength={100} />
+              <RHFTextField name="description" label="Description" required multiline rows={3} maxLength={500} />
+              <Controller
+                name="icon"
+                control={form.control}
+                render={({ field }) => (
+                  <Box className="flex flex-wrap gap-2">
+                    {ABOUT_ICON_OPTIONS.map((opt) => (
+                      <Chip
+                        key={opt.key}
+                        label={opt.label}
+                        onClick={() => field.onChange(opt.key)}
+                        color={field.value === opt.key ? "primary" : "default"}
+                        variant={field.value === opt.key ? "filled" : "outlined"}
+                      />
+                    ))}
+                  </Box>
+                )}
               />
-              <span
-                style={{
-                  fontSize: 10,
-                  color: isSelected ? "var(--a-accent)" : "var(--a-text-m)",
-                  textAlign: "center",
-                  lineHeight: 1.3,
-                  maxWidth: 64,
-                }}
-              >
-                {opt.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
   );
 }
 
 /* ================================================================== *
- * ServiceEditor — inline editor for a single service card
+ * Timeline dialog
  * ================================================================== */
-function ServiceEditor({ service, onSave, onCancel }) {
-  const [form, setForm] = useState({
-    title: service.title,
-    description: service.description,
-    icon: service.icon || "web",
-  });
-  const firstRef = useRef(null);
+function TimelineDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(timelineFormSchema), defaultValues: timelineFormDefaults });
 
   useEffect(() => {
-    firstRef.current?.focus();
-  }, []);
-
-  const set = (field) => (e) =>
-    setForm((p) => ({ ...p, [field]: e.target.value }));
-
-  const isValid =
-    form.title.trim().length >= 2 && form.description.trim().length >= 10;
+    if (open) form.reset(initialValues ?? timelineFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div className="admin-form__field">
-          <label className="admin-form__label">
-            Title <span style={{ color: "var(--a-danger)" }}>*</span>
-          </label>
-          <input
-            ref={firstRef}
-            className="form-input"
-            placeholder="e.g. Full-Stack Web Development"
-            value={form.title}
-            onChange={set("title")}
-            maxLength={100}
-            style={{ fontSize: 13 }}
-          />
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-end" }}>
-          {/* Spacer */}
-        </div>
-      </div>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Timeline entry</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="title" label="Title" required maxLength={120} />
+              <RHFTextField name="subtitle" label="Subtitle" maxLength={150} />
+              <RHFTextField name="dateRange" label="Date range" required maxLength={80} placeholder="2021 — 2025" />
+              <RHFTextField name="description" label="Description" multiline rows={3} maxLength={1000} />
+              <RHFTextField name="icon" label="Icon key (optional)" maxLength={60} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
 
-      <div className="admin-form__field">
-        <label className="admin-form__label">
-          Description <span style={{ color: "var(--a-danger)" }}>*</span>
-        </label>
-        <textarea
-          className="form-input"
-          placeholder="Brief description of this service…"
-          value={form.description}
-          onChange={set("description")}
-          maxLength={500}
-          style={{ minHeight: 80, resize: "vertical", fontSize: 13 }}
+/* ================================================================== *
+ * Highlight dialog
+ * ================================================================== */
+function HighlightDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(highlightFormSchema), defaultValues: highlightFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? highlightFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Highlight</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="value" label="Value" required maxLength={20} placeholder="3+" />
+              <RHFTextField name="label" label="Label" required maxLength={60} placeholder="Years of experience" />
+              <RHFTextField name="icon" label="Icon key (optional)" maxLength={60} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+/* ================================================================== *
+ * Personal info dialog
+ * ================================================================== */
+function PersonalInfoDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(personalInfoFormSchema), defaultValues: personalInfoFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? personalInfoFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Personal info row</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="label" label="Label" required maxLength={40} placeholder="Nationality" />
+              <RHFTextField name="value" label="Value" required maxLength={150} placeholder="Indian" />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+/* ================================================================== *
+ * Ordered-list section — shared shell for Services / Timeline /
+ * Highlights / Personal Info, all of which follow the identical
+ * add/edit-dialog + drag-reorder + dirty-banner pattern.
+ * ================================================================== */
+function OrderedListSection({
+  title,
+  items,
+  setItems,
+  serverItems,
+  compareFields,
+  submitFields,
+  maxItems,
+  onSaveOrder,
+  saving,
+  onAdd,
+  renderRow,
+  emptyLabel,
+}) {
+  const dirty = useMemo(() => {
+    return (
+      JSON.stringify(stripForCompare(items, compareFields)) !==
+      JSON.stringify(stripForCompare(serverItems, compareFields))
+    );
+  }, [items, serverItems, compareFields]);
+
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+      <Box className="flex items-center justify-between mb-3">
+        <Typography variant="subtitle1" fontWeight={700}>
+          {title}
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          {dirty && (
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => onSaveOrder(stripForSubmit(items, submitFields))}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          )}
+          <Button size="small" startIcon={<AddIcon fontSize="small" />} onClick={onAdd} disabled={items.length >= maxItems}>
+            Add
+          </Button>
+        </Stack>
+      </Box>
+
+      {items.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" className="py-6 text-center">
+          {emptyLabel}
+        </Typography>
+      ) : (
+        <DragReorderList items={items} getId={(item) => item._tempId} onReorder={setItems} renderItem={renderRow} />
+      )}
+    </Paper>
+  );
+}
+
+/* ================================================================== *
+ * Preview
+ * ================================================================== */
+function AboutPreview({ about, skillsSummary, highlights, personalInfo, images }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}>
+      <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+        About preview
+      </Typography>
+
+      {about.biography && (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          className="mb-3"
+          component="div"
+          dangerouslySetInnerHTML={{ __html: about.biography }}
         />
-        <span
-          style={{
-            fontSize: 11,
-            color:
-              form.description.length > 470
-                ? "var(--a-danger)"
-                : "var(--a-text-dim)",
-            marginTop: 4,
-          }}
-        >
-          {form.description.length} / 500
-        </span>
-      </div>
+      )}
 
-      <IconPicker
-        value={form.icon}
-        onChange={(key) => setForm((p) => ({ ...p, icon: key }))}
-      />
+      {skillsSummary.length > 0 && (
+        <Stack direction="row" spacing={1} flexWrap="wrap" className="mb-3">
+          {skillsSummary.map((s) => (
+            <Chip key={s} label={s} size="small" />
+          ))}
+        </Stack>
+      )}
 
-      <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-        <button
-          className="btn btn--primary"
-          onClick={() => onSave(form)}
-          disabled={!isValid}
-        >
-          Save
-        </button>
-        <button className="btn btn--ghost" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </div>
+      {highlights.length > 0 && (
+        <Box className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
+          {highlights.map((h) => (
+            <Box key={h._tempId}>
+              <Typography variant="h6" fontWeight={800}>
+                {h.value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {h.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {personalInfo.length > 0 && (
+        <Box className="grid grid-cols-2 gap-2 mb-3">
+          {personalInfo.map((p) => (
+            <Box key={p._tempId} className="flex gap-1.5">
+              <Typography variant="caption" fontWeight={700}>
+                {p.label}:
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {p.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {images.length > 0 && (
+        <Box className="flex gap-2 flex-wrap">
+          {images.map((img) => (
+            <img
+              key={img._tempId}
+              src={img.url}
+              alt={img.altText || "About"}
+              style={{ width: 72, height: 50, objectFit: "cover", borderRadius: 8 }}
+            />
+          ))}
+        </Box>
+      )}
+    </Paper>
   );
 }
 
@@ -252,459 +468,488 @@ function ServiceEditor({ service, onSave, onCancel }) {
  * Main ManageAbout component
  * ================================================================== */
 export default function ManageAbout() {
-  const { data: about, isLoading, isError, error } = useAdminAbout();
-  const { mutateAsync: updateAbout } = useUpdateAbout();
+  const { data, isLoading, isError, error, refetch } = useAdminAboutQuery();
+  const { mutateAsync: updateAbout, isPending: savingScalar } = useUpdateAbout();
+  const { mutateAsync: publish, isPending: publishing } = usePublishAbout();
+  const { mutateAsync: unpublish, isPending: unpublishing } = useUnpublishAbout();
+  const confirm = useConfirmDialog();
 
-  // Which item is currently open in an inline editor
-  const [editing, setEditing] = useState(null);
-
-  // Which section is currently saving
-  const [saving, setSaving] = useState(null);
-
-  // Local copies for optimistic reorder / add / cancel
-  const [localParagraphs, setLocalParagraphs] = useState(null);
-  const [localServices, setLocalServices] = useState(null);
-
-  // Server-confirmed order snapshots for dirty-check comparison
-  const [serverParagraphs, setServerParagraphs] = useState(null);
+  const [services, setServices] = useState(null);
   const [serverServices, setServerServices] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+  const [serverTimeline, setServerTimeline] = useState(null);
+  const [highlights, setHighlights] = useState(null);
+  const [serverHighlights, setServerHighlights] = useState(null);
+  const [personalInfo, setPersonalInfo] = useState(null);
+  const [serverPersonalInfo, setServerPersonalInfo] = useState(null);
+  const [images, setImages] = useState(null);
 
-  // Seed local state from server data when it first arrives
+  const [serviceDialog, setServiceDialog] = useState(null);
+  const [timelineDialog, setTimelineDialog] = useState(null);
+  const [highlightDialog, setHighlightDialog] = useState(null);
+  const [personalInfoDialog, setPersonalInfoDialog] = useState(null);
+
+  const [savingServices, setSavingServices] = useState(false);
+  const [savingTimeline, setSavingTimeline] = useState(false);
+  const [savingHighlights, setSavingHighlights] = useState(false);
+  const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
+  const [savingImages, setSavingImages] = useState(false);
+
   useEffect(() => {
-    if (about && localParagraphs === null) {
-      const seeded = (about.paragraphs ?? []).map((p) => ({
-        ...p,
-        _tempId: p._id,
-      }));
-      queueMicrotask(() => {
-        setLocalParagraphs(seeded);
-        setServerParagraphs(seeded);
-      });
+    if (!data) return;
+    if (services === null) {
+      const seeded = withTempIds(data.services);
+      setServices(seeded);
+      setServerServices(seeded);
     }
-    if (about && localServices === null) {
-      const seeded = (about.services ?? []).map((s) => ({
-        ...s,
-        _tempId: s._id,
-      }));
-      queueMicrotask(() => {
-        setLocalServices(seeded);
-        setServerServices(seeded);
-      });
+    if (timeline === null) {
+      const seeded = withTempIds(data.timeline);
+      setTimeline(seeded);
+      setServerTimeline(seeded);
     }
-  }, [about]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /* ── PATCH helper ───────────────────────────────────────────── */
-  const patchSection = useCallback(
-    async (section, newArray) => {
-      setSaving(section);
-      try {
-        const updated = await updateAbout({
-          section,
-          value: stripTempIds(newArray),
-        });
-        const refreshed = (updated[section] ?? []).map((item) => ({
-          ...item,
-          _tempId: item._id,
-        }));
-        if (section === "paragraphs") {
-          setLocalParagraphs(refreshed);
-          setServerParagraphs(refreshed);
-        } else {
-          setLocalServices(refreshed);
-          setServerServices(refreshed);
-        }
-        setEditing(null);
-        toast.success(
-          `${section === "paragraphs" ? "Paragraphs" : "Service cards"} updated.`,
-        );
-      } catch (err) {
-        toast.error(err.message);
-      } finally {
-        setSaving(null);
-      }
-    },
-    [updateAbout],
-  );
-
-  /* ── Paragraph handlers ─────────────────────────────────────── */
-
-  const saveParagraph = (tempId) => (formData) => {
-    const updated = localParagraphs.map((p) =>
-      p._tempId === tempId ? { ...p, ...formData } : p,
-    );
-    patchSection("paragraphs", updated);
-  };
-
-  const deleteParagraph = (tempId) => {
-    if (!window.confirm("Delete this paragraph?")) return;
-    const updated = localParagraphs.filter((p) => p._tempId !== tempId);
-    patchSection("paragraphs", updated);
-  };
-
-  const moveParagraph = (index, direction) => {
-    setLocalParagraphs((prev) => moveItem(prev, index, direction));
-  };
-
-  const saveParagraphOrder = () => {
-    patchSection("paragraphs", localParagraphs);
-  };
-
-  const addParagraph = () => {
-    const entry = newParagraph(localParagraphs.length);
-    setLocalParagraphs((prev) => [...prev, entry]);
-    setEditing({ section: "paragraphs", id: entry._tempId });
-  };
-
-  const cancelParagraphEdit = (tempId) => {
-    const item = localParagraphs.find((p) => p._tempId === tempId);
-    if (item && !item._id) {
-      setLocalParagraphs((prev) => prev.filter((p) => p._tempId !== tempId));
+    if (highlights === null) {
+      const seeded = withTempIds(data.highlights);
+      setHighlights(seeded);
+      setServerHighlights(seeded);
     }
-    setEditing(null);
-  };
-
-  /* ── Service handlers ───────────────────────────────────────── */
-
-  const saveService = (tempId) => (formData) => {
-    const updated = localServices.map((s) =>
-      s._tempId === tempId ? { ...s, ...formData } : s,
-    );
-    patchSection("services", updated);
-  };
-
-  const deleteService = (tempId) => {
-    if (!window.confirm("Delete this service card?")) return;
-    const updated = localServices.filter((s) => s._tempId !== tempId);
-    patchSection("services", updated);
-  };
-
-  const moveService = (index, direction) => {
-    setLocalServices((prev) => moveItem(prev, index, direction));
-  };
-
-  const saveServiceOrder = () => {
-    patchSection("services", localServices);
-  };
-
-  const addService = () => {
-    const entry = newService(localServices.length);
-    setLocalServices((prev) => [...prev, entry]);
-    setEditing({ section: "services", id: entry._tempId });
-  };
-
-  const cancelServiceEdit = (tempId) => {
-    const item = localServices.find((s) => s._tempId === tempId);
-    if (item && !item._id) {
-      setLocalServices((prev) => prev.filter((s) => s._tempId !== tempId));
+    if (personalInfo === null) {
+      const seeded = withTempIds(data.personalInfo);
+      setPersonalInfo(seeded);
+      setServerPersonalInfo(seeded);
     }
-    setEditing(null);
-  };
+    if (images === null) {
+      setImages(withTempIds(data.images));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
-  /* ── Render guards ──────────────────────────────────────────── */
-  if (isLoading || localParagraphs === null || localServices === null) {
+  const imagesDirty = useMemo(() => {
+    if (!images || !data) return false;
     return (
-      <div className="admin-page">
-        <div className="admin-page__header">
-          <h2 className="admin-page__title">About</h2>
-        </div>
-        <AdminSkeleton rows={3} />
-      </div>
+      JSON.stringify(stripForCompare(images, ["url", "altText", "caption"])) !==
+      JSON.stringify(stripForCompare(withTempIds(data.images), ["url", "altText", "caption"]))
+    );
+  }, [images, data]);
+
+  const anyDirty =
+    (services && serverServices && JSON.stringify(stripForCompare(services, ["title", "description", "icon"])) !== JSON.stringify(stripForCompare(serverServices, ["title", "description", "icon"]))) ||
+    (timeline && serverTimeline && JSON.stringify(stripForCompare(timeline, ["title", "subtitle", "dateRange", "description", "icon"])) !== JSON.stringify(stripForCompare(serverTimeline, ["title", "subtitle", "dateRange", "description", "icon"]))) ||
+    (highlights && serverHighlights && JSON.stringify(stripForCompare(highlights, ["value", "label", "icon"])) !== JSON.stringify(stripForCompare(serverHighlights, ["value", "label", "icon"]))) ||
+    (personalInfo && serverPersonalInfo && JSON.stringify(stripForCompare(personalInfo, ["label", "value"])) !== JSON.stringify(stripForCompare(serverPersonalInfo, ["label", "value"]))) ||
+    imagesDirty;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!anyDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [anyDirty]);
+
+  const genericSave = async (payload, successMsg) => {
+    try {
+      const updated = await updateAbout(payload);
+      toast.success(successMsg);
+      return updated;
+    } catch (err) {
+      toast.error(err.message);
+      return null;
+    }
+  };
+
+  const handleTogglePublish = async () => {
+    try {
+      if (data.status === "draft") {
+        await publish();
+        toast.success("About published.");
+      } else {
+        await unpublish();
+        toast.success("About unpublished.");
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleSaveImages = async () => {
+    setSavingImages(true);
+    try {
+      const updated = await updateAbout({ images: stripForSubmit(images, ["url", "altText", "caption"]) });
+      setImages(withTempIds(updated.images));
+      toast.success("Images saved.");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSavingImages(false);
+    }
+  };
+
+  if (
+    isLoading ||
+    services === null ||
+    timeline === null ||
+    highlights === null ||
+    personalInfo === null ||
+    images === null
+  ) {
+    return (
+      <>
+        <PageHeader title="About" subtitle="Biography, timeline, highlights, services, and personal info." />
+        <LoadingSkeleton rows={6} />
+      </>
     );
   }
 
   if (isError) {
     return (
-      <div className="admin-page">
-        <div className="admin-page__header">
-          <h2 className="admin-page__title">About</h2>
-        </div>
-        <AdminError message={error?.message} />
-      </div>
+      <Box className="py-12 text-center">
+        <Typography color="error" className="mb-3">
+          {error?.message}
+        </Typography>
+        <Button variant="outlined" onClick={refetch}>
+          Try again
+        </Button>
+      </Box>
     );
   }
 
-  const isEditing = (section, id) =>
-    editing?.section === section && editing?.id === id;
+  const isDraft = data.status === "draft";
 
-  // Dirty: compare local ID sequence against last server-confirmed sequence
-  const paragraphOrderDirty =
-    saving !== "paragraphs" &&
-    !editing &&
-    isOrderDirty(localParagraphs, serverParagraphs);
-
-  const serviceOrderDirty =
-    saving !== "services" &&
-    !editing &&
-    isOrderDirty(localServices, serverServices);
-
-  /* ── Main render ────────────────────────────────────────────── */
   return (
-    <div className="admin-page">
-      {/* ════════════════════════════════════════════════════════
-          PARAGRAPHS
-      ════════════════════════════════════════════════════════ */}
-      <div className="admin-page__header">
-        <h2 className="admin-page__title">About Paragraphs</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {paragraphOrderDirty && (
-            <button
-              className="btn btn--ghost"
-              onClick={saveParagraphOrder}
-              disabled={!!saving}
-            >
-              Save Order
-            </button>
-          )}
-          <button
-            className="btn btn--primary"
-            onClick={addParagraph}
-            disabled={!!editing || !!saving}
-          >
-            + Add Paragraph
-          </button>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="About"
+        subtitle="Biography, timeline, highlights, services, personal info, and gallery images for the public About page."
+        badge={
+          <Chip
+            size="small"
+            variant={isDraft ? "outlined" : "filled"}
+            color={isDraft ? "default" : "success"}
+            label={isDraft ? "Draft" : "Published"}
+          />
+        }
+        actions={
+          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
+            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+          </Button>
+        }
+      />
 
-      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
-        These paragraphs appear in the About Me section. Use ↑ ↓ to reorder,
-        then click <strong>Save Order</strong>.
-      </p>
+      <Stack spacing={3}>
+        <BiographySection about={data} onSave={(p) => genericSave(p, "Biography updated.")} saving={savingScalar} />
 
-      {localParagraphs.length === 0 ? (
-        <AdminEmpty
-          icon="📝"
-          title="No paragraphs yet"
-          sub="Click Add Paragraph above to write about yourself."
-        />
-      ) : (
-        <ul className="admin-list" aria-label="About paragraphs">
-          {localParagraphs.map((para, index) => {
-            const isEditingThis = isEditing("paragraphs", para._tempId);
+        <SkillsSummarySection about={data} onSave={(p) => genericSave(p, "Skills summary updated.")} saving={savingScalar} />
 
-            return (
-              <SectionCard key={para._tempId}>
-                {!isEditingThis && (
-                  <ReorderButtons
-                    index={index}
-                    total={localParagraphs.length}
-                    onMove={moveParagraph}
-                    disabled={!!editing || !!saving}
-                  />
-                )}
-
-                <div className="admin-item__body">
-                  {isEditingThis ? (
-                    <ParagraphEditor
-                      paragraph={para}
-                      onSave={saveParagraph(para._tempId)}
-                      onCancel={() => cancelParagraphEdit(para._tempId)}
-                    />
-                  ) : (
-                    <>
-                      <div
-                        className="admin-item__meta"
-                        style={{ marginBottom: 6 }}
-                      >
-                        <span
-                          className="admin-item__badge"
-                          style={{
-                            background: "transparent",
-                            color: "var(--a-text-dim)",
-                            borderColor: "var(--a-border)",
-                            fontSize: 10,
-                          }}
-                        >
-                          #{index + 1}
-                        </span>
-                      </div>
-                      <p
-                        style={{
-                          fontSize: 13,
-                          color: "var(--a-text)",
-                          lineHeight: 1.6,
-                          margin: 0,
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {para.text || (
-                          <em style={{ color: "var(--a-text-d)" }}>
-                            Empty paragraph
-                          </em>
-                        )}
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                {!isEditingThis && (
-                  <div className="admin-item__actions">
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() =>
-                        setEditing({
-                          section: "paragraphs",
-                          id: para._tempId,
-                        })
-                      }
-                      disabled={!!editing || !!saving}
-                      aria-label="Edit paragraph"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn--danger"
-                      onClick={() => deleteParagraph(para._tempId)}
-                      disabled={!!saving}
-                      aria-label="Delete paragraph"
-                    >
-                      {saving === "paragraphs" ? "…" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </SectionCard>
-            );
-          })}
-        </ul>
-      )}
-
-      {/* ════════════════════════════════════════════════════════
-          SERVICE CARDS
-      ════════════════════════════════════════════════════════ */}
-      <div className="admin-page__header" style={{ marginTop: 8 }}>
-        <h2 className="admin-page__title">Service Cards</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {serviceOrderDirty && (
-            <button
-              className="btn btn--ghost"
-              onClick={saveServiceOrder}
-              disabled={!!saving}
-            >
-              Save Order
-            </button>
-          )}
-          <button
-            className="btn btn--primary"
-            onClick={addService}
-            disabled={!!editing || !!saving}
-          >
-            + Add Service
-          </button>
-        </div>
-      </div>
-
-      <p style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}>
-        These cards appear in the &quot;What I&apos;m Doing&quot; section. Use ↑
-        ↓ to reorder, then click <strong>Save Order</strong>.
-      </p>
-
-      {localServices.length === 0 ? (
-        <AdminEmpty
-          icon="⚙️"
-          title="No service cards yet"
-          sub="Click Add Service above to add your first one."
-        />
-      ) : (
-        <ul className="admin-list" aria-label="Service cards">
-          {localServices.map((service, index) => {
-            const isEditingThis = isEditing("services", service._tempId);
-
-            return (
-              <SectionCard key={service._tempId}>
-                {!isEditingThis && (
-                  <ReorderButtons
-                    index={index}
-                    total={localServices.length}
-                    onMove={moveService}
-                    disabled={!!editing || !!saving}
-                  />
-                )}
-
-                {!isEditingThis && (
-                  <img
-                    src={resolveAboutIcon(service.icon)}
-                    alt={service.title}
-                    width={36}
-                    height={36}
-                    style={{
-                      objectFit: "contain",
-                      flexShrink: 0,
-                      opacity: 0.85,
+        <OrderedListSection
+          title="Services"
+          items={services}
+          setItems={setServices}
+          serverItems={serverServices}
+          compareFields={["title", "description", "icon"]}
+          submitFields={["title", "description", "icon"]}
+          maxItems={MAX_SERVICES}
+          saving={savingServices}
+          emptyLabel="No service cards yet."
+          onAdd={() => setServiceDialog({ mode: "add" })}
+          onSaveOrder={async (payload) => {
+            setSavingServices(true);
+            try {
+              const updated = await updateAbout({ services: payload });
+              const seeded = withTempIds(updated.services);
+              setServices(seeded);
+              setServerServices(seeded);
+              toast.success("Services saved.");
+            } catch (err) {
+              toast.error(err.message);
+            } finally {
+              setSavingServices(false);
+            }
+          }}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="flex items-center gap-2 min-w-0">
+                  <img src={resolveAboutIcon(item.icon)} alt={item.title} width={28} height={28} />
+                  <Box className="min-w-0">
+                    <Typography fontWeight={600} noWrap>
+                      {item.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {item.description}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setServiceDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                    aria-label={`Edit ${item.title}`}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={async () => {
+                      const confirmed = await confirm({ title: `Delete "${item.title}"?`, confirmLabel: "Delete", tone: "danger" });
+                      if (confirmed) setServices((prev) => prev.filter((s) => s._tempId !== item._tempId));
                     }}
-                  />
-                )}
+                    aria-label={`Delete ${item.title}`}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
 
-                <div className="admin-item__body">
-                  {isEditingThis ? (
-                    <ServiceEditor
-                      service={service}
-                      onSave={saveService(service._tempId)}
-                      onCancel={() => cancelServiceEdit(service._tempId)}
-                    />
-                  ) : (
-                    <>
-                      <span className="admin-item__name">
-                        {service.title || (
-                          <em style={{ color: "var(--a-text-d)" }}>Untitled</em>
-                        )}
-                      </span>
-                      <div className="admin-item__meta">
-                        <code
-                          style={{
-                            fontSize: 11,
-                            color: "var(--a-text-dim)",
-                            background: "var(--a-surface-3)",
-                            padding: "2px 7px",
-                            borderRadius: 4,
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          {service.icon}
-                        </code>
-                        <span style={{ color: "var(--a-text-dim)" }}>·</span>
-                        <span
-                          style={{ fontSize: 11, color: "var(--a-text-dim)" }}
-                        >
-                          #{index + 1}
-                        </span>
-                      </div>
-                      <span className="admin-item__preview">
-                        {service.description?.slice(0, 100)}
-                        {service.description?.length > 100 && "…"}
-                      </span>
-                    </>
-                  )}
-                </div>
+        <OrderedListSection
+          title="Timeline"
+          items={timeline}
+          setItems={setTimeline}
+          serverItems={serverTimeline}
+          compareFields={["title", "subtitle", "dateRange", "description", "icon"]}
+          submitFields={["title", "subtitle", "dateRange", "description", "icon"]}
+          maxItems={MAX_TIMELINE}
+          saving={savingTimeline}
+          emptyLabel="No timeline entries yet."
+          onAdd={() => setTimelineDialog({ mode: "add" })}
+          onSaveOrder={async (payload) => {
+            setSavingTimeline(true);
+            try {
+              const updated = await updateAbout({ timeline: payload });
+              const seeded = withTempIds(updated.timeline);
+              setTimeline(seeded);
+              setServerTimeline(seeded);
+              toast.success("Timeline saved.");
+            } catch (err) {
+              toast.error(err.message);
+            } finally {
+              setSavingTimeline(false);
+            }
+          }}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="min-w-0">
+                  <Typography fontWeight={600} noWrap>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {item.dateRange} {item.subtitle && `· ${item.subtitle}`}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setTimelineDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                    aria-label={`Edit ${item.title}`}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={async () => {
+                      const confirmed = await confirm({ title: `Delete "${item.title}"?`, confirmLabel: "Delete", tone: "danger" });
+                      if (confirmed) setTimeline((prev) => prev.filter((t) => t._tempId !== item._tempId));
+                    }}
+                    aria-label={`Delete ${item.title}`}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
 
-                {!isEditingThis && (
-                  <div className="admin-item__actions">
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() =>
-                        setEditing({
-                          section: "services",
-                          id: service._tempId,
-                        })
-                      }
-                      disabled={!!editing || !!saving}
-                      aria-label={`Edit ${service.title}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn--danger"
-                      onClick={() => deleteService(service._tempId)}
-                      disabled={!!saving}
-                      aria-label={`Delete ${service.title}`}
-                    >
-                      {saving === "services" ? "…" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </SectionCard>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+        <OrderedListSection
+          title="Highlights"
+          items={highlights}
+          setItems={setHighlights}
+          serverItems={serverHighlights}
+          compareFields={["value", "label", "icon"]}
+          submitFields={["value", "label", "icon"]}
+          maxItems={MAX_HIGHLIGHTS}
+          saving={savingHighlights}
+          emptyLabel="No highlights yet."
+          onAdd={() => setHighlightDialog({ mode: "add" })}
+          onSaveOrder={async (payload) => {
+            setSavingHighlights(true);
+            try {
+              const updated = await updateAbout({ highlights: payload });
+              const seeded = withTempIds(updated.highlights);
+              setHighlights(seeded);
+              setServerHighlights(seeded);
+              toast.success("Highlights saved.");
+            } catch (err) {
+              toast.error(err.message);
+            } finally {
+              setSavingHighlights(false);
+            }
+          }}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="flex items-center gap-2 min-w-0">
+                  <Typography fontWeight={800}>{item.value}</Typography>
+                  <Typography color="text.secondary" noWrap>
+                    {item.label}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setHighlightDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                    aria-label={`Edit ${item.label}`}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={async () => {
+                      const confirmed = await confirm({ title: `Delete "${item.label}"?`, confirmLabel: "Delete", tone: "danger" });
+                      if (confirmed) setHighlights((prev) => prev.filter((h) => h._tempId !== item._tempId));
+                    }}
+                    aria-label={`Delete ${item.label}`}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
+
+        <OrderedListSection
+          title="Personal info"
+          items={personalInfo}
+          setItems={setPersonalInfo}
+          serverItems={serverPersonalInfo}
+          compareFields={["label", "value"]}
+          submitFields={["label", "value"]}
+          maxItems={MAX_PERSONAL_INFO}
+          saving={savingPersonalInfo}
+          emptyLabel="No personal info rows yet."
+          onAdd={() => setPersonalInfoDialog({ mode: "add" })}
+          onSaveOrder={async (payload) => {
+            setSavingPersonalInfo(true);
+            try {
+              const updated = await updateAbout({ personalInfo: payload });
+              const seeded = withTempIds(updated.personalInfo);
+              setPersonalInfo(seeded);
+              setServerPersonalInfo(seeded);
+              toast.success("Personal info saved.");
+            } catch (err) {
+              toast.error(err.message);
+            } finally {
+              setSavingPersonalInfo(false);
+            }
+          }}
+          renderRow={({ item }) => (
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+              <Box className="flex items-center justify-between gap-2">
+                <Box className="flex items-center gap-1.5 min-w-0">
+                  <Typography fontWeight={700}>{item.label}:</Typography>
+                  <Typography color="text.secondary" noWrap>
+                    {item.value}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setPersonalInfoDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                    aria-label={`Edit ${item.label}`}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={async () => {
+                      const confirmed = await confirm({ title: `Delete "${item.label}"?`, confirmLabel: "Delete", tone: "danger" });
+                      if (confirmed) setPersonalInfo((prev) => prev.filter((p) => p._tempId !== item._tempId));
+                    }}
+                    aria-label={`Delete ${item.label}`}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Paper>
+          )}
+        />
+
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+          <Box className="flex items-center justify-between mb-3">
+            <Typography variant="subtitle1" fontWeight={700}>
+              Images
+            </Typography>
+            {imagesDirty && (
+              <Button size="small" variant="contained" onClick={handleSaveImages} disabled={savingImages}>
+                {savingImages ? "Saving…" : "Save changes"}
+              </Button>
+            )}
+          </Box>
+          <ImageGalleryField items={images} onChange={setImages} maxItems={MAX_IMAGES} label="" />
+        </Paper>
+
+        <AboutPreview about={data} skillsSummary={data.skillsSummary ?? []} highlights={highlights} personalInfo={personalInfo} images={images} />
+      </Stack>
+
+      <ServiceDialog
+        open={!!serviceDialog}
+        initialValues={serviceDialog?.initialValues}
+        onClose={() => setServiceDialog(null)}
+        onSave={(values) =>
+          setServices((prev) =>
+            serviceDialog.mode === "add"
+              ? [...prev, { _tempId: crypto.randomUUID(), ...values }]
+              : prev.map((s) => (s._tempId === serviceDialog.tempId ? { ...s, ...values } : s)),
+          )
+        }
+      />
+      <TimelineDialog
+        open={!!timelineDialog}
+        initialValues={timelineDialog?.initialValues}
+        onClose={() => setTimelineDialog(null)}
+        onSave={(values) =>
+          setTimeline((prev) =>
+            timelineDialog.mode === "add"
+              ? [...prev, { _tempId: crypto.randomUUID(), ...values }]
+              : prev.map((t) => (t._tempId === timelineDialog.tempId ? { ...t, ...values } : t)),
+          )
+        }
+      />
+      <HighlightDialog
+        open={!!highlightDialog}
+        initialValues={highlightDialog?.initialValues}
+        onClose={() => setHighlightDialog(null)}
+        onSave={(values) =>
+          setHighlights((prev) =>
+            highlightDialog.mode === "add"
+              ? [...prev, { _tempId: crypto.randomUUID(), ...values }]
+              : prev.map((h) => (h._tempId === highlightDialog.tempId ? { ...h, ...values } : h)),
+          )
+        }
+      />
+      <PersonalInfoDialog
+        open={!!personalInfoDialog}
+        initialValues={personalInfoDialog?.initialValues}
+        onClose={() => setPersonalInfoDialog(null)}
+        onSave={(values) =>
+          setPersonalInfo((prev) =>
+            personalInfoDialog.mode === "add"
+              ? [...prev, { _tempId: crypto.randomUUID(), ...values }]
+              : prev.map((p) => (p._tempId === personalInfoDialog.tempId ? { ...p, ...values } : p)),
+          )
+        }
+      />
+    </>
   );
 }
