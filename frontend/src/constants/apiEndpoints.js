@@ -7,14 +7,20 @@ export const API_ENDPOINTS = {
   // Profile
   profile: "/profile",
   adminProfile: "/admin/profile",
+  adminProfilePublish: "/admin/profile/publish",
+  adminProfileUnpublish: "/admin/profile/unpublish",
 
   // About
   about: "/about",
   adminAbout: "/admin/about",
+  adminAboutPublish: "/admin/about/publish",
+  adminAboutUnpublish: "/admin/about/unpublish",
 
   // Resume
   resume: "/resume",
   adminResume: "/admin/resume",
+  adminResumePublish: "/admin/resume/publish",
+  adminResumeUnpublish: "/admin/resume/unpublish",
 
   // Categories
   categories: "/categories",
