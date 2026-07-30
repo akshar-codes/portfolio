@@ -1,7 +1,6 @@
 import About from "../models/About.js";
+import { createSingletonRepository } from "./SingletonRepository.js";
 
-export const getSingleton = () => About.getSingleton();
+const { getSingleton, findDefault, create } = createSingletonRepository(About);
 
-export const findDefault = () => About.findOne({ owner: "default" });
-
-export const create = (data) => About.create(data);
+export { getSingleton, findDefault, create };

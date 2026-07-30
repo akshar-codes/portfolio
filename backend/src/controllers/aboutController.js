@@ -1,65 +1,38 @@
-import { validationResult } from "express-validator";
-import AppError from "../utils/AppError.js";
 import {
   fetchAdminAbout,
   fetchPublicAbout,
-  patchAboutSection,
+  patchAbout,
   setAboutStatus,
 } from "../services/aboutService.js";
-import { sendSuccess } from "../utils/response.js";
-import asyncHandler from "../utils/asyncHandler.js";
-import {
-  CONTENT_STATUS_DRAFT,
-  CONTENT_STATUS_PUBLISHED,
-} from "../utils/constants.js";
+import { createSingletonController } from "./singletonController.js";
 
-/* ------------------------------------------------------------------ *
- * GET /api/about   (public — 404s while draft)
- * ------------------------------------------------------------------ */
-export const getPublicAbout = asyncHandler(async (_req, res) => {
-  const about = await fetchPublicAbout();
-  return sendSuccess(res, about, "About retrieved successfully");
-});
+const service = {
+  fetchAdmin: fetchAdminAbout,
+  fetchPublic: fetchPublicAbout,
+  patchSingleton: patchAbout,
+  setStatus: setAboutStatus,
+};
 
-/* ------------------------------------------------------------------ *
- * GET /api/admin/about  (protected — any status)
- * ------------------------------------------------------------------ */
-export const getAdminAbout = asyncHandler(async (_req, res) => {
-  const about = await fetchAdminAbout();
-  return sendSuccess(res, about, "About retrieved successfully");
-});
+// Exported name `updateAboutSection` is kept for route-file
+// compatibility (routes/admin/aboutRoutes.js already imports it under
+// that name). Behaviour has changed, though — this is now a
+// whole-object-subset PATCH (any of biography/skillsSummary/services/
+// timeline/highlights/personalInfo/images may be sent, together or
+// individually), matching Resume/Navigation/Footer's convention,
+// rather than the old `{ section, value }` shape. Frontend action:
+// ManageAbout.jsx has been rewritten accordingly.
+const {
+  getPublicResource: getPublicAbout,
+  getAdminResource: getAdminAbout,
+  updateResource: updateAboutSection,
+  publishResource: publishAbout,
+  unpublishResource: unpublishAbout,
+} = createSingletonController({ service, resourceName: "About" });
 
-/* ------------------------------------------------------------------ *
- * PATCH /api/admin/about   (protected)
- * ------------------------------------------------------------------ */
-export const updateAboutSection = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new AppError(errors.array()[0].msg, 400);
-  }
-
-  const { section, value } = req.body;
-
-  const updated = await patchAboutSection(section, value);
-  return sendSuccess(
-    res,
-    updated,
-    `About section "${section}" updated successfully`,
-  );
-});
-
-/* ------------------------------------------------------------------ *
- * PATCH /api/admin/about/publish  (protected)
- * ------------------------------------------------------------------ */
-export const publishAbout = asyncHandler(async (_req, res) => {
-  const updated = await setAboutStatus(CONTENT_STATUS_PUBLISHED);
-  return sendSuccess(res, updated, "About published successfully");
-});
-
-/* ------------------------------------------------------------------ *
- * PATCH /api/admin/about/unpublish  (protected)
- * ------------------------------------------------------------------ */
-export const unpublishAbout = asyncHandler(async (_req, res) => {
-  const updated = await setAboutStatus(CONTENT_STATUS_DRAFT);
-  return sendSuccess(res, updated, "About unpublished successfully");
-});
+export {
+  getPublicAbout,
+  getAdminAbout,
+  updateAboutSection,
+  publishAbout,
+  unpublishAbout,
+};

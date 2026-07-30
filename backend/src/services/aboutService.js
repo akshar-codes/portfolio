@@ -3,123 +3,68 @@ import {
   findDefault,
   create,
 } from "../repositories/aboutRepository.js";
-import cache from "../utils/cache.js";
-import { ServiceError } from "./ServiceError.js";
-import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
-import {
-  CACHE_TTL_MS,
-  CONTENT_STATUSES,
-  CONTENT_STATUS_DRAFT,
-} from "../utils/constants.js";
+import { createSingletonService } from "./SingletonService.js";
+import { sanitizeRichText } from "../utils/htmlSanitizer.js";
 
-/* ── Cache ─────────────────────────────────────────────────────────── */
+const repository = { getSingleton, findDefault, create };
 
-const CACHE_KEY = "about:public";
+const PATCHABLE_FIELDS = [
+  "biography",
+  "skillsSummary",
+  "services",
+  "timeline",
+  "highlights",
+  "personalInfo",
+  "images",
+];
 
-function invalidateAboutCache() {
-  cache.del(CACHE_KEY);
-}
+// `skillsSummary` is deliberately NOT included here — it is a flat
+// string array (no per-item `order` field), and the generic
+// ORDERED_ARRAY_FIELDS path expects each item to be an object it can
+// strip `_tempId` from / renumber `order` on. Routing plain strings
+// through that path would spread each character into an indexed
+// object (JS destructuring `{...rest}` on a string primitive) and
+// silently corrupt the data — see stripTempIds in utils/ordering.js.
+const ORDERED_ARRAY_FIELDS = [
+  "services",
+  "timeline",
+  "highlights",
+  "personalInfo",
+  "images",
+];
 
-const sortSections = (doc) => ({
-  ...doc,
-  paragraphs: [...(doc.paragraphs ?? [])].sort((a, b) => a.order - b.order),
-  services: [...(doc.services ?? [])].sort((a, b) => a.order - b.order),
+const {
+  fetchAdmin: fetchAdminAbout,
+  fetchPublic: fetchPublicAbout,
+  patchSingleton: patchAboutRaw,
+  setStatus: setAboutStatus,
+  invalidateCache: invalidateAboutCache,
+} = createSingletonService({
+  repository,
+  cacheKey: "about:public",
+  patchableFields: PATCHABLE_FIELDS,
+  orderedArrayFields: ORDERED_ARRAY_FIELDS,
+  resourceName: "About",
 });
 
-/* ── ADMIN read — always returns the full document ────────────────── */
-
-export const fetchAdminAbout = async () => {
-  const doc = await getSingleton();
-  return sortSections(doc);
+/**
+ * Sanitizes the rich-text biography before delegating to the generic
+ * singleton PATCH. See profileService.js's patchProfile for the same
+ * rationale (server-side sanitization is the real XSS boundary, not
+ * the client-side DOMPurify pass).
+ */
+const patchAbout = async (updates) => {
+  const sanitized = { ...updates };
+  if (typeof sanitized.biography === "string") {
+    sanitized.biography = sanitizeRichText(sanitized.biography);
+  }
+  return patchAboutRaw(sanitized);
 };
 
-/* ── PUBLIC read (cached) — 404s only while explicitly draft ───────── */
-
-export const fetchPublicAbout = async () => {
-  const cached = cache.get(CACHE_KEY);
-  if (cached) return cached;
-
-  const doc = await getSingleton();
-
-  if (doc.status === CONTENT_STATUS_DRAFT) {
-    throw new ServiceError(
-      "About is not currently published.",
-      404,
-      "CONTENT_NOT_PUBLISHED",
-    );
-  }
-
-  const result = sortSections(doc);
-  cache.set(CACHE_KEY, result, CACHE_TTL_MS);
-  return result;
-};
-
-/* ── patchAboutSection ─────────────────────────────────────────────── */
-
-export const patchAboutSection = async (section, value) => {
-  const ALLOWED = new Set(["paragraphs", "services"]);
-
-  if (!ALLOWED.has(section)) {
-    throw new ServiceError(
-      `Invalid section "${section}". Allowed: ${[...ALLOWED].join(", ")}.`,
-      400,
-      "ABOUT_INVALID_SECTION",
-    );
-  }
-
-  if (!Array.isArray(value)) {
-    throw new ServiceError(
-      `Section "${section}" must be an array.`,
-      400,
-      "ABOUT_INVALID_VALUE",
-    );
-  }
-
-  const cleaned = normaliseOrder(stripTempIds(value));
-
-  const existing = await findDefault();
-
-  if (!existing) {
-    const created = await create({
-      owner: "default",
-      [section]: cleaned,
-    });
-    invalidateAboutCache();
-    return created.toObject();
-  }
-
-  existing[section] = cleaned;
-  await existing.validate();
-  await existing.save();
-
-  invalidateAboutCache();
-  return existing.toObject();
-};
-
-/* ── setAboutStatus — publish / unpublish ───────────────────────────── */
-
-export const setAboutStatus = async (status) => {
-  if (!CONTENT_STATUSES.includes(status)) {
-    throw new ServiceError(
-      `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-      400,
-      "ABOUT_INVALID_STATUS",
-    );
-  }
-
-  const existing = await findDefault();
-
-  let resultDoc;
-  if (!existing) {
-    const created = await create({ owner: "default", status });
-    resultDoc = created.toObject();
-  } else {
-    existing.status = status;
-    await existing.validate();
-    await existing.save();
-    resultDoc = existing.toObject();
-  }
-
-  invalidateAboutCache();
-  return sortSections(resultDoc);
+export {
+  fetchAdminAbout,
+  fetchPublicAbout,
+  patchAbout,
+  setAboutStatus,
+  invalidateAboutCache,
 };
