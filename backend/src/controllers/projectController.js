@@ -18,7 +18,7 @@ import {
   DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
   CONTENT_STATUS_DRAFT,
   CONTENT_STATUS_PUBLISHED,
-} from "../constants/index.js";
+} from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * GET /api/projects  (public — published only, supports ?search)
@@ -34,13 +34,19 @@ export const getProjects = asyncHandler(async (req, res) => {
     typeof req.query.category === "string" ? req.query.category.trim() : "";
   const search =
     typeof req.query.search === "string" ? req.query.search.trim() : "";
+  const featured =
+    typeof req.query.featured === "string" ? req.query.featured.trim() : "";
 
-  const result = await fetchAllProjects({ page, limit, category, search });
+  const result = await fetchAllProjects({ page, limit, category, search, featured });
   return sendSuccess(res, result, "Projects retrieved successfully");
 });
 
 /* ------------------------------------------------------------------ *
  * GET /api/admin/projects  (protected — every status, filterable)
+ * Mounted at a dedicated prefix (not /api/projects) so it can't be
+ * shadowed by the public router's `GET /`, which is already registered
+ * on that same path. Supports ?status, ?featured, ?category, ?search,
+ * ?sortBy, ?sortOrder, ?page, ?limit.
  * ------------------------------------------------------------------ */
 export const getAdminProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -56,6 +62,14 @@ export const getAdminProjects = asyncHandler(async (req, res) => {
     typeof req.query.search === "string" ? req.query.search.trim() : "";
   const status =
     typeof req.query.status === "string" ? req.query.status.trim() : "";
+  const featured =
+    typeof req.query.featured === "string" ? req.query.featured.trim() : "";
+  const sortBy =
+    typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : undefined;
+  const sortOrder =
+    typeof req.query.sortOrder === "string"
+      ? req.query.sortOrder.trim()
+      : undefined;
 
   const result = await fetchAllProjectsAdmin({
     page,
@@ -63,6 +77,9 @@ export const getAdminProjects = asyncHandler(async (req, res) => {
     category,
     search,
     status,
+    featured,
+    sortBy,
+    sortOrder,
   });
   return sendSuccess(res, result, "Projects retrieved successfully");
 });
@@ -104,6 +121,8 @@ export const createProject = asyncHandler(async (req, res) => {
     challenge,
     solution,
     status,
+    featured,
+    seo,
   } = req.body;
 
   // req.files is populated by uploadProjectImages.fields(...)
@@ -124,6 +143,8 @@ export const createProject = asyncHandler(async (req, res) => {
     challenge,
     solution,
     status,
+    featured,
+    seo,
     file,
     bannerFile,
     galleryFiles,
@@ -181,10 +202,7 @@ export const reorderProjectsHandler = asyncHandler(async (req, res) => {
  * PATCH /api/projects/:id/publish  (protected)
  * ------------------------------------------------------------------ */
 export const publishProjectHandler = asyncHandler(async (req, res) => {
-  const project = await setProjectStatus(
-    req.params.id,
-    CONTENT_STATUS_PUBLISHED,
-  );
+  const project = await setProjectStatus(req.params.id, CONTENT_STATUS_PUBLISHED);
   return sendSuccess(res, project, "Project published successfully");
 });
 

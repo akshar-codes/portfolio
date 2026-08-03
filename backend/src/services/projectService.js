@@ -23,6 +23,7 @@ import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
 import { buildSearchFilter } from "../utils/queryHelpers.js";
+import { sanitizeRichText } from "../utils/htmlSanitizer.js";
 import logger from "../utils/logger.js";
 import {
   CACHE_TTL_MS,
@@ -33,7 +34,9 @@ import {
   CONTENT_STATUSES,
   CONTENT_STATUS_DRAFT,
   DEFAULT_CONTENT_STATUS,
-} from "../constants/index.js";
+  PROJECT_ADMIN_SORT_FIELDS,
+  DEFAULT_PROJECT_ADMIN_SORT_FIELD,
+} from "../utils/constants.js";
 
 /* ================================================================== *
  * Cache helpers
@@ -120,6 +123,75 @@ function parseArrayField(value) {
   }
 }
 
+/**
+ * Parses/normalizes the `seo` field. Multipart form submissions send
+ * it as a JSON-stringified object (see validators/projectValidators.js
+ * validateSeoField for the pre-persistence shape check); JSON body
+ * submissions (none currently, but kept forward-compatible) may send
+ * a real object. Malformed input degrades to an empty-but-valid SEO
+ * object rather than throwing, matching parseGroupedField/
+ * parseArrayField's lenient style elsewhere in this file.
+ */
+function parseSeoField(value) {
+  const empty = { metaTitle: "", metaDescription: "", metaKeywords: [], ogImage: "" };
+
+  if (value === undefined) return undefined; // caller decides: omit vs. "clear it"
+
+  let parsed = value;
+  if (typeof value === "string") {
+    if (value.trim() === "") return empty;
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return empty;
+    }
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return empty;
+  }
+
+  const metaKeywords = Array.isArray(parsed.metaKeywords)
+    ? [
+        ...new Set(
+          parsed.metaKeywords
+            .filter((k) => typeof k === "string" && k.trim())
+            .map((k) => k.trim().toLowerCase()),
+        ),
+      ].slice(0, 20)
+    : [];
+
+  return {
+    metaTitle:
+      typeof parsed.metaTitle === "string" ? parsed.metaTitle.trim().slice(0, 70) : "",
+    metaDescription:
+      typeof parsed.metaDescription === "string"
+        ? parsed.metaDescription.trim().slice(0, 160)
+        : "",
+    metaKeywords,
+    ogImage: typeof parsed.ogImage === "string" ? parsed.ogImage.trim() : "",
+  };
+}
+
+/** Multipart form fields arrive as the strings "true"/"false". */
+function parseBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true";
+  return fallback;
+}
+
+/** Builds the Mongoose sort object for the admin listing's column sort. */
+function buildAdminSort(sortBy, sortOrder) {
+  if (!PROJECT_ADMIN_SORT_FIELDS.includes(sortBy)) {
+    return { order: 1, createdAt: -1 };
+  }
+  const direction = sortOrder === "desc" ? -1 : 1;
+  if (sortBy === DEFAULT_PROJECT_ADMIN_SORT_FIELD) {
+    return { order: direction, createdAt: -1 };
+  }
+  return { [sortBy]: direction };
+}
+
 /* ================================================================== *
  * Category resolution helper
  * ================================================================== */
@@ -146,12 +218,13 @@ export const fetchAllProjects = async ({
   limit = DEFAULT_PROJECTS_PAGE_SIZE,
   category = "",
   search = "",
+  featured = "",
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
   const skip = (safePage - 1) * safeLimit;
 
-  const cacheKey = buildCacheKey(safePage, safeLimit, category, search);
+  const cacheKey = `${buildCacheKey(safePage, safeLimit, category, search)}:featured=${featured}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
@@ -174,6 +247,8 @@ export const fetchAllProjects = async ({
     status: { $ne: CONTENT_STATUS_DRAFT },
     ...buildSearchFilter(search, ["title", "description"]),
   };
+  if (featured === "true") filter.featured = true;
+  else if (featured === "false") filter.featured = false;
 
   const [projects, total] = await Promise.all([
     findPaginated({ filter, skip, limit: safeLimit }),
@@ -201,6 +276,9 @@ export const fetchAllProjectsAdmin = async ({
   category = "",
   search = "",
   status = "",
+  featured = "",
+  sortBy = DEFAULT_PROJECT_ADMIN_SORT_FIELD,
+  sortOrder = "asc",
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
@@ -221,12 +299,16 @@ export const fetchAllProjectsAdmin = async ({
   if (status && CONTENT_STATUSES.includes(status)) {
     filter.status = status;
   }
+  if (featured === "true") filter.featured = true;
+  else if (featured === "false") filter.featured = false;
   Object.assign(filter, buildSearchFilter(search, ["title", "description"]));
+
+  const sort = buildAdminSort(sortBy, sortOrder);
 
   // Deliberately not cached: the admin panel needs read-your-own-write
   // consistency immediately after a create/edit/publish action.
   const [projects, total] = await Promise.all([
-    findPaginated({ filter, skip, limit: safeLimit }),
+    findPaginated({ filter, skip, limit: safeLimit, sort }),
     countAll(filter),
   ]);
 
@@ -303,6 +385,8 @@ export const addProject = async ({
   challenge,
   solution,
   status,
+  featured,
+  seo,
   file,
   bannerFile,
   galleryFiles,
@@ -361,17 +445,19 @@ export const addProject = async ({
 
     const project = await create({
       title,
-      description,
+      description: sanitizeRichText(description),
       category: category._id,
       status: safeStatus,
+      featured: parseBoolean(featured, false),
       projectUrl: liveUrl || projectUrl || "",
       liveUrl: liveUrl || projectUrl || "",
       githubUrl: githubUrl || "",
       technologies: parseGroupedField(technologies),
       features: parseArrayField(features),
-      challenge: challenge || "",
-      solution: solution || "",
+      challenge: sanitizeRichText(challenge || ""),
+      solution: sanitizeRichText(solution || ""),
       order: nextOrder,
+      seo: parseSeoField(seo),
       image: {
         url: thumbResult.secure_url,
         public_id: thumbResult.public_id,
@@ -421,17 +507,21 @@ export const updateProject = async (id, updates) => {
   /* ---------------------------------------------------------------- *
    * Scalar fields — direct assignment, no Cloudinary involved
    * ---------------------------------------------------------------- */
-  const SCALAR_UPDATABLE = [
-    "title",
-    "description",
-    "projectUrl",
-    "liveUrl",
-    "githubUrl",
-    "challenge",
-    "solution",
-  ];
+  const SCALAR_UPDATABLE = ["title", "projectUrl", "liveUrl", "githubUrl"];
   for (const key of SCALAR_UPDATABLE) {
     if (updates[key] !== undefined) project[key] = updates[key];
+  }
+
+  // Rich text — sanitized server-side (client-side DOMPurify is a UX
+  // safeguard, not the security boundary; see utils/htmlSanitizer.js).
+  if (updates.description !== undefined) {
+    project.description = sanitizeRichText(updates.description);
+  }
+  if (updates.challenge !== undefined) {
+    project.challenge = sanitizeRichText(updates.challenge);
+  }
+  if (updates.solution !== undefined) {
+    project.solution = sanitizeRichText(updates.solution);
   }
 
   if (updates.status !== undefined) {
@@ -443,6 +533,14 @@ export const updateProject = async (id, updates) => {
       );
     }
     project.status = updates.status;
+  }
+
+  if (updates.featured !== undefined) {
+    project.featured = parseBoolean(updates.featured, project.featured);
+  }
+
+  if (updates.seo !== undefined) {
+    project.seo = parseSeoField(updates.seo);
   }
 
   if (updates.technologies !== undefined) {

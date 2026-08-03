@@ -1,9 +1,82 @@
 import { body, param, query } from "express-validator";
-import { CONTENT_STATUSES } from "../constants/index.js";
+import {
+  CONTENT_STATUSES,
+  PROJECT_ADMIN_SORT_FIELDS,
+} from "../utils/constants.js";
 
 export const projectIdParamValidator = [
   param("id").isMongoId().withMessage("Invalid project ID"),
 ];
+
+/**
+ * Validates the `seo` field, sent as a JSON-stringified object in
+ * multipart/form-data — same convention AddProject/ManageProjects
+ * already use for `technologies`/`features` (see
+ * services/projectService.js parseSeoField for the persistence-side
+ * counterpart). Deep field limits mirror models/Project.js's
+ * projectSeoSchema.
+ */
+function validateSeoField(value) {
+  if (value === undefined || value === "") return true;
+
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      throw new Error("seo must be valid JSON");
+    }
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("seo must be a JSON object");
+  }
+
+  if (
+    parsed.metaTitle !== undefined &&
+    (typeof parsed.metaTitle !== "string" || parsed.metaTitle.length > 70)
+  ) {
+    throw new Error("seo.metaTitle must be a string of at most 70 characters");
+  }
+
+  if (
+    parsed.metaDescription !== undefined &&
+    (typeof parsed.metaDescription !== "string" ||
+      parsed.metaDescription.length > 160)
+  ) {
+    throw new Error(
+      "seo.metaDescription must be a string of at most 160 characters",
+    );
+  }
+
+  if (parsed.metaKeywords !== undefined) {
+    if (!Array.isArray(parsed.metaKeywords)) {
+      throw new Error("seo.metaKeywords must be an array");
+    }
+    if (parsed.metaKeywords.length > 20) {
+      throw new Error("seo.metaKeywords must not exceed 20 entries");
+    }
+    if (
+      !parsed.metaKeywords.every(
+        (k) => typeof k === "string" && k.length <= 60,
+      )
+    ) {
+      throw new Error(
+        "Each seo.metaKeywords entry must be a string of at most 60 characters",
+      );
+    }
+  }
+
+  if (
+    parsed.ogImage !== undefined &&
+    parsed.ogImage !== "" &&
+    !/^https?:\/\/.+/.test(parsed.ogImage)
+  ) {
+    throw new Error("seo.ogImage must be a valid HTTP/HTTPS URL or empty");
+  }
+
+  return true;
+}
 
 export const projectCreateValidators = [
   body("title")
@@ -13,12 +86,17 @@ export const projectCreateValidators = [
     .isLength({ min: 2, max: 120 })
     .withMessage("Title must be between 2 and 120 characters"),
 
+  // Rich text (Tiptap HTML). The authoritative 5000-character ceiling
+  // is enforced by the Mongoose schema AFTER server-side sanitization
+  // (services/projectService.js) strips markup — this is only a
+  // generous first-line-of-defense against absurdly large payloads on
+  // the raw, pre-sanitized HTML (mirrors validators/aboutValidators.js).
   body("description")
     .trim()
     .notEmpty()
     .withMessage("Project description is required")
-    .isLength({ min: 10, max: 2000 })
-    .withMessage("Description must be between 10 and 2000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Description is too long"),
 
   body("category")
     .notEmpty()
@@ -44,20 +122,26 @@ export const projectCreateValidators = [
 
   body("challenge")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage("Challenge must not exceed 1000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Challenge is too long"),
 
   body("solution")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage("Solution must not exceed 1000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Solution is too long"),
 
   body("status")
     .optional()
     .isIn(CONTENT_STATUSES)
     .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
+
+  body("featured")
+    .optional()
+    .isBoolean()
+    .withMessage("featured must be a boolean")
+    .toBoolean(),
+
+  body("seo").optional({ checkFalsy: true }).custom(validateSeoField),
 ];
 
 export const projectUpdateValidators = [
@@ -74,8 +158,8 @@ export const projectUpdateValidators = [
     .trim()
     .notEmpty()
     .withMessage("Project description cannot be empty")
-    .isLength({ min: 10, max: 2000 })
-    .withMessage("Description must be between 10 and 2000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Description is too long"),
 
   body("category")
     .optional({ checkFalsy: true })
@@ -100,20 +184,26 @@ export const projectUpdateValidators = [
 
   body("challenge")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage("Challenge must not exceed 1000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Challenge is too long"),
 
   body("solution")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage("Solution must not exceed 1000 characters"),
+    .isLength({ max: 20000 })
+    .withMessage("Solution is too long"),
 
   body("status")
     .optional()
     .isIn(CONTENT_STATUSES)
     .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
+
+  body("featured")
+    .optional()
+    .isBoolean()
+    .withMessage("featured must be a boolean")
+    .toBoolean(),
+
+  body("seo").optional({ checkFalsy: true }).custom(validateSeoField),
 ];
 
 export const reorderProjectsValidator = [
@@ -127,8 +217,8 @@ export const reorderProjectsValidator = [
 
 /**
  * Query validators for GET /api/admin/projects — the admin-only
- * listing that, unlike the public listing, can filter by status and
- * see drafts.
+ * listing that, unlike the public listing, can filter by status,
+ * featured flag, and sort by an admin-chosen field.
  */
 export const projectAdminListValidators = [
   query("page").optional().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
@@ -137,6 +227,18 @@ export const projectAdminListValidators = [
     .optional()
     .isIn(CONTENT_STATUSES)
     .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
+  query("featured")
+    .optional()
+    .isIn(["true", "false"])
+    .withMessage("featured must be 'true' or 'false'"),
   query("search").optional().trim().isLength({ max: 200 }).withMessage("search must not exceed 200 characters"),
   query("category").optional().trim(),
+  query("sortBy")
+    .optional()
+    .isIn(PROJECT_ADMIN_SORT_FIELDS)
+    .withMessage(`sortBy must be one of: ${PROJECT_ADMIN_SORT_FIELDS.join(", ")}`),
+  query("sortOrder")
+    .optional()
+    .isIn(["asc", "desc"])
+    .withMessage("sortOrder must be 'asc' or 'desc'"),
 ];
