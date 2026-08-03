@@ -6,6 +6,7 @@ import {
   createCategory,
   updateCategory,
   removeCategory,
+  reorderCategories,
 } from "../services/categoryService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -70,6 +71,20 @@ export const updateCategoryHandler = asyncHandler(async (req, res) => {
   const { name, status } = req.body;
   const category = await updateCategory(req.params.id, { name, status });
   return sendSuccess(res, category, "Category updated successfully");
+});
+
+/* ------------------------------------------------------------------ *
+ * PATCH /api/admin/categories/reorder  (protected)
+ * ------------------------------------------------------------------ */
+export const reorderCategoriesHandler = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
+  const { orderedIds } = req.body;
+  await reorderCategories(orderedIds);
+  return sendSuccess(res, null, "Categories reordered successfully");
 });
 
 /* ------------------------------------------------------------------ *

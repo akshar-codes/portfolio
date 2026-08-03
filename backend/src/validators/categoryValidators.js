@@ -1,5 +1,5 @@
 import { body, param } from "express-validator";
-import { CONTENT_STATUSES } from "../constants/index.js";
+import { CONTENT_STATUSES } from "../utils/constants.js";
 
 export const createCategoryValidator = [
   body("name")
@@ -36,4 +36,14 @@ export const updateCategoryValidator = [
 
 export const deleteCategoryValidator = [
   param("id").isMongoId().withMessage("Invalid category ID format"),
+];
+
+/** Mirrors validators/projectValidators.js's reorderProjectsValidator. */
+export const reorderCategoriesValidator = [
+  body("orderedIds")
+    .isArray({ min: 1 })
+    .withMessage("orderedIds must be a non-empty array"),
+  body("orderedIds.*")
+    .isMongoId()
+    .withMessage("Each orderedId must be a valid MongoDB ObjectId"),
 ];

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   aggregateCategories,
   findBySlug,
@@ -5,6 +6,10 @@ import {
   create as createCategoryDoc,
   deleteById,
   updateById,
+  findMaxOrder,
+  findManyByIds,
+  bulkWrite,
+  findAllForResequence,
 } from "../repositories/categoryRepository.js";
 import { countByCategory } from "../repositories/projectRepository.js";
 import { generateSlug, normalizeName } from "../utils/slug.js";
@@ -18,7 +23,7 @@ import {
   DEFAULT_CONTENT_STATUS,
   CATEGORY_SORT_FIELDS,
   DEFAULT_CATEGORY_SORT_FIELD,
-} from "../constants/index.js";
+} from "../utils/constants.js";
 
 /* ── Cache ─────────────────────────────────────────────────────────── */
 
@@ -56,11 +61,6 @@ function buildCategoryPipeline({
     Object.assign(matchStage, buildSearchFilter(search, ["name"]));
   }
 
-  const sortField = CATEGORY_SORT_FIELDS.includes(sortBy)
-    ? sortBy
-    : DEFAULT_CATEGORY_SORT_FIELD;
-  const direction = sortOrder === "desc" ? -1 : 1;
-
   const pipeline = [
     {
       $lookup: {
@@ -78,7 +78,20 @@ function buildCategoryPipeline({
   }
 
   pipeline.push({ $project: { projects: 0 } });
-  pipeline.push({ $sort: { [sortField]: direction } });
+
+  if (publicOnly) {
+    // The public listing always follows the admin-curated display
+    // order (drag-reordered via reorderCategories below), regardless
+    // of any sortBy/sortOrder param — those only drive the admin
+    // table's own column sorting.
+    pipeline.push({ $sort: { order: 1, name: 1 } });
+  } else {
+    const sortField = CATEGORY_SORT_FIELDS.includes(sortBy)
+      ? sortBy
+      : DEFAULT_CATEGORY_SORT_FIELD;
+    const direction = sortOrder === "desc" ? -1 : 1;
+    pipeline.push({ $sort: { [sortField]: direction } });
+  }
 
   return pipeline;
 }
@@ -144,7 +157,17 @@ export const createCategory = async (rawName, status = DEFAULT_CONTENT_STATUS) =
     ? status
     : DEFAULT_CONTENT_STATUS;
 
-  const category = await createCategoryDoc({ name, slug, status: safeStatus });
+  // New categories are appended to the end of the display order,
+  // matching addProject's `findMaxOrder() + 1` convention.
+  const maxOrderDoc = await findMaxOrder();
+  const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
+
+  const category = await createCategoryDoc({
+    name,
+    slug,
+    status: safeStatus,
+    order: nextOrder,
+  });
   invalidateCategoryCache();
   return category;
 };
@@ -208,6 +231,23 @@ export const updateCategory = async (id, { name, status } = {}) => {
   return updated;
 };
 
+/* ── resequenceCategories — renumber order 0..N after a delete ──────── */
+
+async function resequenceCategories() {
+  const categories = await findAllForResequence();
+
+  const ops = categories.map((c, idx) => ({
+    updateOne: {
+      filter: { _id: c._id },
+      update: { $set: { order: idx } },
+    },
+  }));
+
+  if (ops.length) {
+    await bulkWrite(ops);
+  }
+}
+
 /* ── removeCategory ────────────────────────────────────────────────── */
 
 export const removeCategory = async (id) => {
@@ -226,5 +266,49 @@ export const removeCategory = async (id) => {
   }
 
   await deleteById(id);
+  await resequenceCategories();
+  invalidateCategoryCache();
+};
+
+/* ── reorderCategories  (drag-reorder from the admin panel) ─────────── */
+
+export const reorderCategories = async (orderedIds) => {
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    throw new ServiceError(
+      "orderedIds must be a non-empty array of category IDs.",
+      400,
+      "CATEGORY_REORDER_INVALID",
+    );
+  }
+
+  const invalidIds = orderedIds.filter(
+    (id) => !mongoose.Types.ObjectId.isValid(id),
+  );
+  if (invalidIds.length) {
+    throw new ServiceError(
+      `Invalid category ID(s): ${invalidIds.join(", ")}`,
+      400,
+      "CATEGORY_REORDER_INVALID_ID",
+    );
+  }
+
+  const found = await findManyByIds(orderedIds);
+
+  if (found.length !== orderedIds.length) {
+    throw new ServiceError(
+      "One or more category IDs were not found.",
+      404,
+      "CATEGORY_REORDER_NOT_FOUND",
+    );
+  }
+
+  const ops = orderedIds.map((id, idx) => ({
+    updateOne: {
+      filter: { _id: id },
+      update: { $set: { order: idx } },
+    },
+  }));
+
+  await bulkWrite(ops);
   invalidateCategoryCache();
 };
