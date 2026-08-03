@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { generateSlug } from "../utils/slug.js";
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 const categorySchema = new mongoose.Schema(
   {
@@ -29,6 +29,17 @@ const categorySchema = new mongoose.Schema(
       },
       default: DEFAULT_CONTENT_STATUS,
     },
+
+    // Manual display order, curated via the admin drag-reorder UI.
+    // Mirrors Project.order / reorderProjects (see
+    // services/categoryService.js reorderCategories()). New categories
+    // are appended to the end (see createCategory); deleting a
+    // category resequences the remainder so order stays gap-free.
+    order: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
   },
   { timestamps: true },
 );
@@ -37,6 +48,7 @@ const categorySchema = new mongoose.Schema(
 categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
 categorySchema.index({ status: 1 });
+categorySchema.index({ order: 1 });
 
 categorySchema.pre("save", async function () {
   if (!this.slug && this.name) {

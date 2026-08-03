@@ -15,3 +15,18 @@ export const updateById = (id, data) =>
     new: true,
     runValidators: true,
   }).lean();
+
+/* ── Ordering helpers — mirror repositories/projectRepository.js ──── */
+
+export const findMaxOrder = () =>
+  Category.findOne().sort({ order: -1 }).select("order").lean();
+
+export const findManyByIds = (ids) =>
+  Category.find({ _id: { $in: ids } })
+    .select("_id")
+    .lean();
+
+export const bulkWrite = (ops) => Category.bulkWrite(ops, { ordered: false });
+
+export const findAllForResequence = () =>
+  Category.find().select("_id order").sort({ order: 1 }).lean();
