@@ -3,11 +3,23 @@ import Project from "../models/Project.js";
 export const countByCategory = (categoryId) =>
   Project.countDocuments({ category: categoryId });
 
-export const findPaginated = ({ filter, skip, limit }) =>
+/**
+ * `sort` defaults to the public/display order (order asc, then newest
+ * first as a tiebreak). The admin listing (services/projectService.js
+ * fetchAllProjectsAdmin) may override this via ?sortBy/?sortOrder for
+ * the admin table's clickable column sort — see
+ * PROJECT_ADMIN_SORT_FIELDS in utils/constants.js for the allow-list.
+ */
+export const findPaginated = ({
+  filter,
+  skip,
+  limit,
+  sort = { order: 1, createdAt: -1 },
+}) =>
   Project.find(filter)
     .select("-image.public_id -bannerImage.public_id -gallery.public_id")
     .populate("category", "name slug")
-    .sort({ order: 1, createdAt: -1 })
+    .sort(sort)
     .skip(skip)
     .limit(limit)
     .lean();

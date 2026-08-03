@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema: one technology group (e.g. "Frontend": ["React","Vite"])
@@ -32,6 +32,59 @@ const techGroupSchema = new mongoose.Schema(
   { _id: true },
 );
 
+/* ------------------------------------------------------------------ *
+ * Sub-schema: per-project SEO overrides. Mirrors models/SEO.js's
+ * field shapes/limits (metaTitle 70 / metaDescription 160) and reuses
+ * the same keyword cap the SEO singleton uses, so a per-project
+ * override never behaves differently from the site-wide default it's
+ * shadowing. `ogImage` is a Media-Library URL reference (picked via
+ * the frontend's LibraryImageField), NOT an owned Cloudinary upload —
+ * unlike image/bannerImage/gallery below, there is no public_id to
+ * track or destroy here.
+ * ------------------------------------------------------------------ */
+const projectSeoSchema = new mongoose.Schema(
+  {
+    metaTitle: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [70, "Meta title must not exceed 70 characters"],
+    },
+    metaDescription: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [160, "Meta description must not exceed 160 characters"],
+    },
+    metaKeywords: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          lowercase: true,
+          maxlength: [60, "Each meta keyword must not exceed 60 characters"],
+        },
+      ],
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length <= 20,
+        message: "Meta keywords must not exceed 20 entries",
+      },
+      default: [],
+    },
+    ogImage: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2048, "OG image URL must not exceed 2048 characters"],
+      match: [
+        /^$|^https?:\/\/.+/,
+        "OG image must be empty or a valid HTTP/HTTPS URL",
+      ],
+    },
+  },
+  { _id: false },
+);
+
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -41,12 +94,18 @@ const projectSchema = new mongoose.Schema(
       minlength: [2, "Title must be at least 2 characters"],
       maxlength: [120, "Title must not exceed 120 characters"],
     },
+    // Rich text (Tiptap HTML), sanitized server-side in
+    // services/projectService.js before persistence — see
+    // utils/htmlSanitizer.js. The 2000-character plain-text ceiling
+    // this used to carry is widened to account for markup overhead;
+    // mirrors the About.biography / Resume.experience[].description
+    // convention (schema max is the authoritative POST-sanitization
+    // ceiling).
     description: {
       type: String,
-      required: [true, "Project description is required"],
       trim: true,
-      minlength: [10, "Description must be at least 10 characters"],
-      maxlength: [2000, "Description must not exceed 2000 characters"],
+      required: [true, "Project description is required"],
+      maxlength: [5000, "Description must not exceed 5000 characters"],
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -61,6 +120,14 @@ const projectSchema = new mongoose.Schema(
       },
       default: DEFAULT_CONTENT_STATUS,
     },
+
+    // Surfaces this project in a "Featured Projects" section ahead of
+    // the rest of the (order-sorted) portfolio grid.
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+
     image: {
       url: {
         type: String,
@@ -179,17 +246,19 @@ const projectSchema = new mongoose.Schema(
         "Live URL must be empty or a valid HTTP/HTTPS URL",
       ],
     },
+    // Rich text — sanitized server-side, same rationale as
+    // `description` above.
     challenge: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [1000, "Challenge must not exceed 1000 characters"],
+      maxlength: [3000, "Challenge must not exceed 3000 characters"],
     },
     solution: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [1000, "Solution must not exceed 1000 characters"],
+      maxlength: [3000, "Solution must not exceed 3000 characters"],
     },
     // ── Keep legacy projectUrl for backward-compat ─────────────────
     projectUrl: {
@@ -207,6 +276,12 @@ const projectSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+
+    // Per-project SEO overrides — see projectSeoSchema above.
+    seo: {
+      type: projectSeoSchema,
+      default: () => ({}),
+    },
   },
   { timestamps: true },
 );
@@ -215,5 +290,6 @@ projectSchema.index({ order: 1 });
 projectSchema.index({ category: 1 });
 projectSchema.index({ status: 1 });
 projectSchema.index({ title: 1 });
+projectSchema.index({ featured: 1 });
 
 export default mongoose.model("Project", projectSchema);
