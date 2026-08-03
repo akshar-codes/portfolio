@@ -101,6 +101,37 @@ const migrate = async () => {
       }
     }
 
+    /* ── 4. Categories ──────────────────────────────────────────── *
+     * Backfills the `order` field introduced alongside the admin
+     * drag-reorder feature (services/categoryService.js
+     * reorderCategories). Existing categories are seeded in their
+     * current creation order so nothing visually shuffles the first
+     * time the reorder UI is opened.
+     * ------------------------------------------------------------- */
+    console.log("→ Migrating Categories.order…");
+    const categories = await db
+      .collection("categories")
+      .find({ order: { $exists: false } })
+      .sort({ createdAt: 1 })
+      .toArray();
+
+    if (categories.length === 0) {
+      console.log("  ✓ All categories already have an order field — skipped.");
+    } else {
+      const categoryOps = categories.map((c, idx) => ({
+        updateOne: {
+          filter: { _id: c._id },
+          update: { $set: { order: idx } },
+        },
+      }));
+      const categoryResult = await db
+        .collection("categories")
+        .bulkWrite(categoryOps, { ordered: false });
+      console.log(
+        `  ✓ Categories migrated: ${categoryResult.modifiedCount} documents updated.`,
+      );
+    }
+
     console.log("\n✅ Order migration completed successfully.");
     process.exit(0);
   } catch (error) {

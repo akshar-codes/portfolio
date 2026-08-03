@@ -59,8 +59,12 @@ export const CONTENT_STATUS_PUBLISHED = "published";
 export const CONTENT_STATUSES = [CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED];
 export const DEFAULT_CONTENT_STATUS = CONTENT_STATUS_PUBLISHED;
 
-/* ── Category listing (admin) ─────────────────────────────────────── */
-export const CATEGORY_SORT_FIELDS = ["name", "createdAt", "projectCount"];
+/* ── Category listing (admin) ─────────────────────────────────────────
+ * "order" was added alongside the manual drag-reorder feature (mirrors
+ * Project.order / reorderProjects) — see services/categoryService.js
+ * reorderCategories() and routes/admin/categoryRoutes.js PATCH /reorder.
+ * ------------------------------------------------------------------ */
+export const CATEGORY_SORT_FIELDS = ["name", "createdAt", "projectCount", "order"];
 export const DEFAULT_CATEGORY_SORT_FIELD = "name";
 
 /* ── Contact messages ─────────────────────────────────────────────── */
@@ -146,55 +150,13 @@ export const OG_TYPES = ["website", "article", "profile"];
 export const TWITTER_CARD_TYPES = ["summary", "summary_large_image"];
 export const STRUCTURED_DATA_MAX_LENGTH = 5000;
 
-/* ── Profile CMS ───────────────────────────────────────────────────
- * Hero identity (name/title/introduction/avatar/contact) plus the
- * hero-row extras: a small multi-button CTA row and an "impact
- * statistics" strip (years of experience, commits, etc). Deliberately
- * does NOT include a resume-download field — that concern already
- * belongs to SiteSettings.resumeDownload (models/SiteSettings.js) and
- * is not duplicated here.
+/* ── Project CMS ───────────────────────────────────────────────────
+ * `featured` powers a homepage/portfolio "featured projects" filter;
+ * `seo.*` mirrors the SEO singleton's field shapes/limits (metaTitle
+ * 70 chars, metaDescription 160 chars, metaKeywords capped at
+ * SEO_KEYWORDS_MAX/SEO_KEYWORD_MAX_LENGTH above — reused rather than
+ * re-declared) so per-project overrides stay visually/behaviorally
+ * consistent with the global SEO defaults they override.
  * ------------------------------------------------------------------ */
-export const PROFILE_LIMITS = {
-  SOCIAL_LINKS_MAX: 10,
-  CTA_BUTTONS_MAX: 3,
-  STATISTICS_MAX: 8,
-};
-
-export const CTA_BUTTON_STYLES = ["primary", "secondary", "outline"];
-
-/* ── About CMS ─────────────────────────────────────────────────────
- * `biography` (rich text) supersedes the old flat `paragraphs[]`
- * array — see scripts/migrateAboutSchema.js for the one-time data
- * migration. `services[]` is unchanged from the original schema.
- * ------------------------------------------------------------------ */
-export const ABOUT_LIMITS = {
-  SERVICES_MAX: 12,
-  TIMELINE_MAX: 20,
-  SKILLS_SUMMARY_MAX: 20,
-  HIGHLIGHTS_MAX: 8,
-  PERSONAL_INFO_MAX: 10,
-  IMAGES_MAX: 12,
-};
-
-/* ── Rich text sanitization ────────────────────────────────────────
- * Shared allow-list for every server-side-sanitized rich text field
- * (About.biography, Profile.introduction, Resume.aboutMe.summary,
- * Resume.experience[].description). Mirrors the client-side DOMPurify
- * config in frontend/src/components/form/RichTextEditor.jsx so the
- * two layers cannot silently diverge on what markup survives.
- * ------------------------------------------------------------------ */
-export const RICH_TEXT_ALLOWED_TAGS = [
-  "p",
-  "br",
-  "strong",
-  "em",
-  "u",
-  "s",
-  "h2",
-  "h3",
-  "ul",
-  "ol",
-  "li",
-  "blockquote",
-  "a",
-];
+export const PROJECT_ADMIN_SORT_FIELDS = ["order", "title", "createdAt"];
+export const DEFAULT_PROJECT_ADMIN_SORT_FIELD = "order";
