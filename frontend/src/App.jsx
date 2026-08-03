@@ -21,7 +21,7 @@ const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout/AdminLayout"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
-const AddProject = lazy(() => import("./pages/admin/AddProject"));
+const ProjectEditor = lazy(() => import("./pages/admin/ProjectEditor"));
 const ManageCategories = lazy(() => import("./pages/admin/ManageCategories"));
 const Messages = lazy(() => import("./pages/admin/Messages"));
 const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
@@ -126,7 +126,15 @@ export default function App() {
                   path="projects/new"
                   element={
                     <Suspense fallback={<Fallback />}>
-                      <AddProject />
+                      <ProjectEditor />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="projects/:id/edit"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ProjectEditor />
                     </Suspense>
                   }
                 />
