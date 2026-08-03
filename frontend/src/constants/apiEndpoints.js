@@ -26,11 +26,20 @@ export const API_ENDPOINTS = {
   categories: "/categories",
   adminCategories: "/admin/categories",
   adminCategoryById: (id) => `/admin/categories/${id}`,
+  adminCategoryReorder: "/admin/categories/reorder",
 
   // Projects
   projects: "/projects",
   projectById: (id) => `/projects/${id}`,
   projectReorder: "/projects/reorder",
+  projectPublish: (id) => `/projects/${id}/publish`,
+  projectUnpublish: (id) => `/projects/${id}/unpublish`,
+  // Admin-only listing — includes drafts (see
+  // routes/admin/projectAdminRoutes.js). The public `projects`/
+  // `projectById` above only ever return published projects, so the
+  // admin table/editor must read through these instead.
+  adminProjects: "/admin/projects",
+  adminProjectById: (id) => `/admin/projects/${id}`,
 
   // Messages
   messages: "/messages",

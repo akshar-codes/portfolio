@@ -20,6 +20,7 @@ export const PERMISSIONS = Object.freeze({
 
   CATEGORIES_VIEW: "categories.view",
   CATEGORIES_CREATE: "categories.create",
+  CATEGORIES_EDIT: "categories.edit",
   CATEGORIES_DELETE: "categories.delete",
 
   RESUME_EDIT: "resume.edit",
