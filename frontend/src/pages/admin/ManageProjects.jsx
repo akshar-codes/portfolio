@@ -1,567 +1,126 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import api from "../../services/api";
-import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import PublishOutlinedIcon from "@mui/icons-material/PublishOutlined";
+import UnpublishedOutlinedIcon from "@mui/icons-material/UnpublishedOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
+
+import PageHeader from "../../components/common/PageHeader";
+import ToolbarBar from "../../components/common/Toolbar";
+import FilterBar from "../../components/common/FilterBar";
+import DataTable from "../../components/table/DataTable";
+import DragReorderList from "../../components/cms/DragReorderList";
+import RequirePermission from "../../components/auth/RequirePermission";
+import ProjectDetails from "./ProjectDetails";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { useGlobalLoading } from "../../hooks/useGlobalLoading";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useFilters } from "../../hooks/useFilters";
+import { usePagination } from "../../hooks/usePagination";
+import { useCategoriesQuery } from "../../hooks/useCategories";
+import {
+  useAdminProjectsQuery,
+  useDeleteProject,
+  useReorderProjects,
+  usePublishProject,
+  useUnpublishProject,
+} from "../../hooks/useProjects";
+import { projectsApi } from "../../api/projectsApi";
+import { PERMISSIONS } from "../../constants/permissions";
 import { ROUTES } from "../../constants/routes";
-import { PROJECTS_ADMIN_PAGE_SIZE } from "../../constants/pagination";
-import {
-  AdminSkeleton,
-  AdminEmpty,
-  AdminError,
-} from "../../components/common/AdminStatus";
-import { GroupedTagInput } from "../../components/common/GroupedTagInput";
-import TagInput from "../../components/common/TagInput";
-import ReorderButtons from "../../components/common/ReorderButtons";
-import Pagination from "../../components/common/Pagination";
-import { moveItem, isOrderDirty } from "../../utils/ordering";
-import {
-  flattenTechNames,
-  normaliseTechnologies,
-} from "../../utils/projectHelpers";
+import { flattenTechNames } from "../../utils/projectHelpers";
 
-/* ------------------------------------------------------------------ *
- * GalleryManager
- * ------------------------------------------------------------------ */
-function GalleryManager({
-  existing = [],
-  onDeleteExisting,
-  newFiles,
-  onNewFiles,
-}) {
-  const handleAdd = (e) => {
-    const added = Array.from(e.target.files ?? []);
-    const total = existing.length + newFiles.length + added.length;
-    if (total > 10) {
-      toast.warning("Gallery cannot exceed 10 images.");
-      return;
-    }
-    onNewFiles([...newFiles, ...added]);
-    e.target.value = "";
-  };
-  const removeNew = (idx) => onNewFiles(newFiles.filter((_, i) => i !== idx));
+const PROJECTS_ADMIN_PAGE_SIZE = 10;
+// Matches backend MAX_PAGE_SIZE (utils/constants.js). Reorder mode
+// fetches a single unpaginated page up to this cap — see the note on
+// canReorder below for what happens past this count.
+const MAX_REORDER_ITEMS = 50;
 
-  return (
-    <div className="admin-form__field">
-      <label className="admin-form__label">Gallery Screenshots</label>
-      {existing.length > 0 && (
-        <div
-          style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
-        >
-          {existing.map((img) => (
-            <div
-              key={img._id}
-              style={{
-                position: "relative",
-                width: 80,
-                height: 56,
-                borderRadius: 8,
-                overflow: "hidden",
-                border: "1px solid var(--jet)",
-              }}
-            >
-              <img
-                src={img.url}
-                alt="gallery"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                loading="lazy"
-              />
-              <button
-                type="button"
-                onClick={() => onDeleteExisting(img._id)}
-                aria-label="Remove"
-                style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
-                  width: 18,
-                  height: 18,
-                  borderRadius: "50%",
-                  background: "var(--bittersweet-shimmer)",
-                  border: "none",
-                  color: "white",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      {newFiles.length > 0 && (
-        <div
-          style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
-        >
-          {newFiles.map((f, idx) => {
-            const url = URL.createObjectURL(f);
-            return (
-              <div
-                key={idx}
-                style={{
-                  position: "relative",
-                  width: 80,
-                  height: 56,
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  border: "1px dashed var(--orange-yellow-crayola)",
-                }}
-              >
-                <img
-                  src={url}
-                  alt="new"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onLoad={() => URL.revokeObjectURL(url)}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeNew(idx)}
-                  aria-label="Remove"
-                  style={{
-                    position: "absolute",
-                    top: 2,
-                    right: 2,
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    background: "var(--bittersweet-shimmer)",
-                    border: "none",
-                    color: "white",
-                    fontSize: 11,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {existing.length + newFiles.length < 10 && (
-        <label
-          className="file-label"
-          htmlFor="edit-gallery"
-          style={{ maxWidth: 300 }}
-        >
-          <span className="file-label__icon">📷</span>
-          <span className="file-label__text">
-            Add screenshots ({existing.length + newFiles.length}/10)
-          </span>
-          <input
-            id="edit-gallery"
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleAdd}
-            className="file-input"
-          />
-        </label>
-      )}
-    </div>
-  );
+const STATUS_OPTIONS = [
+  { label: "All statuses", value: "" },
+  { label: "Published", value: "published" },
+  { label: "Draft", value: "draft" },
+];
+
+const FEATURED_OPTIONS = [
+  { label: "All projects", value: "" },
+  { label: "Featured only", value: "true" },
+  { label: "Not featured", value: "false" },
+];
+
+function stripHtml(html = "") {
+  return html.replace(/<[^>]*>/g, "");
 }
 
 /* ------------------------------------------------------------------ *
- * EditProjectModal
+ * ProjectReorderPanel
  * ------------------------------------------------------------------ */
-function EditProjectModal({ project, categories, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    title: project.title ?? "",
-    description: project.description ?? "",
-    category: project.category?._id ?? "",
-    liveUrl: project.liveUrl || project.projectUrl || "",
-    githubUrl: project.githubUrl ?? "",
-    challenge: project.challenge ?? "",
-    solution: project.solution ?? "",
-  });
-
-  const [technologies, setTechnologies] = useState(
-    normaliseTechnologies(project.technologies ?? []),
-  );
-  const [features, setFeatures] = useState([...(project.features ?? [])]);
-  const [existingGallery, setExistingGallery] = useState(
-    [...(project.gallery ?? [])].sort(
-      (a, b) => (a.order ?? 0) - (b.order ?? 0),
-    ),
-  );
-  const [newGalleryFiles, setNewGalleryFiles] = useState([]);
-  const [deletedGalleryIds, setDeletedGalleryIds] = useState([]);
-  const [newThumbnail, setNewThumbnail] = useState(null);
-  const [newBanner, setNewBanner] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  const set = (field) => (e) =>
-    setForm((p) => ({ ...p, [field]: e.target.value }));
-
-  const handleDeleteGalleryItem = (id) => {
-    setDeletedGalleryIds((prev) => [...prev, id]);
-    setExistingGallery((prev) => prev.filter((g) => g._id !== id));
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append("title", form.title);
-      fd.append("description", form.description);
-      fd.append("category", form.category);
-      fd.append("liveUrl", form.liveUrl);
-      fd.append("githubUrl", form.githubUrl);
-      fd.append("challenge", form.challenge);
-      fd.append("solution", form.solution);
-      fd.append("technologies", JSON.stringify(technologies)); // [{group,items}]
-      fd.append("features", JSON.stringify(features));
-      if (newThumbnail) fd.append("image", newThumbnail);
-      if (newBanner) fd.append("bannerImage", newBanner);
-      newGalleryFiles.forEach((f) => fd.append("gallery", f));
-      if (deletedGalleryIds.length > 0) {
-        fd.append("deleteGalleryIds", JSON.stringify(deletedGalleryIds));
-      }
-
-      const { data } = await api.patch(
-        API_ENDPOINTS.projectById(project._id),
-        fd,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
-      toast.success("Project updated.");
-      onSaved(data);
-      onClose();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    const h = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", h);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
+function ProjectReorderPanel({ items, onReorder, onSave, onCancel, saving, truncated }) {
   return (
-    <>
-      <div
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "hsla(0,0%,5%,0.85)",
-          zIndex: 100,
-        }}
-        aria-hidden="true"
-      />
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 101,
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          padding: "40px 12px 24px",
-          overflowY: "auto",
-        }}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Edit project: ${project.title}`}
-      >
-        <div
-          style={{
-            background: "var(--eerie-black-2)",
-            border: "1px solid var(--jet)",
-            borderRadius: 20,
-            padding: "28px 24px",
-            width: "100%",
-            maxWidth: 680,
-            boxShadow: "var(--shadow-5)",
-            position: "relative",
-            animation: "fade 0.25s ease backwards",
-          }}
-        >
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              position: "absolute",
-              top: 16,
-              right: 16,
-              background: "var(--onyx)",
-              border: "none",
-              borderRadius: 8,
-              width: 34,
-              height: 34,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--white-2)",
-              fontSize: 20,
-              cursor: "pointer",
-              opacity: 0.75,
-            }}
-          >
-            ×
-          </button>
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, mb: 3 }}>
+      <Box className="flex items-center justify-between mb-3">
+        <Box>
+          <Typography variant="subtitle1" fontWeight={700}>
+            Reorder projects
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Drag rows to set the display order used across the public portfolio grid.
+            {truncated && ` Showing the first ${MAX_REORDER_ITEMS} projects.`}
+          </Typography>
+        </Box>
+        <Box className="flex items-center gap-1.5">
+          <Button size="small" color="inherit" startIcon={<CloseIcon fontSize="small" />} onClick={onCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button size="small" variant="contained" startIcon={<CheckIcon fontSize="small" />} onClick={onSave} disabled={saving}>
+            {saving ? "Saving…" : "Save order"}
+          </Button>
+        </Box>
+      </Box>
 
-          <h2 className="admin-page__title" style={{ marginBottom: 20 }}>
-            Edit Project
-          </h2>
-
-          <form
-            className="admin-form"
-            onSubmit={handleSave}
-            noValidate
-            style={{ maxWidth: "100%" }}
-          >
-            {/* Title */}
-            <div className="admin-form__field">
-              <label className="admin-form__label" htmlFor="ep-title">
-                Title <span style={{ color: "var(--a-danger)" }}>*</span>
-              </label>
-              <input
-                id="ep-title"
-                className="form-input"
-                value={form.title}
-                onChange={set("title")}
-                required
-              />
-            </div>
-
-            {/* Description */}
-            <div className="admin-form__field">
-              <label className="admin-form__label" htmlFor="ep-desc">
-                Description <span style={{ color: "var(--a-danger)" }}>*</span>
-              </label>
-              <textarea
-                id="ep-desc"
-                className="form-input"
-                value={form.description}
-                onChange={set("description")}
-                required
-                maxLength={2000}
-                style={{ minHeight: 100, resize: "vertical" }}
-              />
-            </div>
-
-            {/* Category + Live URL */}
-            <div className="admin-form__row admin-form__row--2col">
-              <div className="admin-form__field">
-                <label className="admin-form__label" htmlFor="ep-cat">
-                  Category
-                </label>
-                <select
-                  id="ep-cat"
-                  className="form-input"
-                  value={form.category}
-                  onChange={set("category")}
-                >
-                  <option value="">Select category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="admin-form__field">
-                <label className="admin-form__label" htmlFor="ep-live">
-                  Live URL
-                </label>
-                <input
-                  id="ep-live"
-                  type="url"
-                  className="form-input"
-                  value={form.liveUrl}
-                  onChange={set("liveUrl")}
-                />
-              </div>
-            </div>
-
-            {/* GitHub */}
-            <div className="admin-form__field">
-              <label className="admin-form__label" htmlFor="ep-github">
-                GitHub URL
-              </label>
-              <input
-                id="ep-github"
-                type="url"
-                className="form-input"
-                value={form.githubUrl}
-                onChange={set("githubUrl")}
-              />
-            </div>
-
-            {/* Technologies — grouped */}
-            <GroupedTagInput
-              id="ep-tech-group"
-              label="Technologies Used"
-              groups={technologies}
-              onChange={setTechnologies}
-            />
-
-            {/* Features — flat */}
-            <TagInput
-              id="ep-feat"
-              label="Key Features"
-              placeholder="Add feature…"
-              items={features}
-              onChange={setFeatures}
-              maxItems={20}
-            />
-
-            {/* Replace thumbnail */}
-            <div className="admin-form__field">
-              <label className="admin-form__label">
-                Replace Thumbnail
-                <span
-                  style={{
-                    color: "var(--light-gray)",
-                    fontWeight: 400,
-                    marginLeft: 6,
-                  }}
-                >
-                  (optional)
-                </span>
-              </label>
-              <label
-                className={`file-label${newThumbnail ? " has-file" : ""}`}
-                htmlFor="ep-thumb"
-              >
-                <span className="file-label__icon">
-                  {newThumbnail ? "🖼️" : "📁"}
-                </span>
-                <span className="file-label__text">
-                  {newThumbnail
-                    ? newThumbnail.name
-                    : "Click to replace thumbnail"}
-                </span>
-                <input
-                  id="ep-thumb"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNewThumbnail(e.target.files[0] ?? null)}
-                  className="file-input"
-                />
-              </label>
-            </div>
-
-            {/* Replace banner */}
-            <div className="admin-form__field">
-              <label className="admin-form__label">
-                Replace Banner Image
-                <span
-                  style={{
-                    color: "var(--light-gray)",
-                    fontWeight: 400,
-                    marginLeft: 6,
-                  }}
-                >
-                  (optional)
-                </span>
-              </label>
-              <label
-                className={`file-label${newBanner ? " has-file" : ""}`}
-                htmlFor="ep-banner"
-              >
-                <span className="file-label__icon">
-                  {newBanner ? "🖼️" : "📁"}
-                </span>
-                <span className="file-label__text">
-                  {newBanner ? newBanner.name : "Click to replace banner"}
-                </span>
-                <input
-                  id="ep-banner"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNewBanner(e.target.files[0] ?? null)}
-                  className="file-input"
-                />
-              </label>
-            </div>
-
-            {/* Gallery */}
-            <GalleryManager
-              existing={existingGallery}
-              onDeleteExisting={handleDeleteGalleryItem}
-              newFiles={newGalleryFiles}
-              onNewFiles={setNewGalleryFiles}
-            />
-
-            {/* Challenge */}
-            <div className="admin-form__field">
-              <label className="admin-form__label" htmlFor="ep-challenge">
-                Challenge
-              </label>
-              <textarea
-                id="ep-challenge"
-                className="form-input"
-                value={form.challenge}
-                onChange={set("challenge")}
-                maxLength={1000}
-                style={{ minHeight: 70, resize: "vertical" }}
-              />
-            </div>
-
-            {/* Solution */}
-            <div className="admin-form__field">
-              <label className="admin-form__label" htmlFor="ep-solution">
-                Solution
-              </label>
-              <textarea
-                id="ep-solution"
-                className="form-input"
-                value={form.solution}
-                onChange={set("solution")}
-                maxLength={1000}
-                style={{ minHeight: 70, resize: "vertical" }}
-              />
-            </div>
-
-            {/* Actions */}
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginTop: 4,
-              }}
+      <DragReorderList
+        items={items}
+        getId={(item) => item._id}
+        onReorder={onReorder}
+        disabled={saving}
+        renderItem={({ item, index }) => (
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%", display: "flex", alignItems: "center", gap: 1.5 }}>
+            <DragIndicatorIcon fontSize="small" sx={{ color: "text.disabled" }} />
+            <Typography variant="caption" color="text.disabled" sx={{ width: 24 }}>
+              {index + 1}
+            </Typography>
+            <Box
+              sx={{ width: 44, height: 32, borderRadius: 1, overflow: "hidden", bgcolor: "action.hover", flexShrink: 0 }}
             >
-              <button
-                type="submit"
-                className="btn btn--primary"
-                style={{ padding: "12px 28px", fontSize: 14 }}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
-              <button
-                type="button"
-                className="btn btn--ghost"
-                onClick={onClose}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </>
+              <img
+                src={item.image?.url || "/images/placeholder.png"}
+                alt={item.title}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </Box>
+            <Typography fontWeight={600} fontSize={14} sx={{ flex: 1 }} noWrap>
+              {item.title}
+            </Typography>
+            {item.featured && <Chip size="small" color="warning" icon={<StarIcon fontSize="small" />} label="Featured" />}
+          </Paper>
+        )}
+      />
+    </Paper>
   );
 }
 
@@ -569,250 +128,400 @@ function EditProjectModal({ project, categories, onClose, onSaved }) {
  * Main ManageProjects component
  * ================================================================== */
 export default function ManageProjects() {
-  const [projects, setProjects] = useState([]);
-  const [status, setStatus] = useState("loading");
-  const [error, setError] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [categories, setCategories] = useState([]);
-  const [localProjects, setLocalProjects] = useState(null);
-  const [savingOrder, setSavingOrder] = useState(false);
-  const [editingProject, setEditingProject] = useState(null);
+  const navigate = useNavigate();
+  const { filters, setFilter } = useFilters({
+    search: "",
+    status: "",
+    category: "",
+    featured: "",
+    sortBy: "order",
+    sortOrder: "asc",
+  });
+  const debouncedSearch = useDebouncedValue(filters.search, 350);
+  const { page, limit, setPage } = usePagination({ initialLimit: PROJECTS_ADMIN_PAGE_SIZE });
 
-  const fetchProjects = useCallback(async (targetPage = 1) => {
-    setStatus("loading");
-    setError("");
-    setLocalProjects(null);
-    try {
-      const { data } = await api.get(API_ENDPOINTS.projects, {
-        params: { page: targetPage, limit: PROJECTS_ADMIN_PAGE_SIZE },
-      });
-      const sorted = [...(data.projects ?? [])].sort(
-        (a, b) => (a.order ?? 0) - (b.order ?? 0),
-      );
-      setProjects(sorted);
-      setLocalProjects(sorted);
-      setTotalPages(data.totalPages ?? 1);
-      setPage(targetPage);
-      setStatus("ready");
-    } catch (err) {
-      setError(err.message);
-      setStatus("error");
-    }
-  }, []);
+  const queryParams = useMemo(
+    () => ({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      status: filters.status || undefined,
+      category: filters.category || undefined,
+      featured: filters.featured || undefined,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+    }),
+    [page, limit, debouncedSearch, filters.status, filters.category, filters.featured, filters.sortBy, filters.sortOrder],
+  );
 
-  useEffect(() => {
-    api
-      .get(API_ENDPOINTS.adminCategories)
-      .then(({ data }) => setCategories(data ?? []))
-      .catch(() => {});
-  }, []);
+  const { data, isLoading, isFetching, isError, error, refetch } = useAdminProjectsQuery(queryParams);
+  const { data: categories = [] } = useCategoriesQuery();
+  const { mutateAsync: deleteProject } = useDeleteProject();
+  const { mutateAsync: reorderProjects, isPending: savingOrder } = useReorderProjects();
+  const { mutateAsync: publishProject } = usePublishProject();
+  const { mutateAsync: unpublishProject } = useUnpublishProject();
 
-  const handleOpenEdit = async (projectId) => {
-    try {
-      const { data } = await api.get(API_ENDPOINTS.projectById(projectId));
-      setEditingProject(data);
-    } catch (err) {
-      toast.error(err.message);
-    }
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [previewProject, setPreviewProject] = useState(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reorderItems, setReorderItems] = useState(null);
+  const [reorderTruncated, setReorderTruncated] = useState(false);
+  const [loadingReorder, setLoadingReorder] = useState(false);
+
+  const confirm = useConfirmDialog();
+  const { showLoading, hideLoading } = useGlobalLoading();
+
+  const projects = data?.projects ?? [];
+  const canReorder = !filters.search && !filters.status && !filters.category && !filters.featured;
+
+  const handleSort = (field) => {
+    const nextOrder = filters.sortBy === field && filters.sortOrder === "asc" ? "desc" : "asc";
+    setFilter("sortBy", field);
+    setFilter("sortOrder", nextOrder);
+    setPage(1);
   };
 
-  const handleEditSaved = () => {
-    fetchProjects(page);
-  };
-
-  const deleteProject = async (id, title) => {
-    const confirmed = window.confirm(
-      `Delete "${title}"?\n\nThis will permanently remove the project and all its images.`,
-    );
+  const handleDelete = async (project) => {
+    const confirmed = await confirm({
+      title: `Delete "${project.title}"?`,
+      description: "This will permanently remove the project and all its images.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
     if (!confirmed) return;
-    try {
-      await api.delete(API_ENDPOINTS.projectById(id));
-      toast.success(`"${title}" deleted successfully.`);
-      fetchProjects(page);
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
 
-  const handleMove = (index, direction) => {
-    // Project order is persisted via a separate orderedIds endpoint,
-    // not a per-item `order` field on the client — skip renumbering.
-    setLocalProjects((prev) =>
-      moveItem(prev, index, direction, { renumber: false }),
-    );
-  };
-
-  const handleSaveOrder = async () => {
-    if (!localProjects) return;
-    setSavingOrder(true);
     try {
-      await api.patch(API_ENDPOINTS.projectReorder, {
-        orderedIds: localProjects.map((p) => p._id),
+      await deleteProject(project._id);
+      toast.success(`"${project.title}" deleted.`);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(project._id);
+        return next;
       });
-      setProjects(localProjects);
-      toast.success("Project order saved.");
     } catch (err) {
       toast.error(err.message);
-      setLocalProjects(projects);
-    } finally {
-      setSavingOrder(false);
     }
   };
 
-  const orderDirty =
-    !savingOrder &&
-    localProjects !== null &&
-    isOrderDirty(localProjects, projects);
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
 
-  useEffect(() => {
-    queueMicrotask(() => fetchProjects(1));
-  }, [fetchProjects]);
+    const confirmed = await confirm({
+      title: `Delete ${ids.length} project${ids.length === 1 ? "" : "s"}?`,
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete all",
+      tone: "danger",
+    });
+    if (!confirmed) return;
 
-  const displayProjects = localProjects ?? projects;
+    setBulkDeleting(true);
+    showLoading(`Deleting ${ids.length} project${ids.length === 1 ? "" : "s"}…`);
+
+    const results = await Promise.allSettled(ids.map((id) => deleteProject(id)));
+
+    hideLoading();
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (failed === 0) {
+      toast.success(`${ids.length} project${ids.length === 1 ? "" : "s"} deleted.`);
+    } else {
+      toast.error(`${failed} of ${ids.length} projects could not be deleted.`);
+    }
+  };
+
+  const handleTogglePublish = async (project) => {
+    try {
+      if (project.status === "draft") {
+        await publishProject(project._id);
+        toast.success(`"${project.title}" published.`);
+      } else {
+        await unpublishProject(project._id);
+        toast.success(`"${project.title}" unpublished.`);
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const enterReorderMode = async () => {
+    setLoadingReorder(true);
+    try {
+      const result = await projectsApi.list({ page: 1, limit: MAX_REORDER_ITEMS, sortBy: "order", sortOrder: "asc" });
+      setReorderItems(result.projects ?? []);
+      setReorderTruncated((result.total ?? 0) > MAX_REORDER_ITEMS);
+      setReorderMode(true);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoadingReorder(false);
+    }
+  };
+
+  const handleSaveReorder = async () => {
+    try {
+      await reorderProjects(reorderItems.map((p) => p._id));
+      toast.success("Project order saved.");
+      setReorderMode(false);
+      setReorderItems(null);
+      refetch();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const columns = [
+    {
+      field: "image",
+      headerName: "Image",
+      width: 64,
+      render: (row) => (
+        <Box sx={{ width: 52, height: 38, borderRadius: 1.5, overflow: "hidden", bgcolor: "action.hover" }}>
+          <img
+            src={row.image?.url || "/images/placeholder.png"}
+            alt={row.title}
+            loading="lazy"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </Box>
+      ),
+    },
+    {
+      field: "title",
+      headerName: "Title",
+      sortable: true,
+      render: (row) => (
+        <Box sx={{ maxWidth: 280 }}>
+          <Typography fontWeight={600} fontSize={14} noWrap>
+            {row.title}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+            {stripHtml(row.description ?? "").slice(0, 90)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "category",
+      headerName: "Category",
+      hideOnMobile: true,
+      render: (row) => <Chip size="small" label={row.category?.name ?? "—"} />,
+    },
+    {
+      field: "technologies",
+      headerName: "Technologies",
+      hideOnMobile: true,
+      render: (row) => {
+        const names = flattenTechNames(row.technologies);
+        if (names.length === 0) return <Typography variant="caption" color="text.disabled">—</Typography>;
+        return (
+          <Typography variant="caption" color="text.secondary">
+            {names.slice(0, 3).join(", ")}
+            {names.length > 3 && ` +${names.length - 3}`}
+          </Typography>
+        );
+      },
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      align: "center",
+      render: (row) => (
+        <Chip
+          size="small"
+          variant={row.status === "draft" ? "outlined" : "filled"}
+          color={row.status === "draft" ? "default" : "success"}
+          label={row.status === "draft" ? "Draft" : "Published"}
+        />
+      ),
+    },
+    {
+      field: "featured",
+      headerName: "Featured",
+      align: "center",
+      render: (row) =>
+        row.featured ? (
+          <Chip size="small" color="warning" icon={<StarIcon fontSize="small" />} label="Featured" />
+        ) : (
+          <Typography variant="caption" color="text.disabled">—</Typography>
+        ),
+    },
+    {
+      field: "createdAt",
+      headerName: "Created",
+      hideOnMobile: true,
+      sortable: true,
+      render: (row) => (
+        <Typography variant="caption" color="text.secondary">
+          {new Date(row.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+        </Typography>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="admin-page">
-        <div className="admin-page__header">
-          <h2 className="admin-page__title">Projects</h2>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {orderDirty && (
-              <button
-                className="btn btn--ghost"
-                onClick={handleSaveOrder}
-                disabled={savingOrder}
-              >
-                {savingOrder ? "Saving…" : "Save Order"}
-              </button>
-            )}
-            <Link to={ROUTES.adminProjectsNew} className="btn btn--primary">
-              + Add Project
-            </Link>
-          </div>
-        </div>
-
-        {status === "ready" && displayProjects.length > 1 && (
-          <p
-            style={{ fontSize: 12, color: "var(--light-gray)", marginTop: -8 }}
-          >
-            Use ↑ ↓ to reorder, then click <strong>Save Order</strong>.
-          </p>
-        )}
-
-        {status === "loading" && <AdminSkeleton rows={4} />}
-        {status === "error" && (
-          <AdminError message={error} onRetry={() => fetchProjects(page)} />
-        )}
-        {status === "ready" && displayProjects.length === 0 && (
-          <AdminEmpty
-            icon="🗂️"
-            title="No projects yet"
-            sub="Click Add Project above to publish your first one"
-          />
-        )}
-
-        {status === "ready" && displayProjects.length > 0 && (
-          <>
-            <ul className="admin-list" aria-label="Portfolio projects">
-              {displayProjects.map((project, index) => {
-                const techNames = flattenTechNames(project.technologies);
-                return (
-                  <li
-                    key={project._id}
-                    className="admin-item"
-                    style={{ alignItems: "flex-start", padding: "14px 18px" }}
+      <PageHeader
+        title="Projects"
+        subtitle="Manage your portfolio projects — content, media, technologies, and SEO."
+        badge={typeof data?.total === "number" ? <Chip size="small" variant="outlined" label={`${data.total} total`} /> : null}
+        actions={
+          <Box className="flex items-center gap-2 flex-wrap">
+            <RequirePermission permission={PERMISSIONS.PROJECTS_REORDER}>
+              <Tooltip title={canReorder ? "" : "Clear search/filters to reorder"}>
+                <span>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<DragIndicatorIcon fontSize="small" />}
+                    onClick={enterReorderMode}
+                    disabled={!canReorder || reorderMode || loadingReorder}
                   >
-                    <ReorderButtons
-                      index={index}
-                      total={displayProjects.length}
-                      onMove={handleMove}
-                      disabled={savingOrder}
-                    />
+                    {loadingReorder ? "Loading…" : "Reorder"}
+                  </Button>
+                </span>
+              </Tooltip>
+            </RequirePermission>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_CREATE}>
+              <Button component={Link} to={ROUTES.adminProjectsNew} variant="contained" startIcon={<AddIcon />}>
+                Add Project
+              </Button>
+            </RequirePermission>
+          </Box>
+        }
+      />
 
-                    <img
-                      className="admin-item__thumb"
-                      src={project.image?.url || "/images/placeholder.png"}
-                      alt={project.title}
-                      loading="lazy"
-                    />
-
-                    <div className="admin-item__body">
-                      <span className="admin-item__name">{project.title}</span>
-                      <div className="admin-item__meta">
-                        <span className="admin-item__badge">
-                          {project.category?.name ?? "—"}
-                        </span>
-                        {techNames.length > 0 && (
-                          <span
-                            style={{ fontSize: 11, color: "var(--a-text-m)" }}
-                          >
-                            {techNames.slice(0, 3).join(", ")}
-                            {techNames.length > 3 &&
-                              ` +${techNames.length - 3}`}
-                          </span>
-                        )}
-                        <span
-                          className="admin-item__badge"
-                          style={{
-                            background: "transparent",
-                            color: "var(--a-text-dim)",
-                            borderColor: "var(--a-border)",
-                            fontSize: 10,
-                          }}
-                        >
-                          #{index + 1}
-                        </span>
-                      </div>
-                      <span className="admin-item__preview">
-                        {project.description?.slice(0, 90)}
-                        {project.description?.length > 90 && "…"}
-                      </span>
-                    </div>
-
-                    <div className="admin-item__actions">
-                      <button
-                        className="btn btn--ghost"
-                        onClick={() => handleOpenEdit(project._id)}
-                        disabled={savingOrder}
-                        aria-label={`Edit project ${project.title}`}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn--danger"
-                        onClick={() =>
-                          deleteProject(project._id, project.title)
-                        }
-                        disabled={savingOrder}
-                        aria-label={`Delete project ${project.title}`}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onChange={fetchProjects}
-              disabled={savingOrder}
-            />
-          </>
-        )}
-      </div>
-
-      {editingProject && (
-        <EditProjectModal
-          project={editingProject}
-          categories={categories}
-          onClose={() => setEditingProject(null)}
-          onSaved={handleEditSaved}
+      {reorderMode && reorderItems && (
+        <ProjectReorderPanel
+          items={reorderItems}
+          onReorder={setReorderItems}
+          onSave={handleSaveReorder}
+          onCancel={() => {
+            setReorderMode(false);
+            setReorderItems(null);
+          }}
+          saving={savingOrder}
+          truncated={reorderTruncated}
         />
       )}
+
+      <DataTable
+        columns={columns}
+        rows={projects}
+        getRowId={(row) => row._id}
+        loading={isLoading}
+        fetching={isFetching}
+        error={isError ? error?.message : null}
+        onRetry={refetch}
+        emptyIcon={<WorkOutlineIcon fontSize="large" />}
+        emptyTitle="No projects yet"
+        emptyDescription="Click Add Project above to publish your first one."
+        sortModel={{ field: filters.sortBy, direction: filters.sortOrder }}
+        onSortChange={handleSort}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        toolbar={
+          <ToolbarBar
+            searchValue={filters.search}
+            onSearchChange={(v) => {
+              setFilter("search", v);
+              setPage(1);
+            }}
+            searchPlaceholder="Search projects…"
+            filters={
+              <FilterBar
+                filters={[
+                  {
+                    label: "Status",
+                    value: filters.status,
+                    onChange: (v) => {
+                      setFilter("status", v);
+                      setPage(1);
+                    },
+                    options: STATUS_OPTIONS,
+                  },
+                  {
+                    label: "Category",
+                    value: filters.category,
+                    onChange: (v) => {
+                      setFilter("category", v);
+                      setPage(1);
+                    },
+                    options: [{ label: "All categories", value: "" }, ...categories.map((c) => ({ label: c.name, value: c._id }))],
+                  },
+                  {
+                    label: "Featured",
+                    value: filters.featured,
+                    onChange: (v) => {
+                      setFilter("featured", v);
+                      setPage(1);
+                    },
+                    options: FEATURED_OPTIONS,
+                  },
+                ]}
+              />
+            }
+            selectedCount={selectedIds.size}
+            bulkActions={
+              <RequirePermission permission={PERMISSIONS.PROJECTS_DELETE}>
+                <Button
+                  size="small"
+                  color="error"
+                  variant="contained"
+                  startIcon={<DeleteOutlineIcon fontSize="small" />}
+                  disabled={bulkDeleting}
+                  onClick={handleBulkDelete}
+                >
+                  Delete selected
+                </Button>
+              </RequirePermission>
+            }
+          />
+        }
+        pagination={{
+          page,
+          totalPages: data?.totalPages ?? 1,
+          totalCount: data?.total,
+          onPageChange: setPage,
+        }}
+        rowActions={(row) => (
+          <>
+            <IconButton size="small" onClick={() => setPreviewProject(row)} aria-label={`Preview ${row.title}`}>
+              <VisibilityOutlinedIcon fontSize="small" />
+            </IconButton>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
+              <IconButton
+                size="small"
+                onClick={() => handleTogglePublish(row)}
+                aria-label={row.status === "draft" ? `Publish ${row.title}` : `Unpublish ${row.title}`}
+                title={row.status === "draft" ? "Publish" : "Unpublish"}
+              >
+                {row.status === "draft" ? <PublishOutlinedIcon fontSize="small" /> : <UnpublishedOutlinedIcon fontSize="small" />}
+              </IconButton>
+            </RequirePermission>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
+              <IconButton
+                size="small"
+                onClick={() => navigate(`${ROUTES.adminProjects}/${row._id}/edit`)}
+                aria-label={`Edit ${row.title}`}
+              >
+                <EditOutlinedIcon fontSize="small" />
+              </IconButton>
+            </RequirePermission>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_DELETE}>
+              <IconButton size="small" color="error" onClick={() => handleDelete(row)} aria-label={`Delete ${row.title}`}>
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </RequirePermission>
+          </>
+        )}
+      />
+
+      {previewProject && <ProjectDetails project={previewProject} onClose={() => setPreviewProject(null)} />}
     </>
   );
 }
