@@ -23,6 +23,7 @@ const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
 const ProjectEditor = lazy(() => import("./pages/admin/ProjectEditor"));
 const ManageCategories = lazy(() => import("./pages/admin/ManageCategories"));
+const ManageMedia = lazy(() => import("./pages/admin/ManageMedia"));
 const Messages = lazy(() => import("./pages/admin/Messages"));
 const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
@@ -143,6 +144,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<Fallback />}>
                       <ManageCategories />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="media"
+                  element={
+                    <Suspense fallback={<Fallback />}>
+                      <ManageMedia />
                     </Suspense>
                   }
                 />
