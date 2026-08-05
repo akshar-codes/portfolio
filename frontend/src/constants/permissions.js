@@ -30,7 +30,13 @@ export const PERMISSIONS = Object.freeze({
 
   MEDIA_VIEW: "media.view",
   MEDIA_UPLOAD: "media.upload",
+  MEDIA_EDIT: "media.edit",
   MEDIA_DELETE: "media.delete",
+  MEDIA_MANAGE_FOLDERS: "media.folders",
+
+  NAVIGATION_EDIT: "navigation.edit",
+  FOOTER_EDIT: "footer.edit",
+  SEO_EDIT: "seo.edit",
 
   SETTINGS_EDIT: "settings.edit",
 });

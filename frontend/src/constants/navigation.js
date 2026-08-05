@@ -3,8 +3,13 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import PermMediaOutlinedIcon from "@mui/icons-material/PermMediaOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
+import ViewAgendaOutlinedIcon from "@mui/icons-material/ViewAgendaOutlined";
+import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 import { ROUTES } from "./routes";
 import { PERMISSIONS } from "./permissions";
@@ -22,6 +27,12 @@ import { PERMISSIONS } from "./permissions";
  *
  * Nothing about the sidebar or breadcrumb trail is hand-written per
  * page — both are derived entirely from this tree.
+ *
+ * NOTE: Navigation / Footer / SEO / Site Settings are routed in
+ * App.jsx and were previously reachable only by typing the URL
+ * directly — they were missing from this tree entirely. Added here
+ * alongside Media Library so every shipped admin module is actually
+ * discoverable from the sidebar.
  */
 export const ADMIN_NAV_TREE = [
   {
@@ -69,6 +80,13 @@ export const ADMIN_NAV_TREE = [
     permission: PERMISSIONS.CATEGORIES_VIEW,
   },
   {
+    id: "media",
+    label: "Media Library",
+    path: ROUTES.adminMedia,
+    icon: PermMediaOutlinedIcon,
+    permission: PERMISSIONS.MEDIA_VIEW,
+  },
+  {
     id: "resume",
     label: "Resume",
     path: ROUTES.adminResume,
@@ -81,6 +99,34 @@ export const ADMIN_NAV_TREE = [
     path: ROUTES.adminMessages,
     icon: MailOutlineIcon,
     permission: PERMISSIONS.MESSAGES_VIEW,
+  },
+  {
+    id: "navigation",
+    label: "Navigation",
+    path: ROUTES.adminNavigation,
+    icon: RouteOutlinedIcon,
+    permission: PERMISSIONS.NAVIGATION_EDIT,
+  },
+  {
+    id: "footer",
+    label: "Footer",
+    path: ROUTES.adminFooter,
+    icon: ViewAgendaOutlinedIcon,
+    permission: PERMISSIONS.FOOTER_EDIT,
+  },
+  {
+    id: "seo",
+    label: "SEO",
+    path: ROUTES.adminSeo,
+    icon: TravelExploreOutlinedIcon,
+    permission: PERMISSIONS.SEO_EDIT,
+  },
+  {
+    id: "settings",
+    label: "Site Settings",
+    path: ROUTES.adminSettings,
+    icon: SettingsOutlinedIcon,
+    permission: PERMISSIONS.SETTINGS_EDIT,
   },
 ];
 
