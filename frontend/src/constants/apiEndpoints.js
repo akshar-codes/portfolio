@@ -73,6 +73,17 @@ export const API_ENDPOINTS = {
 
   // Media library (admin-only)
   adminMedia: "/admin/media",
+  adminMediaById: (id) => `/admin/media/${id}`,
+  adminMediaReplace: (id) => `/admin/media/${id}/replace`,
+  adminMediaRestore: (id) => `/admin/media/${id}/restore`,
+  adminMediaPermanent: (id) => `/admin/media/${id}/permanent`,
+  adminMediaBulkDelete: "/admin/media/bulk-delete",
+  adminMediaBulkRestore: "/admin/media/bulk-restore",
+  adminMediaBulkPermanentDelete: "/admin/media/bulk-permanent-delete",
+
+  // Media folders (admin-only)
+  adminMediaFolders: "/admin/media-folders",
+  adminMediaFolderById: (id) => `/admin/media-folders/${id}`,
 
   // Admin auth
   adminLogin: "/admin/login",

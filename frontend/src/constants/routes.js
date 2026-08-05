@@ -19,4 +19,9 @@ export const ROUTES = {
   adminCategories: "/admin/categories",
   adminResume: "/admin/resume",
   adminMessages: "/admin/messages",
+  adminMedia: "/admin/media",
+  adminNavigation: "/admin/navigation",
+  adminFooter: "/admin/footer",
+  adminSeo: "/admin/seo",
+  adminSettings: "/admin/settings",
 };
