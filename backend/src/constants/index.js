@@ -31,9 +31,17 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/gif",
 ]);
 
-/* ── Media library ────────────────────────────────────────────────── */
+/* ── Media library ─────────────────────────────────────────────────
+ * MEDIA_SORT_FIELDS / DEFAULT_MEDIA_SORT_FIELD back the admin Media
+ * Library dashboard's sortable columns (see services/mediaService.js
+ * buildSort) — centralized here for the same drift-prevention reason
+ * as PROJECT_ADMIN_SORT_FIELDS below.
+ * ------------------------------------------------------------------ */
 export const MEDIA_DEFAULT_FOLDER = "general";
 export const MAX_MEDIA_TAGS = 20;
+export const MEDIA_CAPTION_MAX_LENGTH = 300;
+export const MEDIA_SORT_FIELDS = ["createdAt", "originalName", "bytes"];
+export const DEFAULT_MEDIA_SORT_FIELD = "createdAt";
 
 /* ── Content publish/draft workflow ───────────────────────────────────
  * Applies to every CMS resource with a public-facing representation:
@@ -41,9 +49,10 @@ export const MAX_MEDIA_TAGS = 20;
  * About, Resume) and list resources (Project, Category).
  *
  * Deliberately NOT applied to Media (admin-only asset registry, no
- * public route — "publish" has no meaning for a raw asset) or to
- * Messages (transactional records, not content — see MESSAGE_STATUSES
- * below for their own read/unread concept instead).
+ * public route — "publish" has no meaning for a raw asset; it has its
+ * own active/trash concept instead, see MEDIA_DEFAULT_FOLDER above) or
+ * to Messages (transactional records, not content — see
+ * MESSAGE_STATUSES below for their own read/unread concept instead).
  *
  * IMPORTANT: public-read gating checks `status === CONTENT_STATUS_DRAFT`
  * (never `!== CONTENT_STATUS_PUBLISHED`). Mongoose does not backfill
