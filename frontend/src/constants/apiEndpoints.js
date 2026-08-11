@@ -41,9 +41,21 @@ export const API_ENDPOINTS = {
   adminProjects: "/admin/projects",
   adminProjectById: (id) => `/admin/projects/${id}`,
 
-  // Messages
+  // Messages — one base path ("/messages") shared by the public POST
+  // (contact form) and every protected admin action below; there is
+  // no separate "/admin/messages" path, unlike Categories/Projects, so
+  // these keys are deliberately NOT prefixed "admin*".
   messages: "/messages",
   messageById: (id) => `/messages/${id}`,
+  messagesSummary: "/messages/summary",
+  messageStatus: (id) => `/messages/${id}/status`,
+  messageArchive: (id) => `/messages/${id}/archive`,
+  messageRestore: (id) => `/messages/${id}/restore`,
+  messageSpam: (id) => `/messages/${id}/spam`,
+  messagesBulkStatus: "/messages/bulk-status",
+  messagesBulkArchive: "/messages/bulk-archive",
+  messagesBulkRestore: "/messages/bulk-restore",
+  messagesBulkDelete: "/messages/bulk-delete",
 
   // Site Settings
   siteSettings: "/site-settings",
