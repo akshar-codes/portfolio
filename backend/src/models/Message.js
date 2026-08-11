@@ -36,6 +36,60 @@ const messageSchema = new mongoose.Schema(
       },
       default: DEFAULT_MESSAGE_STATUS,
     },
+
+    /* ── Archive workflow ────────────────────────────────────────────
+     * Independent of `status` (read/unread) — mirrors an email
+     * client's inbox/archive split rather than overloading `status`
+     * with a third state. A message can be read AND archived, or
+     * unread AND archived; the two dimensions never conflict.
+     * ---------------------------------------------------------------- */
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+
+    /* ── Spam detection support ───────────────────────────────────────
+     * Populated by utils/spamDetector.js at submission time — a
+     * deterministic, explainable heuristic scorer, not an ML
+     * classifier or third-party service — and independently
+     * overridable by an admin via PATCH /:id/spam. `spamScore` /
+     * `spamReasons` are retained even after an admin overrides
+     * `isSpam`, so the original heuristic verdict stays visible and
+     * auditable in the Message Details view.
+     * ---------------------------------------------------------------- */
+    isSpam: {
+      type: Boolean,
+      default: false,
+    },
+    spamScore: {
+      type: Number,
+      default: 0,
+      min: [0, "spamScore cannot be negative"],
+      max: [100, "spamScore cannot exceed 100"],
+    },
+    spamReasons: {
+      type: [String],
+      default: [],
+    },
+
+    /* ── Submission metadata ──────────────────────────────────────────
+     * Best-effort, captured from the request at submission time (see
+     * controllers/messageController.js sendMessage). Never required —
+     * IP/UA can legitimately be unavailable behind certain proxies,
+     * and that alone is never a reason to reject a genuine message.
+     * ---------------------------------------------------------------- */
+    ipAddress: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [64, "IP address must not exceed 64 characters"],
+    },
+    userAgent: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [500, "User agent must not exceed 500 characters"],
+    },
   },
   {
     timestamps: true,
@@ -44,6 +98,9 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ createdAt: -1 });
 messageSchema.index({ status: 1, createdAt: -1 });
+messageSchema.index({ isArchived: 1, createdAt: -1 });
+messageSchema.index({ isSpam: 1, createdAt: -1 });
+messageSchema.index({ ipAddress: 1, createdAt: -1 });
 
 const Message = mongoose.model("Message", messageSchema);
 
