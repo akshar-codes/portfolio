@@ -8,18 +8,20 @@ import ListItemText from "@mui/material/ListItemText";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import { ADMIN_NAV_TREE } from "../../constants/navigation";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useMessageSummaryQuery } from "../../hooks/useMessages";
 
 function isNodeActive(node, pathname) {
   if (!node.path) return false;
   return node.path === "/admin/dashboard" ? pathname === node.path : pathname.startsWith(node.path);
 }
 
-function NavNode({ node, depth, pathname, can, onNavigate }) {
+function NavNode({ node, depth, pathname, can, onNavigate, badges }) {
   if (node.hidden || (node.permission && !can(node.permission))) return null;
 
   const visibleChildren = (node.children ?? []).filter(
@@ -28,6 +30,7 @@ function NavNode({ node, depth, pathname, can, onNavigate }) {
   const active = isNodeActive(node, pathname) || visibleChildren.some((c) => isNodeActive(c, pathname));
   const [open, setOpen] = useState(active);
   const Icon = node.icon;
+  const badgeCount = badges?.[node.id];
 
   if (visibleChildren.length === 0) {
     return (
@@ -46,6 +49,14 @@ function NavNode({ node, depth, pathname, can, onNavigate }) {
         <ListItemText primaryTypographyProps={{ fontSize: 14, fontWeight: active ? 600 : 500 }}>
           {node.label}
         </ListItemText>
+        {typeof badgeCount === "number" && badgeCount > 0 && (
+          <Chip
+            size="small"
+            color="primary"
+            label={badgeCount > 99 ? "99+" : badgeCount}
+            sx={{ height: 20, fontSize: 11, ml: 1 }}
+          />
+        )}
       </ListItemButton>
     );
   }
@@ -70,6 +81,7 @@ function NavNode({ node, depth, pathname, can, onNavigate }) {
             pathname={pathname}
             can={can}
             onNavigate={onNavigate}
+            badges={badges}
           />
         ))}
       </Collapse>
@@ -86,6 +98,12 @@ export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const { can } = usePermissions();
 
+  // Shares the same polled query (and therefore the same underlying
+  // network request) as the Dashboard widget and the notification
+  // watcher — see hooks/useMessages.js useMessageSummaryQuery.
+  const { data: summary } = useMessageSummaryQuery();
+  const badges = { messages: summary?.unreadCount ?? 0 };
+
   return (
     <Box className="flex flex-col h-full" sx={{ bgcolor: "background.paper" }}>
       <Box className="px-5 py-5">
@@ -97,7 +115,15 @@ export default function Sidebar({ onNavigate }) {
       <Box className="flex-1 overflow-y-auto py-2">
         <List disablePadding>
           {ADMIN_NAV_TREE.map((node) => (
-            <NavNode key={node.id} node={node} depth={0} pathname={location.pathname} can={can} onNavigate={onNavigate} />
+            <NavNode
+              key={node.id}
+              node={node}
+              depth={0}
+              pathname={location.pathname}
+              can={can}
+              onNavigate={onNavigate}
+              badges={badges}
+            />
           ))}
         </List>
       </Box>

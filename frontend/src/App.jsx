@@ -24,7 +24,10 @@ const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
 const ProjectEditor = lazy(() => import("./pages/admin/ProjectEditor"));
 const ManageCategories = lazy(() => import("./pages/admin/ManageCategories"));
 const ManageMedia = lazy(() => import("./pages/admin/ManageMedia"));
-const Messages = lazy(() => import("./pages/admin/Messages"));
+// Rewritten onto the DataTable/React-Query admin architecture (see
+// pages/admin/ManageMessages.jsx) — replaces the legacy
+// pages/admin/Messages.jsx, which is now orphaned and can be deleted.
+const ManageMessages = lazy(() => import("./pages/admin/ManageMessages"));
 const ManageResume = lazy(() => import("./pages/admin/ManageResume"));
 const ManageProfile = lazy(() => import("./pages/admin/ManageProfile"));
 const ManageAbout = lazy(() => import("./pages/admin/ManageAbout"));
@@ -167,7 +170,7 @@ export default function App() {
                   path="messages"
                   element={
                     <Suspense fallback={<Fallback />}>
-                      <Messages />
+                      <ManageMessages />
                     </Suspense>
                   }
                 />
