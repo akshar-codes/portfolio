@@ -20,19 +20,17 @@ export const PERMISSIONS = Object.freeze({
 
   CATEGORIES_VIEW: "categories.view",
   CATEGORIES_CREATE: "categories.create",
-  CATEGORIES_EDIT: "categories.edit",
   CATEGORIES_DELETE: "categories.delete",
 
   RESUME_EDIT: "resume.edit",
 
   MESSAGES_VIEW: "messages.view",
+  MESSAGES_EDIT: "messages.edit",
   MESSAGES_DELETE: "messages.delete",
 
   MEDIA_VIEW: "media.view",
   MEDIA_UPLOAD: "media.upload",
-  MEDIA_EDIT: "media.edit",
   MEDIA_DELETE: "media.delete",
-  MEDIA_MANAGE_FOLDERS: "media.folders",
 
   NAVIGATION_EDIT: "navigation.edit",
   FOOTER_EDIT: "footer.edit",
