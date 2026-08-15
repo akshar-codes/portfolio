@@ -150,6 +150,40 @@ export default function Navbar() {
                 );
               })}
 
+            {/* Resume download CTA — shown when enabled in Site Settings.
+                Rendered as a subtle outlined link (distinct from the solid
+                nav CTA) so the two don't compete visually. Desktop-only:
+                the mobile bottom-tab bar is too narrow for an extra item. */}
+            {settings?.resumeDownload?.enabled && settings?.resumeDownload?.url && (
+              <a
+                href={settings.resumeDownload.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="no-underline"
+                style={{ textDecoration: "none" }}
+              >
+                <button
+                  className="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "var(--accent)",
+                    border: "1px solid var(--accent)",
+                    fontFamily: "Inter, sans-serif",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--accent)";
+                    e.currentTarget.style.color = "#1c1c1e";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "var(--accent)";
+                  }}
+                >
+                  {settings.resumeDownload.label || "Download CV"}
+                </button>
+              </a>
+            )}
+
             {nav?.ctaEnabled && nav?.ctaUrl && (
               <Link to={nav.ctaUrl} className="no-underline" style={{ textDecoration: "none" }}>
                 <button
@@ -171,6 +205,7 @@ export default function Navbar() {
           </div>
         </nav>
       </header>
+
 
       <nav
         className="bottom-nav md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch justify-around rounded-t-2xl overflow-x-auto"

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { usePublicFooter, usePublicSiteSettings } from "../../hooks/usePublicSite";
 import { useProfile } from "../../hooks/useProfile";
@@ -13,12 +14,12 @@ function formatAddress(address) {
 }
 
 /**
- * Site-wide footer — columns/links/description/copyright/newsletter
- * from the Footer singleton, social icons from Profile.socialLinks
- * (gated by Footer.showSocialLinks AND SiteSettings.socialLinksEnabled,
- * matching the admin UI's own documented relationship between those
- * two flags), contact info from SiteSettings (gated by
- * Footer.showContactInfo).
+ * Site-wide footer — columns/links/description/copyright/newsletter/
+ * legal links from the Footer singleton, social icons from
+ * Profile.socialLinks (gated by Footer.showSocialLinks AND
+ * SiteSettings.socialLinksEnabled, matching the admin UI's own documented
+ * relationship between those two flags), contact info from SiteSettings
+ * (gated by Footer.showContactInfo), and logo/site-name from SiteSettings.
  *
  * Newsletter signup renders the CMS-configured copy, but submission is
  * intentionally inert — the backend Footer.newsletter schema is
@@ -56,6 +57,10 @@ export default function Footer() {
   const contactPhone = settings?.contactPhones?.[0]?.phone || profile?.phone || "";
   const contactAddress = formatAddress(settings?.contactAddress) || profile?.location || "";
   const newsletter = footer.newsletter ?? {};
+  const legalLinks = [...(footer.legalLinks ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const siteName = settings?.siteName || "Portfolio";
+  const logoUrl = settings?.logo?.url || "";
 
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
@@ -65,6 +70,24 @@ export default function Footer() {
   return (
     <footer className="mt-24 pt-12 pb-28 md:pb-12" style={{ borderTop: "1px solid var(--border)" }}>
       <div className="section-container">
+        {/* ── Footer logo / site name ──────────────────────────────── */}
+        <div className="mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 no-underline" style={{ textDecoration: "none" }}>
+            {logoUrl ? (
+              <img src={logoUrl} alt={siteName} style={{ height: 30, width: "auto" }} />
+            ) : (
+              <>
+                <span className="font-mono text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {siteName}
+                </span>
+                <span className="font-mono text-2xl font-black" style={{ color: "var(--accent)", lineHeight: 1 }}>
+                  .
+                </span>
+              </>
+            )}
+          </Link>
+        </div>
+
         {footer.description && (
           <div
             className="font-mono text-sm leading-relaxed max-w-md mb-10"
@@ -203,9 +226,30 @@ export default function Footer() {
         )}
 
         <hr className="section-divider mt-10 mb-5" />
-        <p className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>
-          {footer.copyrightText || `© ${new Date().getFullYear()} All rights reserved.`}
-        </p>
+
+        {/* ── Bottom bar: copyright + legal links ─────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>
+            {footer.copyrightText || `© ${new Date().getFullYear()} All rights reserved.`}
+          </p>
+
+          {legalLinks.length > 0 && (
+            <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {legalLinks.map((link) => (
+                <a
+                  key={link._id ?? link.url}
+                  href={link.url}
+                  className="font-mono text-xs no-underline transition-colors duration-200"
+                  style={{ color: "var(--text-muted)", textDecoration: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          )}
+        </div>
       </div>
     </footer>
   );
