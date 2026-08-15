@@ -10,15 +10,12 @@ import Header from "./Header";
 import PageContainer from "./PageContainer";
 import Footer from "./Footer";
 import MessageNotificationWatcher from "../../components/notifications/MessageNotificationWatcher";
+import GlobalSearch from "../../components/common/GlobalSearch";
 import { useAdminStyles } from "../../hooks/useAdminStyles";
 import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
+import { useGlobalSearch } from "../../hooks/useGlobalSearch";
 
 export default function AdminLayout() {
-  // Legacy admin.css stays loaded so pages not yet migrated onto this
-  // component library (ManageResume, ManageAbout, ManageProfile,
-  // Dashboard) keep their existing styling untouched. New components
-  // below never depend on it — safe to delete this line (and the
-  // stylesheet) once every admin page has been migrated.
   useAdminStyles();
 
   const theme = useTheme();
@@ -28,13 +25,13 @@ export default function AdminLayout() {
   const trail = useBreadcrumbs();
   const pageTitle = trail[trail.length - 1]?.label ?? "Dashboard";
 
+  // Registers the window-level Cmd+K listener and owns the open state
+  const { isOpen, close } = useGlobalSearch();
+
   return (
     <>
-      {/* Headless — renders nothing. Polls the shared message summary
-       * query and surfaces a toast when the unread count increases,
-       * so it needs to be mounted exactly once, app-wide, regardless
-       * of which admin page is currently active. */}
       <MessageNotificationWatcher />
+      <GlobalSearch open={isOpen} onClose={close} />
 
       <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
         {isDesktop && (

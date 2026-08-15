@@ -10,8 +10,10 @@ import MenuItem from "@mui/material/MenuItem";
 import Avatar from "@mui/material/Avatar";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
+import Tooltip from "@mui/material/Tooltip";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SearchIcon from "@mui/icons-material/Search";
 
 import Breadcrumbs from "./Breadcrumbs";
 import api from "../../services/api";
@@ -59,6 +61,15 @@ export default function Header({ onMenuClick, pageTitle }) {
             <Breadcrumbs />
           </Box>
         </Box>
+
+        <Tooltip title="Search (Ctrl+K)">
+          <IconButton
+            onClick={() => window.dispatchEvent(new Event("open-global-search"))}
+            aria-label="Global search"
+          >
+            <SearchIcon />
+          </IconButton>
+        </Tooltip>
 
         <IconButton
           onClick={(e) => setAnchorEl(e.currentTarget)}
