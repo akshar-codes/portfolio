@@ -3,7 +3,7 @@ import {
   fetchSeoPublic,
   patchSeo,
   setSeoStatus,
-} from "../services/seoService.js";
+} from "../services/seo.service.js";
 import { createSingletonController } from "./SingletonController.js";
 
 const service = {

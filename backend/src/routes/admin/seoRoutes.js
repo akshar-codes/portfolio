@@ -6,7 +6,7 @@ import {
   publishSeo,
   unpublishSeo,
 } from "../../controllers/seoController.js";
-import { updateSeoValidator } from "../../validators/seoValidators.js";
+import { updateSeoValidator } from "../../validators/seo.validator.js";
 
 const router = express.Router();
 
