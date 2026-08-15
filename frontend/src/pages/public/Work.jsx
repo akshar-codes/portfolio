@@ -1,268 +1,284 @@
 import { useState } from "react";
-import { NorthEast as NorthEastIcon, GitHub as GitHubIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "@mui/icons-material";
+import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
-const PROJECTS = [
-  {
-    number: "01",
-    title: "Kidney Disease\nDetection",
-    subtitle: "Deep Learning, Cloud Deployment",
-    description:
-      "End-to-end kidney tumor detection using VGG-16, MLflow, DVC, and deployed on AWS.",
-    tags: ["Keras", "MLflow", "DVC", "AWS"],
-    liveUrl: "#",
-    githubUrl: "https://github.com/gupta-akshar",
-    previewImage: "/projects/kidney-detection.png",
-    previewLabel: "Kidney Tumor Classification",
-  },
-  {
-    number: "02",
-    title: "Real Estate\nSearch Engine",
-    subtitle: "Full Stack, Recommendation Engine",
-    description:
-      "Production-grade real estate portal with smart search, filter, and property recommendations — built during internship at 99Acres, Info Edge.",
-    tags: ["React", "Node.js", "MongoDB", "Express"],
-    liveUrl: "#",
-    githubUrl: "https://github.com/gupta-akshar",
-    previewImage: "/projects/real-estate.png",
-    previewLabel: "Property Search Portal",
-  },
-  {
-    number: "03",
-    title: "DSA Visualizer",
-    subtitle: "Educational Tool, Web App",
-    description:
-      "Interactive algorithm visualizer covering sorting, graph traversal, and tree operations — designed to accelerate DSA learning.",
-    tags: ["React", "JavaScript", "Canvas API"],
-    liveUrl: "#",
-    githubUrl: "https://github.com/gupta-akshar",
-    previewImage: "/projects/dsa-visualizer.png",
-    previewLabel: "Algorithm Visualizer",
-  },
-];
+import { usePublicProjectsQuery } from "../../hooks/usePublicProjects";
+import { usePublicCategoriesQuery } from "../../hooks/usePublicCategories";
+import { usePublicSeo } from "../../hooks/usePublicSite";
+import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { flattenTechNames } from "../../utils/projectHelpers";
+import { excerptFromHtml } from "../../utils/html";
+import { SkeletonGrid } from "../../components/public/Skeletons";
+import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
+import ProjectDetailsModal from "../../components/public/ProjectDetailsModal";
 
-/* Mini browser-window chrome that wraps each project screenshot */
+const PAGE_SIZE = 6;
+
+const inputStyles = {
+  padding: "12px 16px",
+  backgroundColor: "var(--bg-card)",
+  border: "1px solid var(--border)",
+  borderRadius: "8px",
+  color: "var(--text-primary)",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "0.85rem",
+  outline: "none",
+};
+
+/* ------------------------------------------------------------------ *
+ * BrowserFrame — preserved from the original single-project layout,
+ * reused per-card in the new grid.
+ * ------------------------------------------------------------------ */
 function BrowserFrame({ image, label }) {
   return (
-    <div
-      className="rounded-xl overflow-hidden shadow-2xl"
-      style={{
-        border: "1px solid var(--border)",
-        backgroundColor: "#1e1e1e",
-      }}
-    >
-      {/* Fake browser toolbar */}
-      <div
-        className="flex items-center gap-2 px-4 py-2"
-        style={{
-          backgroundColor: "#2a2a2d",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        {/* Window dots */}
-        <span
-          className="w-2.5 h-2.5 rounded-full"
-          style={{ backgroundColor: "#ff5f57" }}
-        />
-        <span
-          className="w-2.5 h-2.5 rounded-full"
-          style={{ backgroundColor: "#febc2e" }}
-        />
-        <span
-          className="w-2.5 h-2.5 rounded-full"
-          style={{ backgroundColor: "#28c840" }}
-        />
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ border: "1px solid var(--border)", backgroundColor: "#1e1e1e" }}>
+      <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: "#2a2a2d", borderBottom: "1px solid var(--border)" }}>
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#ff5f57" }} />
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#febc2e" }} />
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#28c840" }} />
+      </div>
+      <div style={{ aspectRatio: "16 / 10", backgroundColor: "#f5f5f5", position: "relative", overflow: "hidden" }}>
+        {image ? (
+          <img
+            src={image}
+            alt={label}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <p className="font-sans text-sm font-semibold" style={{ color: "#333" }}>
+              {label}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        {/* Fake address bar */}
-        <div
-          className="flex-1 ml-3 px-3 py-1 rounded-md font-mono text-xs truncate"
-          style={{
-            backgroundColor: "#1c1c1e",
-            color: "var(--text-muted)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          127.0.0.1:5000
+function ProjectCard({ project, onViewDetails }) {
+  const techNames = flattenTechNames(project.technologies);
+  const liveUrl = project.liveUrl || project.projectUrl;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <button
+        type="button"
+        onClick={() => onViewDetails(project)}
+        className="cursor-pointer border-0 p-0 bg-transparent text-left w-full"
+      >
+        <BrowserFrame image={project.image?.url} label={project.title} />
+      </button>
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+            {project.title}
+          </h3>
+          {project.category?.name && (
+            <span className="font-mono text-xs" style={{ color: "var(--accent)" }}>
+              {project.category.name}
+            </span>
+          )}
         </div>
+        {project.featured && (
+          <span
+            className="font-mono text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
+            style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
+          >
+            FEATURED
+          </span>
+        )}
       </div>
 
-      {/* Screenshot area */}
-      <div
-        style={{
-          aspectRatio: "16 / 10",
-          backgroundColor: "#f5f5f5",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src={image}
-          alt={label}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "top",
-            display: "block",
-          }}
-          onError={(e) => {
-            // Fallback: hide img and show label
-            e.target.style.display = "none";
-            e.target.nextSibling.style.display = "flex";
-          }}
-        />
-        {/* Fallback when no screenshot image exists */}
-        <div
-          style={{
-            display: "none",
-            position: "absolute",
-            inset: 0,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-            gap: "8px",
-            backgroundColor: "#f5f5f5",
-          }}
-        >
-          <p
-            className="font-sans text-lg font-semibold"
-            style={{ color: "#333" }}
-          >
-            {label}
-          </p>
-          <p className="font-mono text-xs" style={{ color: "#999" }}>
-            Add screenshot to preview
-          </p>
+      {project.description && (
+        <p className="font-mono text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          {excerptFromHtml(project.description, 110)}
+        </p>
+      )}
+
+      {techNames.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {techNames.slice(0, 4).map((tech, i) => (
+            <span key={tech} className="font-mono text-xs" style={{ color: "var(--accent)" }}>
+              {tech}
+              {i < Math.min(techNames.length, 4) - 1 && <span style={{ color: "var(--text-muted)" }}>,</span>}
+            </span>
+          ))}
+          {techNames.length > 4 && (
+            <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>
+              +{techNames.length - 4}
+            </span>
+          )}
         </div>
+      )}
+
+      <div className="flex items-center gap-3 mt-1">
+        <button
+          type="button"
+          onClick={() => onViewDetails(project)}
+          className="font-mono text-xs font-semibold px-4 py-2 rounded-full border-0 cursor-pointer"
+          style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
+        >
+          View Details
+        </button>
+        {liveUrl && (
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View live project"
+            className="arrow-btn arrow-btn-dark no-underline"
+            style={{ width: 40, height: 40 }}
+          >
+            <OpenInNewIcon sx={{ fontSize: 18 }} />
+          </a>
+        )}
+        {project.githubUrl && (
+          <a
+            href={project.githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View source on GitHub"
+            className="arrow-btn arrow-btn-dark no-underline"
+            style={{ width: 40, height: 40 }}
+          >
+            <GitHubIcon sx={{ fontSize: 18 }} />
+          </a>
+        )}
       </div>
     </div>
   );
 }
 
 export default function Work() {
-  const [current, setCurrent] = useState(0);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedProject, setSelectedProject] = useState(null);
 
-  const prev = () =>
-    setCurrent((i) => (i - 1 + PROJECTS.length) % PROJECTS.length);
-  const next = () => setCurrent((i) => (i + 1) % PROJECTS.length);
+  const debouncedSearch = useDebouncedValue(search, 350);
 
-  const project = PROJECTS[current];
+  const { data: categories } = usePublicCategoriesQuery();
+  const { data, isLoading, isFetching, isError, error, refetch } = usePublicProjectsQuery({
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    category: category || undefined,
+  });
+  const { data: seo } = usePublicSeo();
+
+  useDocumentHead({
+    title: seo?.defaultMetaTitle ? `Work — ${seo.defaultMetaTitle}` : "Work",
+    description: seo?.defaultMetaDescription,
+    image: seo?.openGraph?.image || seo?.defaultOgImage,
+    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/work` : undefined,
+  });
+
+  const projects = data?.projects ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  const handleFilterChange = (setter) => (value) => {
+    setter(value);
+    setPage(1);
+  };
+
+  if (isError) {
+    return (
+      <div className="page-enter">
+        <section className="section-container py-16">
+          <PublicError message={error?.message} onRetry={refetch} />
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="page-enter">
-      <section className="section-container py-16 min-h-[calc(100vh-80px)] flex items-center">
-        <div className="flex flex-col lg:flex-row items-start justify-between gap-12 w-full">
-          {/* Left: Project Info */}
-          <div className="flex-1 max-w-md">
-            {/* Outlined number */}
+      <section className="section-container py-16">
+        <div className="flex flex-col sm:flex-row gap-4 mb-10">
+          <div className="relative flex-1">
+            <SearchIcon
+              sx={{ fontSize: 18 }}
+              style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
+            />
+            <input
+              type="text"
+              placeholder="Search projects…"
+              value={search}
+              onChange={(e) => handleFilterChange(setSearch)(e.target.value)}
+              style={{ ...inputStyles, width: "100%", paddingLeft: 40 }}
+            />
+          </div>
+          <select
+            value={category}
+            onChange={(e) => handleFilterChange(setCategory)(e.target.value)}
+            style={{ ...inputStyles, minWidth: 200 }}
+          >
+            <option value="">All categories</option>
+            {(categories ?? []).map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.name} ({cat.projectCount})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {isLoading && <SkeletonGrid count={6} cardLines={3} className="sm:grid-cols-2 lg:grid-cols-3" />}
+
+        {!isLoading && projects.length === 0 && (
+          <PublicEmpty
+            icon="🗂️"
+            title="No projects found"
+            message={search || category ? "Try a different search term or category." : "Projects will appear here once published."}
+          />
+        )}
+
+        {!isLoading && projects.length > 0 && (
+          <>
             <div
-              className="font-mono font-bold mb-6"
-              style={{
-                fontSize: "6rem",
-                WebkitTextStroke: "2px rgba(255,255,255,0.15)",
-                color: "transparent",
-                lineHeight: 1,
-                letterSpacing: "-4px",
-              }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10"
+              style={{ opacity: isFetching ? 0.6 : 1, transition: "opacity 0.15s ease" }}
             >
-              {project.number}
-            </div>
-
-            <h2
-              className="font-mono text-4xl md:text-5xl font-bold leading-tight mb-4"
-              style={{ color: "var(--accent)", whiteSpace: "pre-line" }}
-            >
-              {project.title}
-            </h2>
-
-            <p
-              className="font-mono text-base font-semibold mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {project.subtitle}
-            </p>
-
-            <p
-              className="font-mono text-base leading-relaxed mb-6"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {project.description}
-            </p>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-3 mb-8">
-              {project.tags.map((tag, i) => (
-                <span
-                  key={tag}
-                  className="font-mono text-sm"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {tag}
-                  {i < project.tags.length - 1 && (
-                    <span
-                      style={{ color: "var(--text-muted)", marginLeft: "6px" }}
-                    >
-                      ,
-                    </span>
-                  )}
-                </span>
+              {projects.map((project) => (
+                <ProjectCard key={project._id} project={project} onViewDetails={setSelectedProject} />
               ))}
             </div>
 
-            <hr className="section-divider mb-8" />
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 mt-2">
-              <a
-                href={project.liveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="arrow-btn arrow-btn-dark no-underline"
-                aria-label="View live project"
-              >
-                <NorthEastIcon sx={{ fontSize: 22 }} />
-              </a>
-
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="arrow-btn arrow-btn-dark no-underline"
-                aria-label="View source on GitHub"
-              >
-                <GitHubIcon sx={{ fontSize: 22 }} />
-              </a>
-            </div>
-          </div>
-
-          {/* Right: Project Preview */}
-          <div className="flex-1 max-w-2xl w-full flex-shrink-0">
-            <BrowserFrame
-              image={project.previewImage}
-              label={project.previewLabel}
-            />
-
-            {/* Pagination Controls */}
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={prev}
-                className="pagination-btn"
-                aria-label="Previous project"
-              >
-                <ChevronLeftIcon sx={{ fontSize: 24 }} />
-              </button>
-
-              <button
-                onClick={next}
-                className="pagination-btn"
-                aria-label="Next project"
-              >
-                <ChevronRightIcon sx={{ fontSize: 24 }} />
-              </button>
-            </div>
-          </div>
-        </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-14">
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  aria-label="Previous page"
+                  style={{ opacity: page === 1 ? 0.4 : 1 }}
+                >
+                  ←
+                </button>
+                <span className="font-mono text-sm" style={{ color: "var(--text-secondary)" }}>
+                  {page} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="pagination-btn"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  aria-label="Next page"
+                  style={{ opacity: page === totalPages ? 0.4 : 1 }}
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
+
+      {selectedProject && (
+        <ProjectDetailsModal project={selectedProject} onClose={() => setSelectedProject(null)} />
+      )}
     </div>
   );
 }
-

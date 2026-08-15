@@ -1,155 +1,178 @@
 import { useState } from "react";
+import { Download as DownloadIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
-const TABS = ["Experience", "Education", "Certification", "Skills", "About me"];
+import { useResume } from "../../hooks/useResume";
+import { useProfile } from "../../hooks/useProfile";
+import { usePublicSeo } from "../../hooks/usePublicSite";
+import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { excerptFromHtml } from "../../utils/html";
+import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
+import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
 
-const RESUME_DATA = {
-  Experience: {
-    heading: "My experience",
-    subheading:
-      "Demonstrated expertise through impactful internships and personal projects, delivering innovative & high-quality solutions.",
-    items: [
-      {
-        dateRange: "06 Jan. 2025 - 30 Jun. 2025",
-        role: "SDE Intern",
-        details: ["99Acres, Info Edge, Noida"],
-      },
-      {
-        dateRange: "Jul. 2024 - Aug. 2024",
-        role: "ML Intern",
-        details: ["IRDE lab, DRDO, Dehradun"],
-      },
-      {
-        dateRange: "01 Jun. 2024 - 29 Jun. 2024",
-        role: "Participant",
-        details: ["Amazon ML School, Remote"],
-      },
-      {
-        dateRange: "Apr. 24 - Aug. 24",
-        role: "External Relations Officer",
-        details: ["GEU ACM, Dehradun"],
-      },
-    ],
-  },
-  Education: {
-    heading: "My education",
-    subheading:
-      "Academic foundation built through rigorous coursework and hands-on learning experiences.",
-    items: [
-      {
-        dateRange: "2021 - 2025",
-        role: "B.Tech Computer Science",
-        details: ["Graphic Era University, Dehradun", "CGPA: 8.4 / 10"],
-      },
-      {
-        dateRange: "2019 - 2021",
-        role: "Class XII — PCM",
-        details: ["St. Joseph's Academy, Dehradun", "Percentage: 92.8%"],
-      },
-      {
-        dateRange: "2009 - 2019",
-        role: "Class X",
-        details: ["St. Joseph's Academy, Dehradun", "Percentage: 94.2%"],
-      },
-    ],
-  },
-  Certification: {
-    heading: "My certifications",
-    subheading:
-      "Industry-recognised credentials validating expertise across machine learning, development, and cloud platforms.",
-    items: [
-      {
-        dateRange: "2024",
-        role: "Machine Learning Specialization",
-        details: ["Coursera — Andrew Ng, Stanford"],
-      },
-      {
-        dateRange: "2024",
-        role: "AWS Cloud Practitioner Essentials",
-        details: ["Amazon Web Services"],
-      },
-      {
-        dateRange: "2023",
-        role: "Full Stack Web Development",
-        details: ["Udemy — Angela Yu"],
-      },
-      {
-        dateRange: "2023",
-        role: "Data Structures & Algorithms",
-        details: ["Striver A2Z DSA Course"],
-      },
-    ],
-  },
-  Skills: {
-    heading: "My skills",
-    subheading:
-      "Versatile in programming, advanced in algorithm design, and experienced in developing solutions across multiple domains.",
-    categories: [
-      {
-        label: "Languages",
-        skills: ["Python", "JavaScript", "Java", "C++", "SQL"],
-      },
-      {
-        label: "ML / AI",
-        skills: ["TensorFlow", "Keras", "Scikit-learn", "MLflow", "OpenCV"],
-      },
-      {
-        label: "Web",
-        skills: ["React", "Node.js", "Express", "MongoDB", "Tailwind CSS"],
-      },
-      {
-        label: "Tools & Cloud",
-        skills: ["Git", "Docker", "AWS", "DVC", "Postman"],
-      },
-    ],
-  },
-  "About me": {
-    heading: "About me",
-    subheading:
-      "AI enthusiast and soon-to-be graduate, driven by a passion for problem-solving and innovation in software development.",
-    info: [
-      { label: "Name", value: "Akshar Gupta" },
-      { label: "Phone", value: "(+91) 9876543210" },
-      { label: "Nationality", value: "Indian" },
-      { label: "Email", value: "akshar2024wrk@gmail.com" },
-      { label: "Freelance", value: "Available" },
-      { label: "Languages", value: "English, Hindi" },
-    ],
-  },
+const TABS = ["Experience", "Education", "Certifications", "Skills", "Languages", "Interests", "About me"];
+
+const AVAILABILITY_LABEL = {
+  available: "Available for work",
+  unavailable: "Not currently available",
+  open_to_offers: "Open to offers",
 };
+
+function sortByOrder(arr = []) {
+  return [...arr].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+function ItemCard({ dateRange, title, subtitle, description, logo }) {
+  return (
+    <div
+      className="rounded-xl p-7 flex flex-col gap-3 transition-all duration-200"
+      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(0,255,136,0.3)")}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+    >
+      <div className="flex items-center justify-between gap-3">
+        {dateRange && (
+          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+            {dateRange}
+          </span>
+        )}
+        {logo && <img src={logo} alt="" className="w-8 h-8 rounded object-cover" />}
+      </div>
+      <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+        {title}
+      </h3>
+      {subtitle && (
+        <p className="font-mono text-xs" style={{ color: "var(--text-secondary)" }}>
+          {subtitle}
+        </p>
+      )}
+      {description && (
+        <p
+          className="font-mono text-sm leading-relaxed"
+          style={{ color: "var(--text-secondary)" }}
+          dangerouslySetInnerHTML={{ __html: description }}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function Resume() {
   const [activeTab, setActiveTab] = useState("Experience");
-  const data = RESUME_DATA[activeTab];
+  const { data: resume, isLoading, isError, error, refetch } = useResume();
+  const { data: profile } = useProfile();
+  const { data: seo } = usePublicSeo();
+
+  useDocumentHead({
+    title: seo?.defaultMetaTitle ? `Resume — ${seo.defaultMetaTitle}` : "Resume",
+    description: resume?.hero?.summary
+      ? excerptFromHtml(resume.hero.summary)
+      : seo?.defaultMetaDescription,
+    image: seo?.openGraph?.image || seo?.defaultOgImage,
+    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/resume` : undefined,
+  });
+
+  if (isError) {
+    return (
+      <div className="page-enter">
+        <section className="section-container py-16">
+          <PublicError message={error?.message} onRetry={refetch} />
+        </section>
+      </div>
+    );
+  }
+
+  const hero = resume?.hero ?? {};
+  const experience = sortByOrder(resume?.experience);
+  const education = sortByOrder(resume?.education);
+  const certifications = sortByOrder(resume?.certifications);
+  const skills = sortByOrder(resume?.skills);
+  const languages = sortByOrder(resume?.languages);
+  const interests = sortByOrder(resume?.interests);
+  const downloads = sortByOrder(resume?.downloads);
+  const primaryDownload = downloads.find((d) => d.fileType === "pdf") ?? downloads[0];
 
   return (
     <div className="page-enter">
-      <section className="section-container py-16">
-        <div className="flex flex-col md:flex-row gap-12 min-h-[500px]">
-          {/* Sidebar Tabs */}
+      <section className="section-container pt-16 pb-10">
+        {isLoading ? (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            <SkeletonBlock className="h-3 w-24" />
+            <SkeletonBlock className="h-10 w-80" />
+            <SkeletonText lines={2} />
+          </div>
+        ) : (
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className="max-w-2xl">
+              {hero.greeting && (
+                <p className="font-mono text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
+                  {hero.greeting}
+                </p>
+              )}
+              {hero.headline && (
+                <h1 className="font-mono text-3xl md:text-4xl font-bold mb-3" style={{ color: "var(--accent)" }}>
+                  {hero.headline}
+                </h1>
+              )}
+              {hero.summary && (
+                <div
+                  className="font-mono text-sm leading-relaxed"
+                  style={{ color: "var(--text-secondary)" }}
+                  dangerouslySetInnerHTML={{ __html: hero.summary }}
+                />
+              )}
+              {hero.availabilityStatus && (
+                <span
+                  className="inline-block mt-3 font-mono text-xs px-3 py-1 rounded-full"
+                  style={{ backgroundColor: "rgba(0,255,136,0.1)", color: "var(--accent)", border: "1px solid rgba(0,255,136,0.25)" }}
+                >
+                  {AVAILABILITY_LABEL[hero.availabilityStatus] ?? hero.availabilityStatus}
+                </span>
+              )}
+            </div>
+
+            {hero.ctaEnabled && primaryDownload && (
+              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="no-underline">
+                <button
+                  className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold border-2 cursor-pointer transition-all duration-200 whitespace-nowrap"
+                  style={{ borderColor: "var(--text-primary)", color: "var(--text-primary)", backgroundColor: "transparent" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--accent)";
+                    e.currentTarget.style.color = "var(--accent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--text-primary)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }}
+                >
+                  {(hero.ctaLabel || "Download CV").toUpperCase()}
+                  <DownloadIcon fontSize="small" />
+                </button>
+              </a>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="section-container py-8">
+        <div className="flex flex-col md:flex-row gap-12 min-h-[400px]">
           <aside className="flex flex-col gap-3 md:w-72 flex-shrink-0">
             {TABS.map((tab) => {
-              const isActive = activeTab === tab;
+              const active = activeTab === tab;
               return (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className="w-full py-4 px-5 rounded-lg text-center text-sm font-semibold cursor-pointer border-0 transition-all duration-200"
                   style={{
-                    backgroundColor: isActive
-                      ? "var(--accent)"
-                      : "var(--bg-card)",
-                    color: isActive ? "#1c1c1e" : "var(--text-primary)",
+                    backgroundColor: active ? "var(--accent)" : "var(--bg-card)",
+                    color: active ? "#1c1c1e" : "var(--text-primary)",
                     fontFamily: "Inter, sans-serif",
                   }}
                   onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = "#333336";
-                    }
+                    if (!active) e.currentTarget.style.backgroundColor = "#333336";
                   }}
                   onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = "var(--bg-card)";
-                    }
+                    if (!active) e.currentTarget.style.backgroundColor = "var(--bg-card)";
                   }}
                 >
                   {tab}
@@ -158,118 +181,191 @@ export default function Resume() {
             })}
           </aside>
 
-          {/* Content Panel */}
           <div className="flex-1 min-w-0">
-            <h2
-              className="font-mono text-3xl md:text-4xl font-bold mb-3"
-              style={{ color: "var(--accent)" }}
-            >
-              {data.heading}
-            </h2>
-            <p
-              className="font-mono text-sm leading-relaxed mb-8 max-w-2xl"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {data.subheading}
-            </p>
+            {isLoading && <SkeletonGrid count={4} cardLines={3} />}
 
-            {/* Experience / Education / Certification */}
-            {data.items && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {data.items.map((item, i) => (
-                  <div
-                    key={i}
-                    className="rounded-xl p-7 flex flex-col gap-3 transition-all duration-200"
-                    style={{
-                      backgroundColor: "var(--bg-card)",
-                      border: "1px solid var(--border)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(0,255,136,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--border)";
-                    }}
-                  >
-                    <span
-                      className="font-mono text-sm"
-                      style={{ color: "var(--accent)" }}
-                    >
-                      {item.dateRange}
-                    </span>
-                    <h3
-                      className="font-mono text-lg font-bold"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {item.role}
-                    </h3>
-                    <ul className="list-none flex flex-col gap-1 mt-1">
-                      {item.details.map((d, j) => (
-                        <li
-                          key={j}
-                          className="flex items-start gap-2 font-mono text-sm"
-                          style={{ color: "var(--text-secondary)" }}
-                        >
-                          <span style={{ color: "var(--accent)" }}>•</span>
-                          {d}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+            {!isLoading && activeTab === "Experience" && (
+              experience.length === 0 ? (
+                <PublicEmpty icon="💼" title="No experience listed yet" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {experience.map((item) => (
+                    <ItemCard
+                      key={item._id}
+                      dateRange={`${item.startDate} — ${item.current ? "Present" : item.endDate}`}
+                      title={item.role}
+                      subtitle={[item.company, item.location].filter(Boolean).join(" · ")}
+                      description={item.description}
+                      logo={item.companyLogo}
+                    />
+                  ))}
+                </div>
+              )
             )}
 
-            {/* Skills */}
-            {data.categories && (
-              <div className="flex flex-col gap-6">
-                {data.categories.map((cat) => (
-                  <div key={cat.label}>
-                    <p
-                      className="font-mono text-xs font-semibold mb-3 tracking-widest uppercase"
-                      style={{ color: "var(--accent)" }}
+            {!isLoading && activeTab === "Education" && (
+              education.length === 0 ? (
+                <PublicEmpty icon="🎓" title="No education listed yet" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {education.map((item) => (
+                    <ItemCard
+                      key={item._id}
+                      dateRange={item.duration}
+                      title={item.institution}
+                      description={item.description}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+
+            {!isLoading && activeTab === "Certifications" && (
+              certifications.length === 0 ? (
+                <PublicEmpty icon="📜" title="No certifications listed yet" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {certifications.map((item) => (
+                    <div
+                      key={item._id}
+                      className="rounded-xl p-7 flex flex-col gap-3"
+                      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
                     >
-                      {cat.label}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {cat.skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
-                          style={{
-                            backgroundColor: "var(--bg-card)",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border)",
-                          }}
+                      <div className="flex items-center justify-between gap-3">
+                        {item.issueDate && (
+                          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+                            {item.issueDate}
+                          </span>
+                        )}
+                        {item.badgeImage && <img src={item.badgeImage} alt="" className="w-8 h-8 rounded object-cover" />}
+                      </div>
+                      <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+                        {item.title}
+                      </h3>
+                      <p className="font-mono text-xs" style={{ color: "var(--text-secondary)" }}>
+                        {item.issuer}
+                      </p>
+                      {item.credentialUrl && (
+                        <a
+                          href={item.credentialUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-mono text-xs no-underline mt-1"
+                          style={{ color: "var(--accent)", textDecoration: "none" }}
                         >
-                          {skill}
-                        </span>
-                      ))}
+                          View credential <OpenInNewIcon sx={{ fontSize: 13 }} />
+                        </a>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )
             )}
 
-            {/* About me — structured info grid */}
-            {data.info && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 max-w-2xl">
-                {data.info.map((item, i) => (
-                  <div key={i} className="flex items-baseline gap-3">
-                    <span
-                      className="font-mono text-sm"
-                      style={{ color: "var(--accent)" }}
+            {!isLoading && activeTab === "Skills" && (
+              skills.length === 0 ? (
+                <PublicEmpty icon="🛠️" title="No skills listed yet" />
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {skills.map((cat) => (
+                    <div key={cat._id}>
+                      <p className="font-mono text-xs font-semibold mb-3 tracking-widest uppercase" style={{ color: "var(--accent)" }}>
+                        {cat.category}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(cat.items ?? []).map((skill) => (
+                          <span
+                            key={skill}
+                            className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
+                            style={{ backgroundColor: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {!isLoading && activeTab === "Languages" && (
+              languages.length === 0 ? (
+                <PublicEmpty icon="🌐" title="No languages listed yet" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {languages.map((lang) => (
+                    <div
+                      key={lang._id}
+                      className="rounded-xl p-5 flex items-center justify-between"
+                      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
                     >
-                      {item.label}
-                    </span>
+                      <span className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {lang.name}
+                      </span>
+                      <span
+                        className="font-mono text-xs px-3 py-1 rounded-full capitalize"
+                        style={{ backgroundColor: "rgba(0,255,136,0.1)", color: "var(--accent)" }}
+                      >
+                        {lang.proficiency}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {!isLoading && activeTab === "Interests" && (
+              interests.length === 0 ? (
+                <PublicEmpty icon="✨" title="No interests listed yet" />
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {interests.map((interest) => (
                     <span
-                      className="font-mono text-sm font-semibold"
-                      style={{ color: "var(--text-primary)" }}
+                      key={interest._id}
+                      className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
+                      style={{ backgroundColor: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
                     >
-                      {item.value}
+                      {interest.name}
                     </span>
+                  ))}
+                </div>
+              )
+            )}
+
+            {!isLoading && activeTab === "About me" && (
+              <div className="flex flex-col gap-8">
+                {resume?.aboutMe?.summary ? (
+                  <div
+                    className="font-mono text-sm leading-relaxed max-w-2xl"
+                    style={{ color: "var(--text-secondary)" }}
+                    dangerouslySetInnerHTML={{ __html: resume.aboutMe.summary }}
+                  />
+                ) : (
+                  <PublicEmpty icon="📝" title="No summary added yet" />
+                )}
+
+                {profile && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 max-w-2xl">
+                    {[
+                      ["Name", profile.name],
+                      ["Email", profile.email],
+                      ["Phone", profile.phone],
+                      ["Location", profile.location],
+                    ]
+                      .filter(([, value]) => value)
+                      .map(([label, value]) => (
+                        <div key={label} className="flex items-baseline gap-3">
+                          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+                            {label}
+                          </span>
+                          <span className="font-mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                            {value}
+                          </span>
+                        </div>
+                      ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -278,4 +374,3 @@ export default function Resume() {
     </div>
   );
 }
-
