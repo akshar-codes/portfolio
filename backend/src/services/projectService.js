@@ -36,7 +36,7 @@ import {
   DEFAULT_CONTENT_STATUS,
   PROJECT_ADMIN_SORT_FIELDS,
   DEFAULT_PROJECT_ADMIN_SORT_FIELD,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ================================================================== *
  * Cache helpers

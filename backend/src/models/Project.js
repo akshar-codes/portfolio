@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../utils/constants.js";
+import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema: one technology group (e.g. "Frontend": ["React","Vite"])

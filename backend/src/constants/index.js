@@ -169,3 +169,26 @@ export const STRUCTURED_DATA_MAX_LENGTH = 5000;
  * ------------------------------------------------------------------ */
 export const PROJECT_ADMIN_SORT_FIELDS = ["order", "title", "createdAt"];
 export const DEFAULT_PROJECT_ADMIN_SORT_FIELD = "order";
+
+/* ── Rich Text ───────────────────────────────────────────────────── */
+export const RICH_TEXT_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "s", "h2", "h3", "ul", "ol", "li", "blockquote", "a"];
+
+/* ── Profile CMS ─────────────────────────────────────────────────── */
+export const PROFILE_LIMITS = {
+  SOCIAL_LINKS_MAX: 10,
+  CTA_BUTTONS_MAX: 5,
+  STATISTICS_MAX: 10,
+};
+
+export const CTA_BUTTON_STYLES = ["primary", "secondary", "outline", "text"];
+
+/* ── About CMS ───────────────────────────────────────────────────── */
+export const ABOUT_LIMITS = {
+  SKILLS_SUMMARY_MAX: 20,
+  SERVICES_MAX: 20,
+  TIMELINE_MAX: 30,
+  HIGHLIGHTS_MAX: 15,
+  PERSONAL_INFO_MAX: 15,
+  IMAGES_MAX: 10,
+};
+

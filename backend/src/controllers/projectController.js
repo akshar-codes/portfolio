@@ -18,7 +18,7 @@ import {
   DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
   CONTENT_STATUS_DRAFT,
   CONTENT_STATUS_PUBLISHED,
-} from "../utils/constants.js";
+} from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
  * GET /api/projects  (public — published only, supports ?search)
