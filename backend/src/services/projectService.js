@@ -277,6 +277,7 @@ export const fetchAllProjectsAdmin = async ({
   search = "",
   status = "",
   featured = "",
+  technology = "",
   sortBy = DEFAULT_PROJECT_ADMIN_SORT_FIELD,
   sortOrder = "asc",
 } = {}) => {
@@ -302,6 +303,13 @@ export const fetchAllProjectsAdmin = async ({
   if (featured === "true") filter.featured = true;
   else if (featured === "false") filter.featured = false;
   Object.assign(filter, buildSearchFilter(search, ["title", "description"]));
+
+  if (technology) {
+    // Escape regex special chars to prevent ReDoS; dot-path query on
+    // the nested { group, items: string[] }[] schema.
+    const escaped = technology.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter["technologies.items"] = { $regex: escaped, $options: "i" };
+  }
 
   const sort = buildAdminSort(sortBy, sortOrder);
 

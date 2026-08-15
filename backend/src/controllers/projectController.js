@@ -64,6 +64,8 @@ export const getAdminProjects = asyncHandler(async (req, res) => {
     typeof req.query.status === "string" ? req.query.status.trim() : "";
   const featured =
     typeof req.query.featured === "string" ? req.query.featured.trim() : "";
+  const technology =
+    typeof req.query.technology === "string" ? req.query.technology.trim() : "";
   const sortBy =
     typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : undefined;
   const sortOrder =
@@ -78,6 +80,7 @@ export const getAdminProjects = asyncHandler(async (req, res) => {
     search,
     status,
     featured,
+    technology,
     sortBy,
     sortOrder,
   });

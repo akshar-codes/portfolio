@@ -40,6 +40,19 @@ export const getMedia = asyncHandler(async (req, res) => {
   const sortOrder =
     typeof req.query.sortOrder === "string" ? req.query.sortOrder.trim() : undefined;
 
+  // Accept only YYYY-MM-DD strings; anything else is ignored rather than
+  // crashing — the service handles invalid Date values gracefully via
+  // its isNaN guard, but rejecting bad input here is cleaner.
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const dateFrom =
+    typeof req.query.dateFrom === "string" && ISO_DATE_RE.test(req.query.dateFrom)
+      ? req.query.dateFrom
+      : "";
+  const dateTo =
+    typeof req.query.dateTo === "string" && ISO_DATE_RE.test(req.query.dateTo)
+      ? req.query.dateTo
+      : "";
+
   const result = await fetchMediaLibrary({
     page,
     limit,
@@ -49,6 +62,8 @@ export const getMedia = asyncHandler(async (req, res) => {
     status,
     sortBy,
     sortOrder,
+    dateFrom,
+    dateTo,
   });
   return sendSuccess(res, result, "Media retrieved successfully");
 });

@@ -36,11 +36,11 @@ import {
 
 const CACHE_PREFIX = "media:";
 
-function buildCacheKey({ page, limit, folder, search, format, status, sortBy, sortOrder }) {
+function buildCacheKey({ page, limit, folder, search, format, status, sortBy, sortOrder, dateFrom, dateTo }) {
   return (
     `${CACHE_PREFIX}page=${page}:limit=${limit}:folder=${folder || "all"}:` +
     `search=${search || ""}:format=${format || "all"}:status=${status}:` +
-    `sort=${sortBy}:${sortOrder}`
+    `sort=${sortBy}:${sortOrder}:dateFrom=${dateFrom || ""}:dateTo=${dateTo || ""}`
   );
 }
 
@@ -116,6 +116,8 @@ export const fetchMediaLibrary = async ({
   status = "active",
   sortBy = DEFAULT_MEDIA_SORT_FIELD,
   sortOrder = "desc",
+  dateFrom = "",
+  dateTo = "",
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
@@ -131,6 +133,8 @@ export const fetchMediaLibrary = async ({
     status: safeStatus,
     sortBy,
     sortOrder,
+    dateFrom,
+    dateTo,
   });
   const cached = cache.get(cacheKey);
   if (cached) return cached;
@@ -139,6 +143,20 @@ export const fetchMediaLibrary = async ({
   if (folder) filter.folder = folder;
   if (format) filter.format = format.toLowerCase();
   if (search) filter.$text = { $search: search };
+
+  // Date-range filter: pin to explicit UTC day boundaries so a bare
+  // YYYY-MM-DD string (which JS parses as UTC midnight) doesn't silently
+  // exclude or include records based on the server's local timezone.
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    from.setUTCHours(0, 0, 0, 0);
+    filter.createdAt = { ...filter.createdAt, $gte: from };
+  }
+  if (dateTo) {
+    const to = new Date(dateTo);
+    to.setUTCHours(23, 59, 59, 999);
+    filter.createdAt = { ...filter.createdAt, $lte: to };
+  }
 
   const sort = search ? { score: { $meta: "textScore" } } : buildSort(sortBy, sortOrder);
   const projection = search ? { score: { $meta: "textScore" } } : null;
