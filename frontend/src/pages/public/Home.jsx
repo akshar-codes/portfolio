@@ -3,7 +3,8 @@ import { Download as DownloadIcon } from "@mui/icons-material";
 
 import { useProfile } from "../../hooks/useProfile";
 import { usePublicSeo } from "../../hooks/usePublicSite";
-import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
+import { useStructuredData } from "../../hooks/useStructuredData";
 import { resolveIcon } from "../../utils/iconMap";
 import { getInitials } from "../../utils/strings";
 import { excerptFromHtml } from "../../utils/html";
@@ -137,16 +138,47 @@ export default function Home() {
     return () => observer.disconnect();
   }, [profile]);
 
-  useDocumentHead({
-    title: profile
-      ? `${profile.name} | ${profile.title}`
-      : seo?.defaultMetaTitle,
-    description: profile?.introduction
-      ? excerptFromHtml(profile.introduction)
-      : seo?.defaultMetaDescription,
-    image: seo?.openGraph?.image || seo?.defaultOgImage,
-    canonical: seo?.canonicalBaseUrl,
-  });
+  const pageTitle = profile
+    ? `${profile.name} | ${profile.title}`
+    : seo?.defaultMetaTitle;
+
+  const pageDescription = profile?.introduction
+    ? excerptFromHtml(profile.introduction)
+    : seo?.defaultMetaDescription;
+
+  useDocumentHead(
+    buildPageSeo(seo, {
+      pageTitle,
+      pageDescription,
+      pageCanonical: seo?.canonicalBaseUrl || "",
+      pageOgType: "profile",
+    }),
+  );
+
+  // ── Structured Data ────────────────────────────────────────────────
+  const personSchema = profile
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: profile.name,
+        jobTitle: profile.title,
+        description: pageDescription,
+        url: seo?.canonicalBaseUrl || "",
+        image: profile.avatarUrl || "",
+        sameAs: (profile.socialLinks ?? []).map((l) => l.url).filter(Boolean),
+      }
+    : null;
+
+  const websiteSchema = seo?.canonicalBaseUrl
+    ? {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: profile?.name || seo?.defaultMetaTitle || "",
+        url: seo.canonicalBaseUrl,
+      }
+    : null;
+
+  useStructuredData([personSchema, websiteSchema].filter(Boolean));
 
   if (isError) {
     return (

@@ -3,7 +3,8 @@ import { SouthWest as SouthWestIcon, NorthEast as NorthEastIcon } from "@mui/ico
 
 import { useAbout } from "../../hooks/useAbout";
 import { usePublicSeo } from "../../hooks/usePublicSite";
-import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
+import { useStructuredData } from "../../hooks/useStructuredData";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonPillRow, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
@@ -26,12 +27,53 @@ export default function Services() {
   const { data: about, isLoading, isError, error, refetch } = useAbout();
   const { data: seo } = usePublicSeo();
 
-  useDocumentHead({
-    title: seo?.defaultMetaTitle ? `About — ${seo.defaultMetaTitle}` : "About",
-    description: about?.biography ? excerptFromHtml(about.biography) : seo?.defaultMetaDescription,
-    image: seo?.openGraph?.image || seo?.defaultOgImage,
-    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/services` : undefined,
-  });
+  const pageDescription = about?.biography
+    ? excerptFromHtml(about.biography)
+    : seo?.defaultMetaDescription;
+
+  const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/services` : "";
+
+  useDocumentHead(
+    buildPageSeo(seo, {
+      pageTitle: seo?.defaultMetaTitle ? `About — ${seo.defaultMetaTitle}` : "About",
+      pageDescription,
+      pageCanonical: canonical,
+    }),
+  );
+
+  // ── Structured Data ────────────────────────────────────────────────
+  const breadcrumbSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: seo?.canonicalBaseUrl || "",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "About",
+            item: canonical,
+          },
+        ],
+      }
+    : null;
+
+  const aboutPageSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        name: "About",
+        url: canonical,
+        description: pageDescription,
+      }
+    : null;
+
+  useStructuredData([breadcrumbSchema, aboutPageSchema].filter(Boolean));
 
   if (isError) {
     return (

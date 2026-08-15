@@ -4,12 +4,44 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import AnnouncementBar from "../components/layout/AnnouncementBar";
 import MaintenancePage from "../components/layout/MaintenancePage";
-import { usePublicSiteSettings } from "../hooks/usePublicSite";
+import { usePublicSiteSettings, usePublicSeo } from "../hooks/usePublicSite";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { useAnalytics } from "../hooks/useAnalytics";
+import { useStructuredData } from "../hooks/useStructuredData";
 
 export default function PublicLayout() {
   const { data: settings } = usePublicSiteSettings();
+  const { data: seo } = usePublicSeo();
+
+  // ── Global Organization JSON-LD ────────────────────────────────────
+  // Emitted once at the layout level (not per-page) because Organization
+  // identity doesn't vary across routes. Also injects the free-form
+  // `structuredData` blob an admin may have set in the SEO CMS panel.
+  const globalSchemas = [];
+  if (seo?.organization?.name) {
+    globalSchemas.push({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: seo.organization.name,
+      url: seo.organization.url || seo.canonicalBaseUrl || "",
+      logo: seo.organization.logoUrl
+        ? {
+            "@type": "ImageObject",
+            url: seo.organization.logoUrl,
+          }
+        : undefined,
+    });
+  }
+  if (seo?.structuredData) {
+    try {
+      const parsed = JSON.parse(seo.structuredData);
+      const entries = Array.isArray(parsed) ? parsed : [parsed];
+      globalSchemas.push(...entries);
+    } catch {
+      // Invalid JSON in structuredData — silently skip
+    }
+  }
+  useStructuredData(globalSchemas.length ? globalSchemas : null);
 
   const faviconUrl = settings?.favicon?.url;
 

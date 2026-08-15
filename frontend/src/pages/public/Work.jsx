@@ -4,7 +4,8 @@ import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon 
 import { usePublicProjectsQuery } from "../../hooks/usePublicProjects";
 import { usePublicCategoriesQuery } from "../../hooks/usePublicCategories";
 import { usePublicSeo } from "../../hooks/usePublicSite";
-import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
+import { useStructuredData } from "../../hooks/useStructuredData";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { flattenTechNames } from "../../utils/projectHelpers";
 import { excerptFromHtml } from "../../utils/html";
@@ -168,12 +169,48 @@ export default function Work() {
   });
   const { data: seo } = usePublicSeo();
 
-  useDocumentHead({
-    title: seo?.defaultMetaTitle ? `Work — ${seo.defaultMetaTitle}` : "Work",
-    description: seo?.defaultMetaDescription,
-    image: seo?.openGraph?.image || seo?.defaultOgImage,
-    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/work` : undefined,
-  });
+  const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/work` : "";
+
+  useDocumentHead(
+    buildPageSeo(seo, {
+      pageTitle: seo?.defaultMetaTitle ? `Work — ${seo.defaultMetaTitle}` : "Work",
+      pageCanonical: canonical,
+    }),
+  );
+
+  // ── Structured Data ────────────────────────────────────────────────
+  const breadcrumbSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: seo?.canonicalBaseUrl || "",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Work",
+            item: canonical,
+          },
+        ],
+      }
+    : null;
+
+  const collectionSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: "Projects",
+        url: canonical,
+        description: seo?.defaultMetaDescription || "",
+      }
+    : null;
+
+  useStructuredData([breadcrumbSchema, collectionSchema].filter(Boolean));
 
   const projects = data?.projects ?? [];
   const totalPages = data?.totalPages ?? 1;

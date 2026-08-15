@@ -5,7 +5,8 @@ import { useProfile } from "../../hooks/useProfile";
 import { useAbout } from "../../hooks/useAbout";
 import { usePublicSiteSettings, usePublicSeo } from "../../hooks/usePublicSite";
 import { useSendMessage } from "../../hooks/useContactForm";
-import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
+import { useStructuredData } from "../../hooks/useStructuredData";
 import { isContactFormValid } from "../../validators/contact";
 import { SkeletonBlock } from "../../components/public/Skeletons";
 
@@ -37,12 +38,48 @@ export default function Contact() {
   const { data: seo } = usePublicSeo();
   const { mutateAsync: sendMessage, isPending } = useSendMessage();
 
-  useDocumentHead({
-    title: seo?.defaultMetaTitle ? `Contact — ${seo.defaultMetaTitle}` : "Contact",
-    description: seo?.defaultMetaDescription,
-    image: seo?.openGraph?.image || seo?.defaultOgImage,
-    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/contact` : undefined,
-  });
+  const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/contact` : "";
+
+  useDocumentHead(
+    buildPageSeo(seo, {
+      pageTitle: seo?.defaultMetaTitle ? `Contact — ${seo.defaultMetaTitle}` : "Contact",
+      pageCanonical: canonical,
+    }),
+  );
+
+  // ── Structured Data ────────────────────────────────────────────────
+  const breadcrumbSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: seo?.canonicalBaseUrl || "",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Contact",
+            item: canonical,
+          },
+        ],
+      }
+    : null;
+
+  const contactPageSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        name: "Contact",
+        url: canonical,
+        description: seo?.defaultMetaDescription || "",
+      }
+    : null;
+
+  useStructuredData([breadcrumbSchema, contactPageSchema].filter(Boolean));
 
   const [form, setForm] = useState({
     firstName: "",

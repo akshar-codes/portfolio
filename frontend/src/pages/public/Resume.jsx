@@ -4,7 +4,8 @@ import { Download as DownloadIcon, OpenInNew as OpenInNewIcon } from "@mui/icons
 import { useResume } from "../../hooks/useResume";
 import { useProfile } from "../../hooks/useProfile";
 import { usePublicSeo } from "../../hooks/usePublicSite";
-import { useDocumentHead } from "../../hooks/useDocumentHead";
+import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
+import { useStructuredData } from "../../hooks/useStructuredData";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
@@ -62,14 +63,62 @@ export default function Resume() {
   const { data: profile } = useProfile();
   const { data: seo } = usePublicSeo();
 
-  useDocumentHead({
-    title: seo?.defaultMetaTitle ? `Resume — ${seo.defaultMetaTitle}` : "Resume",
-    description: resume?.hero?.summary
-      ? excerptFromHtml(resume.hero.summary)
-      : seo?.defaultMetaDescription,
-    image: seo?.openGraph?.image || seo?.defaultOgImage,
-    canonical: seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/resume` : undefined,
-  });
+  const pageDescription = resume?.hero?.summary
+    ? excerptFromHtml(resume.hero.summary)
+    : seo?.defaultMetaDescription;
+
+  const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/resume` : "";
+
+  const resumeTitle = profile?.name
+    ? `${profile.name} — Resume`
+    : seo?.defaultMetaTitle
+      ? `Resume — ${seo.defaultMetaTitle}`
+      : "Resume";
+
+  useDocumentHead(
+    buildPageSeo(seo, {
+      pageTitle: resumeTitle,
+      pageDescription,
+      pageCanonical: canonical,
+    }),
+  );
+
+  // ── Structured Data ────────────────────────────────────────────────
+  const breadcrumbSchema = canonical
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: seo?.canonicalBaseUrl || "",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Resume",
+            item: canonical,
+          },
+        ],
+      }
+    : null;
+
+  const personSchema = profile
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: profile.name,
+        jobTitle: profile.title,
+        description: pageDescription,
+        url: seo?.canonicalBaseUrl || "",
+        image: profile.avatarUrl || "",
+        sameAs: (profile.socialLinks ?? []).map((l) => l.url).filter(Boolean),
+      }
+    : null;
+
+  useStructuredData([breadcrumbSchema, personSchema].filter(Boolean));
 
   if (isError) {
     return (
