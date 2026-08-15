@@ -35,10 +35,13 @@ import {
   footerColumnFormDefaults,
   footerLinkFormSchema,
   footerLinkFormDefaults,
+  footerLegalLinkFormSchema,
+  footerLegalLinkFormDefaults,
 } from "../../schemas/footerSchema";
 
 const MAX_COLUMNS = 6;
 const MAX_LINKS_PER_COLUMN = 15;
+const MAX_LEGAL_LINKS = 10;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -133,6 +136,48 @@ function LinkFormDialog({ open, initialValues, onClose, onSave }) {
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
               <RHFTextField name="label" label="Label" required maxLength={50} />
               <RHFTextField name="url" label="URL" required maxLength={2048} placeholder="/services or https://…" />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Save
+            </Button>
+          </DialogActions>
+        </Box>
+      </FormProvider>
+    </Dialog>
+  );
+}
+
+/* ── Legal link dialog ───────────────────────────────────────────── */
+
+function LegalLinkFormDialog({ open, initialValues, onClose, onSave }) {
+  const form = useForm({ resolver: zodResolver(footerLegalLinkFormSchema), defaultValues: footerLegalLinkFormDefaults });
+
+  useEffect(() => {
+    if (open) form.reset(initialValues ?? footerLegalLinkFormDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValues]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <FormProvider {...form}>
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit((v) => {
+            onSave(v);
+            onClose();
+          })}
+          noValidate
+        >
+          <DialogTitle fontWeight={700}>Legal link</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              <RHFTextField name="label" label="Label" required maxLength={50} placeholder="Privacy Policy" />
+              <RHFTextField name="url" label="URL" required maxLength={2048} placeholder="/privacy or https://…" />
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -301,6 +346,9 @@ export default function ManageFooter() {
   const [serverColumns, setServerColumns] = useState(null);
   const [columnDialog, setColumnDialog] = useState(null);
   const [linkDialog, setLinkDialog] = useState(null);
+  const [localLegalLinks, setLocalLegalLinks] = useState(null);
+  const [serverLegalLinks, setServerLegalLinks] = useState(null);
+  const [legalLinkDialog, setLegalLinkDialog] = useState(null);
 
   useEffect(() => {
     if (data && localColumns === null) {
@@ -313,10 +361,28 @@ export default function ManageFooter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
+  // Seed legal links from server on first load.
+  useEffect(() => {
+    if (data && localLegalLinks === null) {
+      const seeded = [...(data.legalLinks ?? [])]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((l) => ({ ...l, _tempId: l._id ?? crypto.randomUUID() }));
+      setLocalLegalLinks(seeded);
+      setServerLegalLinks(seeded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
   const isDirty = useMemo(() => {
     if (!localColumns || !serverColumns) return false;
-    return JSON.stringify(stripForCompare(localColumns)) !== JSON.stringify(stripForCompare(serverColumns));
-  }, [localColumns, serverColumns]);
+    const colsDirty = JSON.stringify(stripForCompare(localColumns)) !== JSON.stringify(stripForCompare(serverColumns));
+    const legalDirty =
+      localLegalLinks && serverLegalLinks
+        ? JSON.stringify(localLegalLinks.map((l) => ({ label: l.label, url: l.url }))) !==
+          JSON.stringify(serverLegalLinks.map((l) => ({ label: l.label, url: l.url })))
+        : false;
+    return colsDirty || legalDirty;
+  }, [localColumns, serverColumns, localLegalLinks, serverLegalLinks]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -333,6 +399,28 @@ export default function ManageFooter() {
   const openAddLink = (colTempId) => setLinkDialog({ mode: "add", colTempId });
   const openEditLink = (colTempId, link) =>
     setLinkDialog({ mode: "edit", colTempId, tempId: link._tempId, initialValues: link });
+
+  // ── Legal link handlers ──────────────────────────────────────────
+  const openAddLegalLink = () => setLegalLinkDialog({ mode: "add" });
+  const openEditLegalLink = (link) =>
+    setLegalLinkDialog({ mode: "edit", tempId: link._tempId, initialValues: link });
+
+  const handleSaveLegalLink = (values) => {
+    setLocalLegalLinks((prev) => {
+      if (legalLinkDialog.mode === "add") {
+        return [...prev, { _tempId: crypto.randomUUID(), ...values }];
+      }
+      return prev.map((l) => (l._tempId === legalLinkDialog.tempId ? { ...l, ...values } : l));
+    });
+  };
+
+  const handleDeleteLegalLink = async (link) => {
+    const confirmed = await confirm({ title: `Delete "${link.label}"?`, confirmLabel: "Delete", tone: "danger" });
+    if (!confirmed) return;
+    setLocalLegalLinks((prev) => prev.filter((l) => l._tempId !== link._tempId));
+  };
+
+  const handleReorderLegalLinks = (reordered) => setLocalLegalLinks(reordered);
 
   const handleSaveColumn = (values) => {
     setLocalColumns((prev) => {
@@ -394,6 +482,28 @@ export default function ManageFooter() {
 
   const handleDiscardColumns = () => setLocalColumns(serverColumns);
 
+  const handleSaveLegalLinks = async () => {
+    try {
+      const payload = localLegalLinks.map((l, order) => ({
+        ...(l._id ? { _id: l._id } : {}),
+        label: l.label,
+        url: l.url,
+        order,
+      }));
+      const updated = await updateFooter({ legalLinks: payload });
+      const seeded = [...(updated.legalLinks ?? [])]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((l) => ({ ...l, _tempId: l._id ?? crypto.randomUUID() }));
+      setLocalLegalLinks(seeded);
+      setServerLegalLinks(seeded);
+      toast.success("Legal links saved.");
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDiscardLegalLinks = () => setLocalLegalLinks(serverLegalLinks);
+
   const handleSaveGeneral = async (values) => {
     try {
       await updateFooter(values);
@@ -426,7 +536,7 @@ export default function ManageFooter() {
     }
   };
 
-  if (isLoading || localColumns === null) {
+  if (isLoading || localColumns === null || localLegalLinks === null) {
     return (
       <Box className="flex items-center justify-center py-24">
         <CircularProgress />
@@ -595,6 +705,80 @@ export default function ManageFooter() {
         </Paper>
 
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+          <Box className="flex items-center justify-between mb-3">
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700}>
+                Legal links
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Rendered next to the copyright text in the footer bottom bar (Privacy Policy, Terms, etc.)
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {localLegalLinks &&
+                serverLegalLinks &&
+                JSON.stringify(localLegalLinks.map((l) => ({ label: l.label, url: l.url }))) !==
+                  JSON.stringify(serverLegalLinks.map((l) => ({ label: l.label, url: l.url }))) && (
+                  <>
+                    <Button size="small" color="inherit" onClick={handleDiscardLegalLinks} disabled={saving}>
+                      Discard
+                    </Button>
+                    <Button size="small" variant="contained" onClick={handleSaveLegalLinks} disabled={saving}>
+                      {saving ? "Saving…" : "Save"}
+                    </Button>
+                  </>
+                )}
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={openAddLegalLink}
+                disabled={(localLegalLinks?.length ?? 0) >= MAX_LEGAL_LINKS}
+              >
+                Add link
+              </Button>
+            </Stack>
+          </Box>
+
+          {(localLegalLinks ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary" className="py-4 text-center">
+              No legal links yet. Add links like Privacy Policy or Terms of Service.
+            </Typography>
+          ) : (
+            <DragReorderList
+              items={localLegalLinks}
+              getId={(l) => l._tempId}
+              onReorder={handleReorderLegalLinks}
+              renderItem={({ item: link }) => (
+                <Box className="flex items-center justify-between gap-2 py-1">
+                  <Box className="flex items-center gap-1.5 min-w-0">
+                    <LaunchIcon sx={{ fontSize: 13, color: "text.disabled" }} />
+                    <Typography fontSize={13} fontWeight={500} noWrap>
+                      {link.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {link.url}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" onClick={() => openEditLegalLink(link)} aria-label={`Edit ${link.label}`}>
+                      <EditOutlinedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteLegalLink(link)}
+                      aria-label={`Delete ${link.label}`}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              )}
+            />
+          )}
+        </Paper>
+
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
           <Typography variant="subtitle1" fontWeight={700} className="mb-3">
             Live preview
           </Typography>
@@ -618,6 +802,12 @@ export default function ManageFooter() {
         initialValues={linkDialog?.initialValues}
         onClose={() => setLinkDialog(null)}
         onSave={handleSaveLink}
+      />
+      <LegalLinkFormDialog
+        open={!!legalLinkDialog}
+        initialValues={legalLinkDialog?.initialValues}
+        onClose={() => setLegalLinkDialog(null)}
+        onSave={handleSaveLegalLink}
       />
     </>
   );

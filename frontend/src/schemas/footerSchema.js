@@ -30,3 +30,27 @@ export const footerLinkFormDefaults = {
   label: "",
   url: "",
 };
+
+/**
+ * Schema for a single legal link (Privacy Policy, Terms of Service, etc.)
+ * rendered in the footer's bottom bar alongside copyright text.
+ */
+export const footerLegalLinkFormSchema = z.object({
+  label: z
+    .string()
+    .trim()
+    .min(1, "Label is required")
+    .max(50, "Label must not exceed 50 characters"),
+  url: z
+    .string()
+    .trim()
+    .min(1, "URL is required")
+    .max(2048, "URL must not exceed 2048 characters")
+    .refine((val) => /^\/|^https?:\/\/.+/.test(val), "Must start with '/' or be a valid URL"),
+});
+
+export const footerLegalLinkFormDefaults = {
+  label: "",
+  url: "",
+};
+

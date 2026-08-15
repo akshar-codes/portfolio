@@ -47,4 +47,31 @@ export const updateFooterValidator = [
 
   optionalTrimmedString("copyrightText", { max: 300 }),
   optionalBoolean("showSocialLinks"),
+  optionalBoolean("showContactInfo"),
+
+  // ── Legal links ─────────────────────────────────────────────────────
+  body("legalLinks")
+    .optional()
+    .isArray({ max: 10 })
+    .withMessage("legalLinks must be an array with at most 10 entries"),
+
+  body("legalLinks.*.label")
+    .trim()
+    .notEmpty()
+    .withMessage("Each legal link must have a label")
+    .isLength({ max: 50 })
+    .withMessage("Legal link label must not exceed 50 characters"),
+
+  body("legalLinks.*.url")
+    .trim()
+    .notEmpty()
+    .withMessage("Each legal link must have a URL")
+    .matches(PATH_OR_URL_PATTERN)
+    .withMessage(
+      "Legal link URL must start with '/' or be a valid HTTP/HTTPS URL",
+    )
+    .isLength({ max: 2048 })
+    .withMessage("Legal link URL must not exceed 2048 characters"),
+
+  optionalOrder("legalLinks.*.order"),
 ];
