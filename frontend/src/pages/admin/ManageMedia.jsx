@@ -58,7 +58,7 @@ const FORMAT_OPTIONS = [
 ];
 
 export default function ManageMedia() {
-  const { filters, setFilter } = useFilters({ search: "", format: "", sort: "createdAt:desc" });
+  const { filters, setFilter } = useFilters({ search: "", format: "", sort: "createdAt:desc", dateFrom: "", dateTo: "" });
   const debouncedSearch = useDebouncedValue(filters.search, 350);
 
   const [activeFolder, setActiveFolder] = useState("");
@@ -81,9 +81,11 @@ export default function ManageMedia() {
       status: showTrash ? "trash" : "active",
       sortBy,
       sortOrder,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
       limit: 24,
     }),
-    [debouncedSearch, activeFolder, filters.format, showTrash, sortBy, sortOrder],
+    [debouncedSearch, activeFolder, filters.format, showTrash, sortBy, sortOrder, filters.dateFrom, filters.dateTo],
   );
 
   const {
@@ -294,15 +296,35 @@ export default function ManageMedia() {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <ToolbarBar
             searchValue={filters.search}
-            onSearchChange={(v) => setFilter("search", v)}
+            onSearchChange={(v) => setFilter("search", v, { replace: true })}
             searchPlaceholder="Search by name, alt text, caption, or tag…"
             filters={
-              <FilterBar
-                filters={[
-                  { label: "Format", value: filters.format, onChange: (v) => setFilter("format", v), options: FORMAT_OPTIONS },
-                  { label: "Sort", value: filters.sort, onChange: (v) => setFilter("sort", v), options: SORT_OPTIONS },
-                ]}
-              />
+              <Box className="flex flex-wrap items-center gap-2">
+                <FilterBar
+                  filters={[
+                    { label: "Format", value: filters.format, onChange: (v) => setFilter("format", v), options: FORMAT_OPTIONS },
+                    { label: "Sort", value: filters.sort, onChange: (v) => setFilter("sort", v), options: SORT_OPTIONS },
+                  ]}
+                />
+                <TextField
+                  size="small"
+                  type="date"
+                  label="From"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilter("dateFrom", e.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  sx={{ width: 150 }}
+                />
+                <TextField
+                  size="small"
+                  type="date"
+                  label="To"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilter("dateTo", e.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  sx={{ width: 150 }}
+                />
+              </Box>
             }
             selectedCount={selectedIds.size}
             bulkActions={

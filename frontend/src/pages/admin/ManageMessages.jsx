@@ -169,8 +169,7 @@ export default function ManageMessages() {
   const handleSort = (field) => {
     const nextOrder = filters.sortBy === field && filters.sortOrder === "asc" ? "desc" : "asc";
     setFilter("sortBy", field);
-    setFilter("sortOrder", nextOrder);
-    setPage(1);
+    setFilter("sortOrder", nextOrder, { resetPage: false }); // page already reset by sortBy write
   };
 
   const handleOpenDetails = (row) => setDetailsMessage(row);
@@ -399,8 +398,7 @@ export default function ManageMessages() {
           <ToolbarBar
             searchValue={filters.search}
             onSearchChange={(v) => {
-              setFilter("search", v);
-              setPage(1);
+              setFilter("search", v, { replace: true });
             }}
             searchPlaceholder="Search by name, email, or message…"
             filters={
@@ -410,19 +408,13 @@ export default function ManageMessages() {
                     {
                       label: "Folder",
                       value: filters.folder,
-                      onChange: (v) => {
-                        setFilter("folder", v);
-                        setPage(1);
-                      },
+                      onChange: (v) => setFilter("folder", v),
                       options: FOLDER_OPTIONS,
                     },
                     {
                       label: "Status",
                       value: filters.status,
-                      onChange: (v) => {
-                        setFilter("status", v);
-                        setPage(1);
-                      },
+                      onChange: (v) => setFilter("status", v),
                       options: STATUS_OPTIONS,
                     },
                   ]}
@@ -432,10 +424,7 @@ export default function ManageMessages() {
                   type="date"
                   label="From"
                   value={filters.dateFrom}
-                  onChange={(e) => {
-                    setFilter("dateFrom", e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => setFilter("dateFrom", e.target.value)}
                   slotProps={{ inputLabel: { shrink: true } }}
                   sx={{ width: 150 }}
                 />
@@ -444,10 +433,7 @@ export default function ManageMessages() {
                   type="date"
                   label="To"
                   value={filters.dateTo}
-                  onChange={(e) => {
-                    setFilter("dateTo", e.target.value);
-                    setPage(1);
-                  }}
+                  onChange={(e) => setFilter("dateTo", e.target.value)}
                   slotProps={{ inputLabel: { shrink: true } }}
                   sx={{ width: 150 }}
                 />

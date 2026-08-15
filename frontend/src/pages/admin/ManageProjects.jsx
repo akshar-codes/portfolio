@@ -6,6 +6,8 @@ import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
@@ -18,6 +20,7 @@ import StarIcon from "@mui/icons-material/Star";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 
 import PageHeader from "../../components/common/PageHeader";
@@ -134,10 +137,12 @@ export default function ManageProjects() {
     status: "",
     category: "",
     featured: "",
+    technology: "",
     sortBy: "order",
     sortOrder: "asc",
   });
   const debouncedSearch = useDebouncedValue(filters.search, 350);
+  const debouncedTechnology = useDebouncedValue(filters.technology, 350);
   const { page, limit, setPage } = usePagination({ initialLimit: PROJECTS_ADMIN_PAGE_SIZE });
 
   const queryParams = useMemo(
@@ -148,10 +153,11 @@ export default function ManageProjects() {
       status: filters.status || undefined,
       category: filters.category || undefined,
       featured: filters.featured || undefined,
+      technology: debouncedTechnology || undefined,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
     }),
-    [page, limit, debouncedSearch, filters.status, filters.category, filters.featured, filters.sortBy, filters.sortOrder],
+    [page, limit, debouncedSearch, filters.status, filters.category, filters.featured, debouncedTechnology, filters.sortBy, filters.sortOrder],
   );
 
   const { data, isLoading, isFetching, isError, error, refetch } = useAdminProjectsQuery(queryParams);
@@ -173,13 +179,14 @@ export default function ManageProjects() {
   const { showLoading, hideLoading } = useGlobalLoading();
 
   const projects = data?.projects ?? [];
-  const canReorder = !filters.search && !filters.status && !filters.category && !filters.featured;
+  const canReorder = !filters.search && !filters.status && !filters.category && !filters.featured && !filters.technology;
 
+  // Sort column click: push a history entry (user can go back to previous sort).
+  // setFilter auto-resets page to 1, so no manual setPage(1) needed.
   const handleSort = (field) => {
     const nextOrder = filters.sortBy === field && filters.sortOrder === "asc" ? "desc" : "asc";
     setFilter("sortBy", field);
-    setFilter("sortOrder", nextOrder);
-    setPage(1);
+    setFilter("sortOrder", nextOrder, { resetPage: false }); // page already reset by sortBy write
   };
 
   const handleDelete = async (project) => {
@@ -428,42 +435,52 @@ export default function ManageProjects() {
           <ToolbarBar
             searchValue={filters.search}
             onSearchChange={(v) => {
-              setFilter("search", v);
-              setPage(1);
+              // Debounced — use replace:true so intermediate keystrokes don't
+              // pile up in browser history (the debounced flush is the real entry).
+              setFilter("search", v, { replace: true });
             }}
             searchPlaceholder="Search projects…"
             filters={
-              <FilterBar
-                filters={[
-                  {
-                    label: "Status",
-                    value: filters.status,
-                    onChange: (v) => {
-                      setFilter("status", v);
-                      setPage(1);
+              <Box className="flex flex-wrap items-center gap-2">
+                <FilterBar
+                  filters={[
+                    {
+                      label: "Status",
+                      value: filters.status,
+                      onChange: (v) => setFilter("status", v),
+                      options: STATUS_OPTIONS,
                     },
-                    options: STATUS_OPTIONS,
-                  },
-                  {
-                    label: "Category",
-                    value: filters.category,
-                    onChange: (v) => {
-                      setFilter("category", v);
-                      setPage(1);
+                    {
+                      label: "Category",
+                      value: filters.category,
+                      onChange: (v) => setFilter("category", v),
+                      options: [{ label: "All categories", value: "" }, ...categories.map((c) => ({ label: c.name, value: c._id }))],
                     },
-                    options: [{ label: "All categories", value: "" }, ...categories.map((c) => ({ label: c.name, value: c._id }))],
-                  },
-                  {
-                    label: "Featured",
-                    value: filters.featured,
-                    onChange: (v) => {
-                      setFilter("featured", v);
-                      setPage(1);
+                    {
+                      label: "Featured",
+                      value: filters.featured,
+                      onChange: (v) => setFilter("featured", v),
+                      options: FEATURED_OPTIONS,
                     },
-                    options: FEATURED_OPTIONS,
-                  },
-                ]}
-              />
+                  ]}
+                />
+                <TextField
+                  size="small"
+                  value={filters.technology}
+                  onChange={(e) => setFilter("technology", e.target.value, { replace: true })}
+                  placeholder="Filter by technology…"
+                  sx={{ minWidth: 180 }}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Box>
             }
             selectedCount={selectedIds.size}
             bulkActions={
