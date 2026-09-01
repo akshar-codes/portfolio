@@ -25,11 +25,6 @@ const PATCHABLE_FIELDS = [
   "downloads",
 ];
 
-/**
- * Subset of PATCHABLE_FIELDS that are arrays of orderable items —
- * order is re-numbered and any client-only `_tempId` is stripped
- * before persisting.
- */
 const ORDERED_ARRAY_FIELDS = [
   "experience",
   "education",
@@ -44,7 +39,11 @@ const {
   fetchAdmin: fetchResumeAdmin,
   fetchPublic: fetchResumePublic,
   patchSingleton: patchResumeRaw,
-  setStatus: setResumeStatus,
+  publish: publishResume,
+  unpublish: unpublishResume,
+  archive: archiveResume,
+  restore: restoreResume,
+  schedule: scheduleResume,
   invalidateCache: invalidateResumeCache,
 } = createSingletonService({
   repository,
@@ -57,9 +56,7 @@ const {
 /**
  * Sanitizes the two rich-text surfaces (Resume.aboutMe.summary and
  * each Resume.experience[].description) before delegating to the
- * generic singleton PATCH. Client-side DOMPurify (RichTextEditor.jsx)
- * is a UX safeguard only — this is the real defense against stored
- * XSS for content rendered with dangerouslySetInnerHTML publicly.
+ * generic singleton PATCH.
  */
 const patchResume = async (updates) => {
   const sanitized = { ...updates };
@@ -86,6 +83,10 @@ export {
   fetchResumeAdmin,
   fetchResumePublic,
   patchResume,
-  setResumeStatus,
+  publishResume,
+  unpublishResume,
+  archiveResume,
+  restoreResume,
+  scheduleResume,
   invalidateResumeCache,
 };

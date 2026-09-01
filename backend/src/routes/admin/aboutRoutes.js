@@ -5,8 +5,12 @@ import {
   updateAboutSection,
   publishAbout,
   unpublishAbout,
+  archiveAbout,
+  restoreAbout,
+  scheduleAbout,
 } from "../../controllers/aboutController.js";
 import { updateAboutValidator } from "../../validators/aboutValidators.js";
+import { publishAtValidator } from "../../validators/common.js";
 
 const router = express.Router();
 
@@ -24,9 +28,13 @@ router.get("/", getAdminAbout);
 router.patch("/", updateAboutValidator, updateAboutSection);
 
 /* ------------------------------------------------------------------ *
- * PATCH /api/admin/about/publish | /unpublish
+ * PATCH /api/admin/about/publish | /unpublish | /archive | /restore
+ * PATCH /api/admin/about/schedule  { publishAt: ISO8601 date }
  * ------------------------------------------------------------------ */
 router.patch("/publish", publishAbout);
 router.patch("/unpublish", unpublishAbout);
+router.patch("/archive", archiveAbout);
+router.patch("/restore", restoreAbout);
+router.patch("/schedule", publishAtValidator(), scheduleAbout);
 
 export default router;
