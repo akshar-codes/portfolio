@@ -37,3 +37,15 @@ export function usePublishSeo() {
 export function useUnpublishSeo() {
   return useSeoMutation(() => seoApi.unpublish());
 }
+
+export function useArchiveSeo() {
+  return useSeoMutation(() => seoApi.archive());
+}
+
+export function useRestoreSeo() {
+  return useSeoMutation(() => seoApi.restore());
+}
+
+export function useScheduleSeo() {
+  return useSeoMutation((publishAt) => seoApi.schedule(publishAt));
+}

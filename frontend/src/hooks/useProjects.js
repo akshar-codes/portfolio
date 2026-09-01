@@ -78,28 +78,44 @@ export function useReorderProjects(options = {}) {
   });
 }
 
-export function usePublishProject(options = {}) {
+/**
+ * Shared factory for the 5 status-action mutations — every one follows
+ * the identical "call the endpoint, refresh the list, refresh the
+ * single-item cache" shape.
+ */
+function useProjectStatusMutation(mutationFn, options = {}) {
   const queryClient = useQueryClient();
   const invalidateList = useInvalidateProjectsList();
   return useMutation({
-    mutationFn: (id) => projectsApi.publish(id),
-    onSuccess: (data, id, ...rest) => {
+    mutationFn,
+    onSuccess: (data, variables, ...rest) => {
       invalidateList();
+      const id = typeof variables === "object" ? variables.id : variables;
       queryClient.setQueryData(itemKey(id), data);
-      options.onSuccess?.(data, id, ...rest);
+      options.onSuccess?.(data, variables, ...rest);
     },
   });
 }
 
+export function usePublishProject(options = {}) {
+  return useProjectStatusMutation((id) => projectsApi.publish(id), options);
+}
+
 export function useUnpublishProject(options = {}) {
-  const queryClient = useQueryClient();
-  const invalidateList = useInvalidateProjectsList();
-  return useMutation({
-    mutationFn: (id) => projectsApi.unpublish(id),
-    onSuccess: (data, id, ...rest) => {
-      invalidateList();
-      queryClient.setQueryData(itemKey(id), data);
-      options.onSuccess?.(data, id, ...rest);
-    },
-  });
+  return useProjectStatusMutation((id) => projectsApi.unpublish(id), options);
+}
+
+export function useArchiveProject(options = {}) {
+  return useProjectStatusMutation((id) => projectsApi.archive(id), options);
+}
+
+export function useRestoreProject(options = {}) {
+  return useProjectStatusMutation((id) => projectsApi.restore(id), options);
+}
+
+export function useScheduleProject(options = {}) {
+  return useProjectStatusMutation(
+    ({ id, publishAt }) => projectsApi.schedule(id, publishAt),
+    options,
+  );
 }

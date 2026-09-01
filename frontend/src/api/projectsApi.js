@@ -3,16 +3,9 @@ import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
 /**
  * Admin project data-access layer. Deliberately NOT built on
- * createResourceApi.js:
- *   - listing/reads go through the dedicated /admin/projects endpoints
- *     (routes/admin/projectAdminRoutes.js) so drafts stay visible to
- *     the admin panel — the public /projects endpoints only ever
- *     return published projects.
- *   - create/update send multipart/form-data (thumbnail/banner/gallery
- *     uploads through the existing Cloudinary pipeline in
- *     config/cloudinary.js + services/projectService.js), not JSON.
- *   - publish/unpublish/reorder are dedicated action endpoints, not
- *     generic CRUD verbs.
+ * createResourceApi.js — see original file header for the full
+ * rationale (drafts must stay visible to the admin panel, multipart
+ * uploads, dedicated action endpoints rather than generic CRUD verbs).
  */
 export const projectsApi = {
   list: (params) =>
@@ -47,4 +40,15 @@ export const projectsApi = {
 
   unpublish: (id) =>
     api.patch(API_ENDPOINTS.projectUnpublish(id)).then((res) => res.data),
+
+  archive: (id) =>
+    api.patch(API_ENDPOINTS.projectArchive(id)).then((res) => res.data),
+
+  restore: (id) =>
+    api.patch(API_ENDPOINTS.projectRestore(id)).then((res) => res.data),
+
+  schedule: (id, publishAt) =>
+    api
+      .patch(API_ENDPOINTS.projectSchedule(id), { publishAt })
+      .then((res) => res.data),
 };

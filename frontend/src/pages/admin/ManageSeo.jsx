@@ -6,7 +6,6 @@ import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
@@ -16,6 +15,8 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import PageHeader from "../../components/common/PageHeader";
 import MediaPickerDialog from "../../components/cms/MediaPickerDialog";
+import StatusBadge from "../../components/cms/StatusBadge";
+import PublishActionsMenu from "../../components/cms/PublishActionsMenu";
 import { SerpPreview, SocialCardPreview } from "../../components/cms/SeoPreview";
 import TagInput from "../../components/common/TagInput";
 import { TextField as RHFTextField, SwitchField, SelectField } from "../../components/form/fields";
@@ -24,6 +25,9 @@ import {
   useUpdateSeo,
   usePublishSeo,
   useUnpublishSeo,
+  useArchiveSeo,
+  useRestoreSeo,
+  useScheduleSeo,
 } from "../../hooks/useSeo";
 import { seoFormSchema, seoFormDefaultsFrom } from "../../schemas/seoSchema";
 
@@ -119,6 +123,9 @@ export default function ManageSeo() {
   const { mutateAsync: updateSeo, isPending: saving } = useUpdateSeo();
   const { mutateAsync: publish, isPending: publishing } = usePublishSeo();
   const { mutateAsync: unpublish, isPending: unpublishing } = useUnpublishSeo();
+  const { mutateAsync: archive, isPending: archiving } = useArchiveSeo();
+  const { mutateAsync: restore, isPending: restoring } = useRestoreSeo();
+  const { mutateAsync: schedule, isPending: scheduling } = useScheduleSeo();
 
   const form = useForm({
     resolver: zodResolver(seoFormSchema),
@@ -149,15 +156,12 @@ export default function ManageSeo() {
     }
   };
 
-  const handleTogglePublish = async () => {
+  const statusBusy = publishing || unpublishing || archiving || restoring || scheduling;
+
+  const withStatusToast = (fn, successMessage) => async (...args) => {
     try {
-      if (data.status === "draft") {
-        await publish();
-        toast.success("SEO settings published.");
-      } else {
-        await unpublish();
-        toast.success("SEO settings unpublished.");
-      }
+      await fn(...args);
+      toast.success(successMessage);
     } catch (err) {
       toast.error(err.message);
     }
@@ -184,7 +188,6 @@ export default function ManageSeo() {
     );
   }
 
-  const isDraft = data.status === "draft";
   const structuredDataError = errors?.structuredData?.message;
 
   return (
@@ -192,18 +195,18 @@ export default function ManageSeo() {
       <PageHeader
         title="SEO"
         subtitle="Global search-engine and social-sharing defaults, used when a page doesn't override them."
-        badge={
-          <Chip
-            size="small"
-            variant={isDraft ? "outlined" : "filled"}
-            color={isDraft ? "default" : "success"}
-            label={isDraft ? "Draft" : "Published"}
-          />
-        }
+        badge={<StatusBadge status={data.status} publishAt={data.publishAt} />}
         actions={
-          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
-            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
-          </Button>
+          <PublishActionsMenu
+            status={data.status}
+            busy={statusBusy}
+            resourceLabel="SEO settings"
+            onPublish={withStatusToast(publish, "SEO settings published.")}
+            onUnpublish={withStatusToast(unpublish, "SEO settings unpublished.")}
+            onArchive={withStatusToast(archive, "SEO settings archived.")}
+            onRestore={withStatusToast(restore, "SEO settings restored to draft.")}
+            onSchedule={withStatusToast(schedule, "SEO settings scheduled.")}
+          />
         }
       />
 
