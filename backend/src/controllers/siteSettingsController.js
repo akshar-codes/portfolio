@@ -4,34 +4,47 @@ import {
   fetchSiteSettingsAdmin,
   fetchSiteSettingsPublic,
   patchSiteSettings,
-  setSiteSettingsStatus,
+  publishSiteSettings,
+  unpublishSiteSettings,
+  archiveSiteSettings,
+  restoreSiteSettings,
+  scheduleSiteSettings,
   uploadSiteLogo,
   removeSiteLogo,
   uploadSiteFavicon,
   removeSiteFavicon,
-} from "../services/siteSettingsService.js";
-import { createSingletonController } from "./SingletonController.js";
+  // Previously imported from "../services/siteSettingsService.js" — no
+  // such file exists (the real file is SiteSettingsService.js,
+  // capitalized). Fixed to the real filename.
+} from "../services/SiteSettingsService.js";
+import { createSingletonController } from "./singletonController.js";
+// Previously imported "./SingletonController.js" (capitalized), which
+// doesn't exist as a real file — fixed to singletonController.js.
 
 const service = {
   fetchAdmin: fetchSiteSettingsAdmin,
   fetchPublic: fetchSiteSettingsPublic,
   patchSingleton: patchSiteSettings,
-  setStatus: setSiteSettingsStatus,
+  publish: publishSiteSettings,
+  unpublish: unpublishSiteSettings,
+  archive: archiveSiteSettings,
+  restore: restoreSiteSettings,
+  schedule: scheduleSiteSettings,
 };
 
 const {
   getPublicResource: getPublicSiteSettings,
   getAdminResource: getAdminSiteSettings,
   updateResource: updateSiteSettings,
-  publishResource: publishSiteSettings,
-  unpublishResource: unpublishSiteSettings,
+  publishResource: publishSiteSettingsHandler,
+  unpublishResource: unpublishSiteSettingsHandler,
+  archiveResource: archiveSiteSettingsHandler,
+  restoreResource: restoreSiteSettingsHandler,
+  scheduleResource: scheduleSiteSettingsHandler,
 } = createSingletonController({ service, resourceName: "Site settings" });
 
 /* ------------------------------------------------------------------ *
  * PATCH /api/admin/site-settings/logo  (protected, multipart/form-data)
- * File-presence validation happens inside the service (mirrors
- * mediaController.uploadMedia), since an uploaded file lives on
- * req.file, not req.body.
  * ------------------------------------------------------------------ */
 export const uploadSiteSettingsLogo = asyncHandler(async (req, res) => {
   const updated = await uploadSiteLogo(req.file ?? null);
@@ -66,6 +79,9 @@ export {
   getPublicSiteSettings,
   getAdminSiteSettings,
   updateSiteSettings,
-  publishSiteSettings,
-  unpublishSiteSettings,
+  publishSiteSettingsHandler as publishSiteSettings,
+  unpublishSiteSettingsHandler as unpublishSiteSettings,
+  archiveSiteSettingsHandler as archiveSiteSettings,
+  restoreSiteSettingsHandler as restoreSiteSettings,
+  scheduleSiteSettingsHandler as scheduleSiteSettings,
 };

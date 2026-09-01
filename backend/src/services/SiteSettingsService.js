@@ -43,7 +43,7 @@ const PATCHABLE_FIELDS = [
 const ORDERED_ARRAY_FIELDS = ["contactEmails", "contactPhones"];
 
 // Required-by-schema fields need a default so the singleton can be
-// created on first read/write without the caller having to supply them.
+// created on first read/write without the caller having to supply it.
 const DEFAULTS = {
   siteName: "My Portfolio",
 };
@@ -52,7 +52,11 @@ const {
   fetchAdmin: fetchSiteSettingsAdmin,
   fetchPublic: fetchSiteSettingsPublic,
   patchSingleton: patchSiteSettings,
-  setStatus: setSiteSettingsStatus,
+  publish: publishSiteSettings,
+  unpublish: unpublishSiteSettings,
+  archive: archiveSiteSettings,
+  restore: restoreSiteSettings,
+  schedule: scheduleSiteSettings,
   invalidateCache: invalidateSiteSettingsCache,
 } = createSingletonService({
   repository,
@@ -177,6 +181,10 @@ export {
   fetchSiteSettingsAdmin,
   fetchSiteSettingsPublic,
   patchSiteSettings,
-  setSiteSettingsStatus,
+  publishSiteSettings,
+  unpublishSiteSettings,
+  archiveSiteSettings,
+  restoreSiteSettings,
+  scheduleSiteSettings,
   invalidateSiteSettingsCache,
 };

@@ -5,8 +5,12 @@ import {
   updateNavigation,
   publishNavigation,
   unpublishNavigation,
+  archiveNavigation,
+  restoreNavigation,
+  scheduleNavigation,
 } from "../../controllers/navigationController.js";
-import { updateNavigationValidator } from "../../validators/navigationValidators.js";
+import { updateNavigationValidator } from "../../validators/navigation.validator.js";
+import { publishAtValidator } from "../../validators/common.js";
 
 const router = express.Router();
 
@@ -24,9 +28,13 @@ router.get("/", getAdminNavigation);
 router.patch("/", updateNavigationValidator, updateNavigation);
 
 /* ------------------------------------------------------------------ *
- * PATCH /api/admin/navigation/publish | /unpublish
+ * PATCH /api/admin/navigation/publish | /unpublish | /archive | /restore
+ * PATCH /api/admin/navigation/schedule  { publishAt: ISO8601 date }
  * ------------------------------------------------------------------ */
 router.patch("/publish", publishNavigation);
 router.patch("/unpublish", unpublishNavigation);
+router.patch("/archive", archiveNavigation);
+router.patch("/restore", restoreNavigation);
+router.patch("/schedule", publishAtValidator(), scheduleNavigation);
 
 export default router;
