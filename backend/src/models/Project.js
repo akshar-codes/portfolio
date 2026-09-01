@@ -33,14 +33,7 @@ const techGroupSchema = new mongoose.Schema(
 );
 
 /* ------------------------------------------------------------------ *
- * Sub-schema: per-project SEO overrides. Mirrors models/SEO.js's
- * field shapes/limits (metaTitle 70 / metaDescription 160) and reuses
- * the same keyword cap the SEO singleton uses, so a per-project
- * override never behaves differently from the site-wide default it's
- * shadowing. `ogImage` is a Media-Library URL reference (picked via
- * the frontend's LibraryImageField), NOT an owned Cloudinary upload —
- * unlike image/bannerImage/gallery below, there is no public_id to
- * track or destroy here.
+ * Sub-schema: per-project SEO overrides.
  * ------------------------------------------------------------------ */
 const projectSeoSchema = new mongoose.Schema(
   {
@@ -94,13 +87,6 @@ const projectSchema = new mongoose.Schema(
       minlength: [2, "Title must be at least 2 characters"],
       maxlength: [120, "Title must not exceed 120 characters"],
     },
-    // Rich text (Tiptap HTML), sanitized server-side in
-    // services/projectService.js before persistence — see
-    // utils/htmlSanitizer.js. The 2000-character plain-text ceiling
-    // this used to carry is widened to account for markup overhead;
-    // mirrors the About.biography / Resume.experience[].description
-    // convention (schema max is the authoritative POST-sanitization
-    // ceiling).
     description: {
       type: String,
       trim: true,
@@ -112,6 +98,15 @@ const projectSchema = new mongoose.Schema(
       ref: "Category",
       required: [true, "Category is required"],
     },
+
+    /* ── Publishing workflow ─────────────────────────────────────────
+     * status transitions (draft/scheduled/published/unpublished/
+     * archived) are exclusively owned by services/projectService.js's
+     * publish/unpublish/archive/restore/scheduleProject — never
+     * assigned directly from a generic update. See utils/contentStatus.js
+     * for the transition rules and services/scheduledPublishSweep.js
+     * for how `scheduled` becomes `published` once `publishAt` elapses.
+     * ---------------------------------------------------------------- */
     status: {
       type: String,
       enum: {
@@ -120,6 +115,10 @@ const projectSchema = new mongoose.Schema(
       },
       default: DEFAULT_CONTENT_STATUS,
     },
+    publishAt: { type: Date, default: null },
+    publishedAt: { type: Date, default: null },
+    unpublishedAt: { type: Date, default: null },
+    archivedAt: { type: Date, default: null },
 
     // Surfaces this project in a "Featured Projects" section ahead of
     // the rest of the (order-sorted) portfolio grid.
@@ -143,7 +142,6 @@ const projectSchema = new mongoose.Schema(
         maxlength: [500, "Image public_id must not exceed 500 characters"],
       },
     },
-    // ── Extended detail fields ─────────────────────────────────────
     bannerImage: {
       url: {
         type: String,
@@ -165,8 +163,6 @@ const projectSchema = new mongoose.Schema(
         ],
       },
     },
-
-    // ── technologies: grouped structure ───────────────────────────
 
     technologies: {
       type: [techGroupSchema],
@@ -246,8 +242,6 @@ const projectSchema = new mongoose.Schema(
         "Live URL must be empty or a valid HTTP/HTTPS URL",
       ],
     },
-    // Rich text — sanitized server-side, same rationale as
-    // `description` above.
     challenge: {
       type: String,
       trim: true,
@@ -260,7 +254,6 @@ const projectSchema = new mongoose.Schema(
       default: "",
       maxlength: [3000, "Solution must not exceed 3000 characters"],
     },
-    // ── Keep legacy projectUrl for backward-compat ─────────────────
     projectUrl: {
       type: String,
       trim: true,
@@ -277,7 +270,6 @@ const projectSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // Per-project SEO overrides — see projectSeoSchema above.
     seo: {
       type: projectSeoSchema,
       default: () => ({}),
@@ -289,6 +281,7 @@ const projectSchema = new mongoose.Schema(
 projectSchema.index({ order: 1 });
 projectSchema.index({ category: 1 });
 projectSchema.index({ status: 1 });
+projectSchema.index({ status: 1, publishAt: 1 }); // scheduled-publish sweep
 projectSchema.index({ title: 1 });
 projectSchema.index({ featured: 1 });
 

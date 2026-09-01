@@ -24,6 +24,7 @@ import cache from "../utils/cache.js";
 import { invalidateCategoryCache } from "./categoryService.js";
 import { buildSearchFilter } from "../utils/queryHelpers.js";
 import { sanitizeRichText } from "../utils/htmlSanitizer.js";
+import { applyStatusTransition } from "../utils/contentStatus.js";
 import logger from "../utils/logger.js";
 import {
   CACHE_TTL_MS,
@@ -32,7 +33,11 @@ import {
   MAX_PAGE_SIZE,
   MAX_GALLERY_IMAGES,
   CONTENT_STATUSES,
+  CONTENT_STATUS_PUBLISHED,
+  CONTENT_STATUS_UNPUBLISHED,
+  CONTENT_STATUS_ARCHIVED,
   CONTENT_STATUS_DRAFT,
+  CONTENT_STATUS_SCHEDULED,
   DEFAULT_CONTENT_STATUS,
   PROJECT_ADMIN_SORT_FIELDS,
   DEFAULT_PROJECT_ADMIN_SORT_FIELD,
@@ -123,19 +128,10 @@ function parseArrayField(value) {
   }
 }
 
-/**
- * Parses/normalizes the `seo` field. Multipart form submissions send
- * it as a JSON-stringified object (see validators/projectValidators.js
- * validateSeoField for the pre-persistence shape check); JSON body
- * submissions (none currently, but kept forward-compatible) may send
- * a real object. Malformed input degrades to an empty-but-valid SEO
- * object rather than throwing, matching parseGroupedField/
- * parseArrayField's lenient style elsewhere in this file.
- */
 function parseSeoField(value) {
   const empty = { metaTitle: "", metaDescription: "", metaKeywords: [], ogImage: "" };
 
-  if (value === undefined) return undefined; // caller decides: omit vs. "clear it"
+  if (value === undefined) return undefined;
 
   let parsed = value;
   if (typeof value === "string") {
@@ -210,7 +206,12 @@ async function resolveCategoryFilter(category) {
 }
 
 /* ================================================================== *
- * fetchAllProjects  (public — published projects only)
+ * fetchAllProjects  (public — PUBLISHED projects only)
+ *
+ * Strict equality (`status: CONTENT_STATUS_PUBLISHED`), not
+ * `$ne: draft` — a draft/scheduled/unpublished/archived project must
+ * never appear on the public site. See constants/index.js's note on
+ * the publish workflow's public-read contract.
  * ================================================================== */
 
 export const fetchAllProjects = async ({
@@ -239,12 +240,9 @@ export const fetchAllProjects = async ({
     };
   }
 
-  // Excludes only EXPLICIT drafts — a document without a status field
-  // (i.e. seeded before this feature existed) is still public. See the
-  // note on CONTENT_STATUS_DRAFT in utils/constants.js.
   const filter = {
     ...categoryFilter,
-    status: { $ne: CONTENT_STATUS_DRAFT },
+    status: CONTENT_STATUS_PUBLISHED,
     ...buildSearchFilter(search, ["title", "description"]),
   };
   if (featured === "true") filter.featured = true;
@@ -305,16 +303,12 @@ export const fetchAllProjectsAdmin = async ({
   Object.assign(filter, buildSearchFilter(search, ["title", "description"]));
 
   if (technology) {
-    // Escape regex special chars to prevent ReDoS; dot-path query on
-    // the nested { group, items: string[] }[] schema.
     const escaped = technology.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     filter["technologies.items"] = { $regex: escaped, $options: "i" };
   }
 
   const sort = buildAdminSort(sortBy, sortOrder);
 
-  // Deliberately not cached: the admin panel needs read-your-own-write
-  // consistency immediately after a create/edit/publish action.
   const [projects, total] = await Promise.all([
     findPaginated({ filter, skip, limit: safeLimit, sort }),
     countAll(filter),
@@ -330,7 +324,7 @@ export const fetchAllProjectsAdmin = async ({
 };
 
 /* ================================================================== *
- * fetchProjectById  (public — 404s for drafts)
+ * fetchProjectById  (public — anything but "published" 404s)
  * ================================================================== */
 
 export const fetchProjectById = async (id) => {
@@ -340,7 +334,7 @@ export const fetchProjectById = async (id) => {
 
   const project = await findByIdPublic(id);
 
-  if (!project || project.status === CONTENT_STATUS_DRAFT) {
+  if (!project || project.status !== CONTENT_STATUS_PUBLISHED) {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
@@ -412,6 +406,9 @@ export const addProject = async ({
     );
   }
 
+  // Direct literal assignment is fine at creation time only — there is
+  // no prior status to transition FROM yet, so utils/contentStatus.js's
+  // transition validation doesn't apply here.
   const safeStatus = CONTENT_STATUSES.includes(status)
     ? status
     : DEFAULT_CONTENT_STATUS;
@@ -419,7 +416,6 @@ export const addProject = async ({
   const uploadedPublicIds = [];
 
   try {
-    // Thumbnail (required) + optional banner — concurrent
     const thumbFolder = cloudinaryFolder("portfolio/projects");
     const bannerFolder = cloudinaryFolder("portfolio/projects/banners");
 
@@ -436,7 +432,6 @@ export const addProject = async ({
         : Promise.resolve(null),
     ]);
 
-    // Gallery — concurrent (up to MAX_GALLERY_IMAGES images)
     const galleryFolder = cloudinaryFolder("portfolio/projects/gallery");
     const validGallery = (galleryFiles ?? []).filter((gf) => gf?.buffer);
     const galleryResults = await Promise.all(
@@ -456,6 +451,7 @@ export const addProject = async ({
       description: sanitizeRichText(description),
       category: category._id,
       status: safeStatus,
+      publishedAt: safeStatus === CONTENT_STATUS_PUBLISHED ? new Date() : null,
       featured: parseBoolean(featured, false),
       projectUrl: liveUrl || projectUrl || "",
       liveUrl: liveUrl || projectUrl || "",
@@ -480,7 +476,6 @@ export const addProject = async ({
       })),
     });
 
-    // DB succeeded — uploads are no longer "pending"
     invalidateProjectsCache();
     invalidateCategoryCache();
     return project;
@@ -497,13 +492,19 @@ export const addProject = async ({
       await destroyManyFromCloudinary(uploadedPublicIds, logger);
     }
 
-    // Re-throw so the controller returns the correct error response
     throw err;
   }
 };
 
 /* ================================================================== *
  * updateProject
+ *
+ * NOTE: `status` is intentionally NOT accepted here anymore (previously
+ * a raw `project.status = updates.status` assignment with no transition
+ * validation). All status changes now go exclusively through
+ * publishProject/unpublishProject/archiveProject/restoreProject/
+ * scheduleProject below, each of which validates the transition via
+ * utils/contentStatus.js.
  * ================================================================== */
 
 export const updateProject = async (id, updates) => {
@@ -512,16 +513,11 @@ export const updateProject = async (id, updates) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  /* ---------------------------------------------------------------- *
-   * Scalar fields — direct assignment, no Cloudinary involved
-   * ---------------------------------------------------------------- */
   const SCALAR_UPDATABLE = ["title", "projectUrl", "liveUrl", "githubUrl"];
   for (const key of SCALAR_UPDATABLE) {
     if (updates[key] !== undefined) project[key] = updates[key];
   }
 
-  // Rich text — sanitized server-side (client-side DOMPurify is a UX
-  // safeguard, not the security boundary; see utils/htmlSanitizer.js).
   if (updates.description !== undefined) {
     project.description = sanitizeRichText(updates.description);
   }
@@ -530,17 +526,6 @@ export const updateProject = async (id, updates) => {
   }
   if (updates.solution !== undefined) {
     project.solution = sanitizeRichText(updates.solution);
-  }
-
-  if (updates.status !== undefined) {
-    if (!CONTENT_STATUSES.includes(updates.status)) {
-      throw new ServiceError(
-        `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-        400,
-        "PROJECT_INVALID_STATUS",
-      );
-    }
-    project.status = updates.status;
   }
 
   if (updates.featured !== undefined) {
@@ -570,10 +555,8 @@ export const updateProject = async (id, updates) => {
     project.category = category._id;
   }
 
-  // Track { newPublicId, oldPublicId } pairs for post-save cleanup
   const pendingDestroys = [];
 
-  // — Thumbnail replacement
   if (updates.file?.buffer) {
     const folder = cloudinaryFolder("portfolio/projects");
     const result = await uploadToCloudinary(updates.file, folder);
@@ -583,7 +566,6 @@ export const updateProject = async (id, updates) => {
     pendingDestroys.push(oldPublicId);
   }
 
-  // — Banner replacement
   if (updates.bannerFile?.buffer) {
     const folder = cloudinaryFolder("portfolio/projects/banners");
     const result = await uploadToCloudinary(updates.bannerFile, folder);
@@ -596,7 +578,6 @@ export const updateProject = async (id, updates) => {
     pendingDestroys.push(oldPublicId);
   }
 
-  // — New gallery images appended
   if (Array.isArray(updates.galleryFiles) && updates.galleryFiles.length > 0) {
     const folder = cloudinaryFolder("portfolio/projects/gallery");
     const currentCount = project.gallery?.length ?? 0;
@@ -604,7 +585,6 @@ export const updateProject = async (id, updates) => {
       (gf, i) => gf?.buffer && currentCount + i < MAX_GALLERY_IMAGES,
     );
 
-    // Upload new gallery images concurrently
     const galleryResults = await Promise.all(
       toUpload.map((gf) => uploadToCloudinary(gf, folder)),
     );
@@ -618,9 +598,6 @@ export const updateProject = async (id, updates) => {
     });
   }
 
-  /* ---------------------------------------------------------------- *
-   * Gallery reorder (in-memory only, no Cloudinary involved)
-   * ---------------------------------------------------------------- */
   if (updates.galleryOrder !== undefined) {
     const orderedIds = JSON.parse(updates.galleryOrder || "[]");
     const galleryMap = new Map(
@@ -641,7 +618,6 @@ export const updateProject = async (id, updates) => {
   if (updates.deleteGalleryIds) {
     const toDelete = JSON.parse(updates.deleteGalleryIds || "[]");
 
-    // Collect public_ids of items being removed
     for (const gid of toDelete) {
       const item = project.gallery.find((g) => g._id.toString() === gid);
       if (item?.public_id) {
@@ -649,7 +625,6 @@ export const updateProject = async (id, updates) => {
       }
     }
 
-    // Remove from the document and re-number order
     project.gallery = project.gallery
       .filter((g) => !toDelete.includes(g._id.toString()))
       .map((g, i) => ({
@@ -698,29 +673,39 @@ export const updateProject = async (id, updates) => {
 };
 
 /* ================================================================== *
- * setProjectStatus  (publish / unpublish)
+ * Publishing workflow — publish / unpublish / archive / restore /
+ * schedule. Every transition is validated against
+ * utils/contentStatus.js's CONTENT_STATUS_TRANSITIONS before it's
+ * applied; an illegal transition (e.g. archived → published directly)
+ * throws a 409 rather than silently mutating the document.
  * ================================================================== */
 
-export const setProjectStatus = async (id, status) => {
-  if (!CONTENT_STATUSES.includes(status)) {
-    throw new ServiceError(
-      `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-      400,
-      "PROJECT_INVALID_STATUS",
-    );
-  }
-
+const transitionProjectStatus = async (id, target, opts = {}) => {
   const project = await findById(id);
   if (!project) {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  project.status = status;
-  await project.save();
+  await applyStatusTransition(project, target, opts);
 
   invalidateProjectsCache();
   return project;
 };
+
+export const publishProject = (id) =>
+  transitionProjectStatus(id, CONTENT_STATUS_PUBLISHED);
+
+export const unpublishProject = (id) =>
+  transitionProjectStatus(id, CONTENT_STATUS_UNPUBLISHED);
+
+export const archiveProject = (id) =>
+  transitionProjectStatus(id, CONTENT_STATUS_ARCHIVED);
+
+export const restoreProject = (id) =>
+  transitionProjectStatus(id, CONTENT_STATUS_DRAFT);
+
+export const scheduleProject = (id, publishAt) =>
+  transitionProjectStatus(id, CONTENT_STATUS_SCHEDULED, { publishAt });
 
 /* ================================================================== *
  * removeProject
@@ -732,11 +717,9 @@ export const removeProject = async (id) => {
     throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
   }
 
-  // Delete from MongoDB first — the source of truth
   await project.deleteOne();
   await resequenceProjects();
 
-  // Best-effort Cloudinary cleanup AFTER the DB record is gone
   const publicIds = [
     project.image?.public_id,
     project.bannerImage?.public_id,

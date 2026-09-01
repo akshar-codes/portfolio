@@ -9,15 +9,17 @@ import {
   updateProject,
   removeProject,
   reorderProjects,
-  setProjectStatus,
+  publishProject,
+  unpublishProject,
+  archiveProject,
+  restoreProject,
+  scheduleProject,
 } from "../services/projectService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import {
   DEFAULT_PROJECTS_PAGE_SIZE,
   DEFAULT_PROJECTS_ADMIN_PAGE_SIZE,
-  CONTENT_STATUS_DRAFT,
-  CONTENT_STATUS_PUBLISHED,
 } from "../constants/index.js";
 
 /* ------------------------------------------------------------------ *
@@ -43,10 +45,6 @@ export const getProjects = asyncHandler(async (req, res) => {
 
 /* ------------------------------------------------------------------ *
  * GET /api/admin/projects  (protected — every status, filterable)
- * Mounted at a dedicated prefix (not /api/projects) so it can't be
- * shadowed by the public router's `GET /`, which is already registered
- * on that same path. Supports ?status, ?featured, ?category, ?search,
- * ?sortBy, ?sortOrder, ?page, ?limit.
  * ------------------------------------------------------------------ */
 export const getAdminProjects = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -88,7 +86,7 @@ export const getAdminProjects = asyncHandler(async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ *
- * GET /api/projects/:id  (public — 404s for drafts)
+ * GET /api/projects/:id  (public — 404s unless published)
  * ------------------------------------------------------------------ */
 export const getProjectById = asyncHandler(async (req, res) => {
   const project = await fetchProjectById(req.params.id);
@@ -128,7 +126,6 @@ export const createProject = asyncHandler(async (req, res) => {
     seo,
   } = req.body;
 
-  // req.files is populated by uploadProjectImages.fields(...)
   const files = req.files ?? {};
   const file = files.image?.[0] ?? req.file ?? null;
   const bannerFile = files.bannerImage?.[0] ?? null;
@@ -158,6 +155,8 @@ export const createProject = asyncHandler(async (req, res) => {
 
 /* ------------------------------------------------------------------ *
  * PATCH /api/projects/:id  (protected, multipart/form-data)
+ * `status` is not accepted here — see routes/admin/projectRoutes.js
+ * publish/unpublish/archive/restore/schedule for status changes.
  * ------------------------------------------------------------------ */
 export const editProject = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
@@ -202,17 +201,37 @@ export const reorderProjectsHandler = asyncHandler(async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ *
- * PATCH /api/projects/:id/publish  (protected)
+ * PATCH /api/projects/:id/publish | /unpublish | /archive | /restore
  * ------------------------------------------------------------------ */
 export const publishProjectHandler = asyncHandler(async (req, res) => {
-  const project = await setProjectStatus(req.params.id, CONTENT_STATUS_PUBLISHED);
+  const project = await publishProject(req.params.id);
   return sendSuccess(res, project, "Project published successfully");
 });
 
-/* ------------------------------------------------------------------ *
- * PATCH /api/projects/:id/unpublish  (protected)
- * ------------------------------------------------------------------ */
 export const unpublishProjectHandler = asyncHandler(async (req, res) => {
-  const project = await setProjectStatus(req.params.id, CONTENT_STATUS_DRAFT);
+  const project = await unpublishProject(req.params.id);
   return sendSuccess(res, project, "Project unpublished successfully");
+});
+
+export const archiveProjectHandler = asyncHandler(async (req, res) => {
+  const project = await archiveProject(req.params.id);
+  return sendSuccess(res, project, "Project archived successfully");
+});
+
+export const restoreProjectHandler = asyncHandler(async (req, res) => {
+  const project = await restoreProject(req.params.id);
+  return sendSuccess(res, project, "Project restored to draft successfully");
+});
+
+/* ------------------------------------------------------------------ *
+ * PATCH /api/projects/:id/schedule  { publishAt: ISO8601 date }
+ * ------------------------------------------------------------------ */
+export const scheduleProjectHandler = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
+  const project = await scheduleProject(req.params.id, req.body.publishAt);
+  return sendSuccess(res, project, "Project scheduled successfully");
 });
