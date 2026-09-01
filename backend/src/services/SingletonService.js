@@ -1,15 +1,30 @@
 import { ServiceError } from "./ServiceError.js";
 import { stripTempIds, normaliseOrder } from "../utils/ordering.js";
+import {
+  applyStatusTransition,
+} from "../utils/contentStatus.js";
 import cache from "../utils/cache.js";
 import {
   CACHE_TTL_MS,
-  CONTENT_STATUSES,
+  CONTENT_STATUS_PUBLISHED,
   CONTENT_STATUS_DRAFT,
+  CONTENT_STATUS_SCHEDULED,
+  CONTENT_STATUS_UNPUBLISHED,
+  CONTENT_STATUS_ARCHIVED,
 } from "../constants/index.js";
 
 /**
  * Factory that builds the standard business-logic layer for a singleton
- * CMS resource (SiteSettings, Navigation, Footer, SEO, Resume, ...).
+ * CMS resource (SiteSettings, Navigation, Footer, SEO, Profile, About,
+ * Resume, ...).
+ *
+ * Owns two concerns:
+ *   1. Content editing — `patchSingleton`, restricted to `patchableFields`,
+ *      and NEVER touches `status` or its timestamps.
+ *   2. The publishing workflow — `publish` / `unpublish` / `archive` /
+ *      `restore` / `schedule`, each a validated status transition (see
+ *      utils/contentStatus.js). These are the only ways `status` ever
+ *      changes on a singleton.
  */
 export function createSingletonService({
   repository,
@@ -103,14 +118,14 @@ export function createSingletonService({
     return result;
   };
 
-  /** PUBLIC read — 404s only while the resource is explicitly "draft". */
+  /** PUBLIC read — 404s unless the resource is explicitly "published". */
   const fetchPublic = async () => {
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
     const doc = await repository.getSingleton(defaults);
 
-    if (doc.status === CONTENT_STATUS_DRAFT) {
+    if (doc.status !== CONTENT_STATUS_PUBLISHED) {
       throw new ServiceError(
         `${resourceName} is not currently published.`,
         404,
@@ -123,7 +138,7 @@ export function createSingletonService({
     return result;
   };
 
-  /** PATCH — partial update restricted to `patchableFields`. Never touches `status`. */
+  /** PATCH — partial content update restricted to `patchableFields`. Never touches `status`. */
   const patchSingleton = async (updates) => {
     const sanitized = sanitizeUpdates(updates);
 
@@ -146,38 +161,35 @@ export function createSingletonService({
     return sortOrderedFields(resultDoc);
   };
 
-  /** Sets the publish status ("draft" | "published"). */
-  const setStatus = async (status) => {
-    if (!CONTENT_STATUSES.includes(status)) {
-      throw new ServiceError(
-        `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-        400,
-        "SINGLETON_INVALID_STATUS",
-      );
+  /** Shared transition runner — loads (or lazily creates) the singleton, validates and applies the transition. */
+  const transitionStatus = async (target, opts = {}) => {
+    let doc = await repository.findDefault();
+    if (!doc) {
+      doc = await repository.create({ ...defaults });
     }
 
-    const existing = await repository.findDefault();
-
-    let resultDoc;
-    if (!existing) {
-      const created = await repository.create({ ...defaults, status });
-      resultDoc = created.toObject();
-    } else {
-      existing.status = status;
-      await existing.validate();
-      await existing.save();
-      resultDoc = existing.toObject();
-    }
+    await applyStatusTransition(doc, target, opts);
 
     invalidateCache();
-    return sortOrderedFields(resultDoc);
+    return sortOrderedFields(doc.toObject());
   };
+
+  const publish = () => transitionStatus(CONTENT_STATUS_PUBLISHED);
+  const unpublish = () => transitionStatus(CONTENT_STATUS_UNPUBLISHED);
+  const archive = () => transitionStatus(CONTENT_STATUS_ARCHIVED);
+  const restore = () => transitionStatus(CONTENT_STATUS_DRAFT);
+  const schedule = (publishAt) =>
+    transitionStatus(CONTENT_STATUS_SCHEDULED, { publishAt });
 
   return {
     fetchAdmin,
     fetchPublic,
     patchSingleton,
-    setStatus,
+    publish,
+    unpublish,
+    archive,
+    restore,
+    schedule,
     invalidateCache,
   };
 }

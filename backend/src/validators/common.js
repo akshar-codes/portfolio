@@ -4,7 +4,8 @@ import { body } from "express-validator";
  * Reusable, standardized validation-chain builders shared across every
  * singleton CMS resource (SiteSettings, Navigation, Footer, SEO, ...).
  * Keeps constraint patterns (URL shape, hex colors, email, booleans,
- * order integers) defined once instead of re-typed per validator file.
+ * order integers, publish scheduling) defined once instead of re-typed
+ * per validator file.
  */
 
 /** Optional trimmed string. Empty string is treated as "unset" and skips length checks. */
@@ -72,4 +73,25 @@ export function optionalOrder(field = "order") {
     .isInt({ min: 0 })
     .withMessage(`${field} must be a non-negative integer`)
     .toInt();
+}
+
+/**
+ * Required, must-be-future ISO8601 date for the "schedule" action.
+ * The service layer (utils/contentStatus.js assertFuturePublishAt)
+ * re-validates this server-side regardless — this is the request-level
+ * first line of defense so a malformed body never reaches the service.
+ */
+export function publishAtValidator(field = "publishAt") {
+  return body(field)
+    .exists({ checkFalsy: true })
+    .withMessage(`${field} is required`)
+    .isISO8601()
+    .withMessage(`${field} must be a valid ISO8601 date`)
+    .toDate()
+    .custom((value) => {
+      if (new Date(value).getTime() <= Date.now()) {
+        throw new Error(`${field} must be a future date/time`);
+      }
+      return true;
+    });
 }
