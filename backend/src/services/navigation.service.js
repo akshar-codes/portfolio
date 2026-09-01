@@ -19,7 +19,11 @@ const {
   fetchAdmin: fetchNavigationAdminRaw,
   fetchPublic: fetchNavigationPublicRaw,
   patchSingleton: patchNavigationRaw,
-  setStatus: setNavigationStatusRaw,
+  publish: publishNavigationRaw,
+  unpublish: unpublishNavigationRaw,
+  archive: archiveNavigationRaw,
+  restore: restoreNavigationRaw,
+  schedule: scheduleNavigationRaw,
   invalidateCache: invalidateNavigationCache,
 } = createSingletonService({
   repository,
@@ -46,8 +50,6 @@ function sortNestedItems(doc) {
 
 const fetchNavigationAdmin = async () => sortNestedItems(await fetchNavigationAdminRaw());
 const fetchNavigationPublic = async () => sortNestedItems(await fetchNavigationPublicRaw());
-const setNavigationStatus = async (status) =>
-  sortNestedItems(await setNavigationStatusRaw(status));
 
 const patchNavigation = async (updates) => {
   const sanitized = { ...updates };
@@ -57,10 +59,24 @@ const patchNavigation = async (updates) => {
   return sortNestedItems(await patchNavigationRaw(sanitized));
 };
 
+// The publishing-workflow methods never touch `items`, so they need no
+// nested-sanitization wrapping — only the sort-for-display pass, same
+// as the reads above.
+const publishNavigation = async () => sortNestedItems(await publishNavigationRaw());
+const unpublishNavigation = async () => sortNestedItems(await unpublishNavigationRaw());
+const archiveNavigation = async () => sortNestedItems(await archiveNavigationRaw());
+const restoreNavigation = async () => sortNestedItems(await restoreNavigationRaw());
+const scheduleNavigation = async (publishAt) =>
+  sortNestedItems(await scheduleNavigationRaw(publishAt));
+
 export {
   fetchNavigationAdmin,
   fetchNavigationPublic,
   patchNavigation,
-  setNavigationStatus,
+  publishNavigation,
+  unpublishNavigation,
+  archiveNavigation,
+  restoreNavigation,
+  scheduleNavigation,
   invalidateNavigationCache,
 };
