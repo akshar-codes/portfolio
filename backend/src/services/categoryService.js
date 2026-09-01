@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Category from "../models/Category.js";
 import {
   aggregateCategories,
   findBySlug,
@@ -16,10 +17,15 @@ import { generateSlug, normalizeName } from "../utils/slug.js";
 import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
 import { buildSearchFilter } from "../utils/queryHelpers.js";
+import { applyStatusTransition } from "../utils/contentStatus.js";
 import {
   CACHE_TTL_MS,
   CONTENT_STATUSES,
+  CONTENT_STATUS_PUBLISHED,
+  CONTENT_STATUS_UNPUBLISHED,
+  CONTENT_STATUS_ARCHIVED,
   CONTENT_STATUS_DRAFT,
+  CONTENT_STATUS_SCHEDULED,
   DEFAULT_CONTENT_STATUS,
   CATEGORY_SORT_FIELDS,
   DEFAULT_CATEGORY_SORT_FIELD,
@@ -50,9 +56,9 @@ function buildCategoryPipeline({
 
   if (publicOnly) {
     matchStage.projectCount = { $gt: 0 };
-    // Excludes only EXPLICIT drafts — see the note on
-    // CONTENT_STATUS_DRAFT in utils/constants.js.
-    matchStage.status = { $ne: CONTENT_STATUS_DRAFT };
+    // Strict equality — only genuinely "published" categories are
+    // public. See constants/index.js's publish-workflow contract.
+    matchStage.status = CONTENT_STATUS_PUBLISHED;
   } else if (status && CONTENT_STATUSES.includes(status)) {
     matchStage.status = status;
   }
@@ -80,10 +86,6 @@ function buildCategoryPipeline({
   pipeline.push({ $project: { projects: 0 } });
 
   if (publicOnly) {
-    // The public listing always follows the admin-curated display
-    // order (drag-reordered via reorderCategories below), regardless
-    // of any sortBy/sortOrder param — those only drive the admin
-    // table's own column sorting.
     pipeline.push({ $sort: { order: 1, name: 1 } });
   } else {
     const sortField = CATEGORY_SORT_FIELDS.includes(sortBy)
@@ -153,12 +155,12 @@ export const createCategory = async (rawName, status = DEFAULT_CONTENT_STATUS) =
     );
   }
 
+  // Literal assignment at creation only — no prior status to
+  // transition from, so utils/contentStatus.js's validation is N/A here.
   const safeStatus = CONTENT_STATUSES.includes(status)
     ? status
     : DEFAULT_CONTENT_STATUS;
 
-  // New categories are appended to the end of the display order,
-  // matching addProject's `findMaxOrder() + 1` convention.
   const maxOrderDoc = await findMaxOrder();
   const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
 
@@ -166,59 +168,24 @@ export const createCategory = async (rawName, status = DEFAULT_CONTENT_STATUS) =
     name,
     slug,
     status: safeStatus,
+    publishedAt: safeStatus === CONTENT_STATUS_PUBLISHED ? new Date() : null,
     order: nextOrder,
   });
   invalidateCategoryCache();
   return category;
 };
 
-/* ── updateCategory  (rename and/or change publish status) ──────────── */
+/* ── updateCategory  (rename only — status flows through the
+ * dedicated publish/unpublish/archive/restore/schedule endpoints
+ * below, each validated against utils/contentStatus.js) ────────────── */
 
-export const updateCategory = async (id, { name, status } = {}) => {
+export const updateCategory = async (id, { name } = {}) => {
   const category = await findById(id);
   if (!category) {
     throw new ServiceError("Category not found.", 404, "CATEGORY_NOT_FOUND");
   }
 
-  const updates = {};
-
-  if (name !== undefined) {
-    const normalizedName = normalizeName(name);
-    const slug = generateSlug(normalizedName);
-
-    if (!slug) {
-      throw new ServiceError(
-        "Category name is invalid — it must contain at least one alphanumeric character.",
-        400,
-        "CATEGORY_INVALID_NAME",
-      );
-    }
-
-    const existingSlug = await findBySlug(slug);
-    if (existingSlug && existingSlug._id.toString() !== id) {
-      throw new ServiceError(
-        `Category "${existingSlug.name}" already exists.`,
-        409,
-        "CATEGORY_DUPLICATE",
-      );
-    }
-
-    updates.name = normalizedName;
-    updates.slug = slug;
-  }
-
-  if (status !== undefined) {
-    if (!CONTENT_STATUSES.includes(status)) {
-      throw new ServiceError(
-        `status must be one of: ${CONTENT_STATUSES.join(", ")}`,
-        400,
-        "CATEGORY_INVALID_STATUS",
-      );
-    }
-    updates.status = status;
-  }
-
-  if (Object.keys(updates).length === 0) {
+  if (name === undefined) {
     throw new ServiceError(
       "No valid fields provided for update.",
       400,
@@ -226,10 +193,63 @@ export const updateCategory = async (id, { name, status } = {}) => {
     );
   }
 
-  const updated = await updateById(id, updates);
+  const normalizedName = normalizeName(name);
+  const slug = generateSlug(normalizedName);
+
+  if (!slug) {
+    throw new ServiceError(
+      "Category name is invalid — it must contain at least one alphanumeric character.",
+      400,
+      "CATEGORY_INVALID_NAME",
+    );
+  }
+
+  const existingSlug = await findBySlug(slug);
+  if (existingSlug && existingSlug._id.toString() !== id) {
+    throw new ServiceError(
+      `Category "${existingSlug.name}" already exists.`,
+      409,
+      "CATEGORY_DUPLICATE",
+    );
+  }
+
+  const updated = await updateById(id, { name: normalizedName, slug });
   invalidateCategoryCache();
   return updated;
 };
+
+/* ── Publishing workflow ──────────────────────────────────────────── */
+
+const transitionCategoryStatus = async (id, target, opts = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ServiceError("Invalid category ID.", 400, "CATEGORY_INVALID_ID");
+  }
+
+  const category = await Category.findById(id);
+  if (!category) {
+    throw new ServiceError("Category not found.", 404, "CATEGORY_NOT_FOUND");
+  }
+
+  await applyStatusTransition(category, target, opts);
+
+  invalidateCategoryCache();
+  return category;
+};
+
+export const publishCategory = (id) =>
+  transitionCategoryStatus(id, CONTENT_STATUS_PUBLISHED);
+
+export const unpublishCategory = (id) =>
+  transitionCategoryStatus(id, CONTENT_STATUS_UNPUBLISHED);
+
+export const archiveCategory = (id) =>
+  transitionCategoryStatus(id, CONTENT_STATUS_ARCHIVED);
+
+export const restoreCategory = (id) =>
+  transitionCategoryStatus(id, CONTENT_STATUS_DRAFT);
+
+export const scheduleCategory = (id, publishAt) =>
+  transitionCategoryStatus(id, CONTENT_STATUS_SCHEDULED, { publishAt });
 
 /* ── resequenceCategories — renumber order 0..N after a delete ──────── */
 
