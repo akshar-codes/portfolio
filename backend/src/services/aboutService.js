@@ -19,12 +19,8 @@ const PATCHABLE_FIELDS = [
 ];
 
 // `skillsSummary` is deliberately NOT included here — it is a flat
-// string array (no per-item `order` field), and the generic
-// ORDERED_ARRAY_FIELDS path expects each item to be an object it can
-// strip `_tempId` from / renumber `order` on. Routing plain strings
-// through that path would spread each character into an indexed
-// object (JS destructuring `{...rest}` on a string primitive) and
-// silently corrupt the data — see stripTempIds in utils/ordering.js.
+// string array (no per-item `order` field); see the original file's
+// note on stripTempIds corrupting plain-string arrays.
 const ORDERED_ARRAY_FIELDS = [
   "services",
   "timeline",
@@ -37,7 +33,11 @@ const {
   fetchAdmin: fetchAdminAbout,
   fetchPublic: fetchPublicAbout,
   patchSingleton: patchAboutRaw,
-  setStatus: setAboutStatus,
+  publish: publishAbout,
+  unpublish: unpublishAbout,
+  archive: archiveAbout,
+  restore: restoreAbout,
+  schedule: scheduleAbout,
   invalidateCache: invalidateAboutCache,
 } = createSingletonService({
   repository,
@@ -49,9 +49,7 @@ const {
 
 /**
  * Sanitizes the rich-text biography before delegating to the generic
- * singleton PATCH. See profileService.js's patchProfile for the same
- * rationale (server-side sanitization is the real XSS boundary, not
- * the client-side DOMPurify pass).
+ * singleton PATCH. Server-side sanitization is the real XSS boundary.
  */
 const patchAbout = async (updates) => {
   const sanitized = { ...updates };
@@ -65,6 +63,10 @@ export {
   fetchAdminAbout,
   fetchPublicAbout,
   patchAbout,
-  setAboutStatus,
+  publishAbout,
+  unpublishAbout,
+  archiveAbout,
+  restoreAbout,
+  scheduleAbout,
   invalidateAboutCache,
 };
