@@ -9,24 +9,38 @@ export const API_ENDPOINTS = {
   adminProfile: "/admin/profile",
   adminProfilePublish: "/admin/profile/publish",
   adminProfileUnpublish: "/admin/profile/unpublish",
+  adminProfileArchive: "/admin/profile/archive",
+  adminProfileRestore: "/admin/profile/restore",
+  adminProfileSchedule: "/admin/profile/schedule",
 
   // About
   about: "/about",
   adminAbout: "/admin/about",
   adminAboutPublish: "/admin/about/publish",
   adminAboutUnpublish: "/admin/about/unpublish",
+  adminAboutArchive: "/admin/about/archive",
+  adminAboutRestore: "/admin/about/restore",
+  adminAboutSchedule: "/admin/about/schedule",
 
   // Resume
   resume: "/resume",
   adminResume: "/admin/resume",
   adminResumePublish: "/admin/resume/publish",
   adminResumeUnpublish: "/admin/resume/unpublish",
+  adminResumeArchive: "/admin/resume/archive",
+  adminResumeRestore: "/admin/resume/restore",
+  adminResumeSchedule: "/admin/resume/schedule",
 
   // Categories
   categories: "/categories",
   adminCategories: "/admin/categories",
   adminCategoryById: (id) => `/admin/categories/${id}`,
   adminCategoryReorder: "/admin/categories/reorder",
+  adminCategoryPublish: (id) => `/admin/categories/${id}/publish`,
+  adminCategoryUnpublish: (id) => `/admin/categories/${id}/unpublish`,
+  adminCategoryArchive: (id) => `/admin/categories/${id}/archive`,
+  adminCategoryRestore: (id) => `/admin/categories/${id}/restore`,
+  adminCategorySchedule: (id) => `/admin/categories/${id}/schedule`,
 
   // Projects
   projects: "/projects",
@@ -34,17 +48,14 @@ export const API_ENDPOINTS = {
   projectReorder: "/projects/reorder",
   projectPublish: (id) => `/projects/${id}/publish`,
   projectUnpublish: (id) => `/projects/${id}/unpublish`,
-  // Admin-only listing — includes drafts (see
-  // routes/admin/projectAdminRoutes.js). The public `projects`/
-  // `projectById` above only ever return published projects, so the
-  // admin table/editor must read through these instead.
+  projectArchive: (id) => `/projects/${id}/archive`,
+  projectRestore: (id) => `/projects/${id}/restore`,
+  projectSchedule: (id) => `/projects/${id}/schedule`,
+  // Admin-only listing — includes drafts.
   adminProjects: "/admin/projects",
   adminProjectById: (id) => `/admin/projects/${id}`,
 
-  // Messages — one base path ("/messages") shared by the public POST
-  // (contact form) and every protected admin action below; there is
-  // no separate "/admin/messages" path, unlike Categories/Projects, so
-  // these keys are deliberately NOT prefixed "admin*".
+  // Messages
   messages: "/messages",
   messageById: (id) => `/messages/${id}`,
   messagesSummary: "/messages/summary",
@@ -62,6 +73,9 @@ export const API_ENDPOINTS = {
   adminSiteSettings: "/admin/site-settings",
   adminSiteSettingsPublish: "/admin/site-settings/publish",
   adminSiteSettingsUnpublish: "/admin/site-settings/unpublish",
+  adminSiteSettingsArchive: "/admin/site-settings/archive",
+  adminSiteSettingsRestore: "/admin/site-settings/restore",
+  adminSiteSettingsSchedule: "/admin/site-settings/schedule",
   adminSiteSettingsLogo: "/admin/site-settings/logo",
   adminSiteSettingsFavicon: "/admin/site-settings/favicon",
 
@@ -70,18 +84,27 @@ export const API_ENDPOINTS = {
   adminNavigation: "/admin/navigation",
   adminNavigationPublish: "/admin/navigation/publish",
   adminNavigationUnpublish: "/admin/navigation/unpublish",
+  adminNavigationArchive: "/admin/navigation/archive",
+  adminNavigationRestore: "/admin/navigation/restore",
+  adminNavigationSchedule: "/admin/navigation/schedule",
 
   // Footer
   footer: "/footer",
   adminFooter: "/admin/footer",
   adminFooterPublish: "/admin/footer/publish",
   adminFooterUnpublish: "/admin/footer/unpublish",
+  adminFooterArchive: "/admin/footer/archive",
+  adminFooterRestore: "/admin/footer/restore",
+  adminFooterSchedule: "/admin/footer/schedule",
 
   // SEO
   seo: "/seo",
   adminSeo: "/admin/seo",
   adminSeoPublish: "/admin/seo/publish",
   adminSeoUnpublish: "/admin/seo/unpublish",
+  adminSeoArchive: "/admin/seo/archive",
+  adminSeoRestore: "/admin/seo/restore",
+  adminSeoSchedule: "/admin/seo/schedule",
 
   // Media library (admin-only)
   adminMedia: "/admin/media",
