@@ -14,8 +14,6 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import PublishOutlinedIcon from "@mui/icons-material/PublishOutlined";
-import UnpublishedOutlinedIcon from "@mui/icons-material/UnpublishedOutlined";
 import StarIcon from "@mui/icons-material/Star";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import CheckIcon from "@mui/icons-material/Check";
@@ -29,6 +27,8 @@ import FilterBar from "../../components/common/FilterBar";
 import DataTable from "../../components/table/DataTable";
 import DragReorderList from "../../components/cms/DragReorderList";
 import RequirePermission from "../../components/auth/RequirePermission";
+import StatusBadge from "../../components/cms/StatusBadge";
+import PublishActionsMenu from "../../components/cms/PublishActionsMenu";
 import ProjectDetails from "./ProjectDetails";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useGlobalLoading } from "../../hooks/useGlobalLoading";
@@ -42,6 +42,9 @@ import {
   useReorderProjects,
   usePublishProject,
   useUnpublishProject,
+  useArchiveProject,
+  useRestoreProject,
+  useScheduleProject,
 } from "../../hooks/useProjects";
 import { projectsApi } from "../../api/projectsApi";
 import { PERMISSIONS } from "../../constants/permissions";
@@ -49,15 +52,15 @@ import { ROUTES } from "../../constants/routes";
 import { flattenTechNames } from "../../utils/projectHelpers";
 
 const PROJECTS_ADMIN_PAGE_SIZE = 10;
-// Matches backend MAX_PAGE_SIZE (utils/constants.js). Reorder mode
-// fetches a single unpaginated page up to this cap — see the note on
-// canReorder below for what happens past this count.
 const MAX_REORDER_ITEMS = 50;
 
 const STATUS_OPTIONS = [
   { label: "All statuses", value: "" },
-  { label: "Published", value: "published" },
   { label: "Draft", value: "draft" },
+  { label: "Scheduled", value: "scheduled" },
+  { label: "Published", value: "published" },
+  { label: "Unpublished", value: "unpublished" },
+  { label: "Archived", value: "archived" },
 ];
 
 const FEATURED_OPTIONS = [
@@ -166,6 +169,9 @@ export default function ManageProjects() {
   const { mutateAsync: reorderProjects, isPending: savingOrder } = useReorderProjects();
   const { mutateAsync: publishProject } = usePublishProject();
   const { mutateAsync: unpublishProject } = useUnpublishProject();
+  const { mutateAsync: archiveProject } = useArchiveProject();
+  const { mutateAsync: restoreProject } = useRestoreProject();
+  const { mutateAsync: scheduleProject } = useScheduleProject();
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -174,6 +180,7 @@ export default function ManageProjects() {
   const [reorderItems, setReorderItems] = useState(null);
   const [reorderTruncated, setReorderTruncated] = useState(false);
   const [loadingReorder, setLoadingReorder] = useState(false);
+  const [statusBusyId, setStatusBusyId] = useState(null);
 
   const confirm = useConfirmDialog();
   const { showLoading, hideLoading } = useGlobalLoading();
@@ -181,12 +188,10 @@ export default function ManageProjects() {
   const projects = data?.projects ?? [];
   const canReorder = !filters.search && !filters.status && !filters.category && !filters.featured && !filters.technology;
 
-  // Sort column click: push a history entry (user can go back to previous sort).
-  // setFilter auto-resets page to 1, so no manual setPage(1) needed.
   const handleSort = (field) => {
     const nextOrder = filters.sortBy === field && filters.sortOrder === "asc" ? "desc" : "asc";
     setFilter("sortBy", field);
-    setFilter("sortOrder", nextOrder, { resetPage: false }); // page already reset by sortBy write
+    setFilter("sortOrder", nextOrder, { resetPage: false });
   };
 
   const handleDelete = async (project) => {
@@ -240,17 +245,16 @@ export default function ManageProjects() {
     }
   };
 
-  const handleTogglePublish = async (project) => {
+  /** Wraps a per-row status mutation with the busy-row indicator + toast. */
+  const runStatusAction = (project, mutate, successMessage) => async (...args) => {
+    setStatusBusyId(project._id);
     try {
-      if (project.status === "draft") {
-        await publishProject(project._id);
-        toast.success(`"${project.title}" published.`);
-      } else {
-        await unpublishProject(project._id);
-        toast.success(`"${project.title}" unpublished.`);
-      }
+      await mutate(...args);
+      toast.success(successMessage);
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setStatusBusyId(null);
     }
   };
 
@@ -336,14 +340,7 @@ export default function ManageProjects() {
       field: "status",
       headerName: "Status",
       align: "center",
-      render: (row) => (
-        <Chip
-          size="small"
-          variant={row.status === "draft" ? "outlined" : "filled"}
-          color={row.status === "draft" ? "default" : "success"}
-          label={row.status === "draft" ? "Draft" : "Published"}
-        />
-      ),
+      render: (row) => <StatusBadge status={row.status} publishAt={row.publishAt} />,
     },
     {
       field: "featured",
@@ -435,8 +432,6 @@ export default function ManageProjects() {
           <ToolbarBar
             searchValue={filters.search}
             onSearchChange={(v) => {
-              // Debounced — use replace:true so intermediate keystrokes don't
-              // pile up in browser history (the debounced flush is the real entry).
               setFilter("search", v, { replace: true });
             }}
             searchPlaceholder="Search projects…"
@@ -511,14 +506,20 @@ export default function ManageProjects() {
               <VisibilityOutlinedIcon fontSize="small" />
             </IconButton>
             <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
-              <IconButton
-                size="small"
-                onClick={() => handleTogglePublish(row)}
-                aria-label={row.status === "draft" ? `Publish ${row.title}` : `Unpublish ${row.title}`}
-                title={row.status === "draft" ? "Publish" : "Unpublish"}
-              >
-                {row.status === "draft" ? <PublishOutlinedIcon fontSize="small" /> : <UnpublishedOutlinedIcon fontSize="small" />}
-              </IconButton>
+              <PublishActionsMenu
+                status={row.status}
+                busy={statusBusyId === row._id}
+                resourceLabel={`"${row.title}"`}
+                onPublish={runStatusAction(row, () => publishProject(row._id), `"${row.title}" published.`)}
+                onUnpublish={runStatusAction(row, () => unpublishProject(row._id), `"${row.title}" unpublished.`)}
+                onArchive={runStatusAction(row, () => archiveProject(row._id), `"${row.title}" archived.`)}
+                onRestore={runStatusAction(row, () => restoreProject(row._id), `"${row.title}" restored to draft.`)}
+                onSchedule={runStatusAction(
+                  row,
+                  (publishAt) => scheduleProject({ id: row._id, publishAt }),
+                  `"${row.title}" scheduled.`,
+                )}
+              />
             </RequirePermission>
             <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
               <IconButton

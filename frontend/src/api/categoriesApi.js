@@ -10,12 +10,26 @@ export const categoriesApi = {
     remove: (id) => API_ENDPOINTS.adminCategoryById(id),
   }),
 
-  // Drag-reorder — not a plain CRUD verb, so it doesn't fit
-  // createResourceApi's list/getById/create/update/remove shape.
-  // Mirrors the standalone `reorder` action already used for Projects
-  // (services/projectService.js reorderProjects).
+  // Drag-reorder — not a plain CRUD verb.
   reorder: (orderedIds) =>
     api
       .patch(API_ENDPOINTS.adminCategoryReorder, { orderedIds })
+      .then((res) => res.data),
+
+  // Publishing workflow — dedicated action endpoints. `update` above
+  // (generic PATCH) only renames a category now; status changes always
+  // go through these.
+  publish: (id) => api.patch(API_ENDPOINTS.adminCategoryPublish(id)).then((res) => res.data),
+
+  unpublish: (id) =>
+    api.patch(API_ENDPOINTS.adminCategoryUnpublish(id)).then((res) => res.data),
+
+  archive: (id) => api.patch(API_ENDPOINTS.adminCategoryArchive(id)).then((res) => res.data),
+
+  restore: (id) => api.patch(API_ENDPOINTS.adminCategoryRestore(id)).then((res) => res.data),
+
+  schedule: (id, publishAt) =>
+    api
+      .patch(API_ENDPOINTS.adminCategorySchedule(id), { publishAt })
       .then((res) => res.data),
 };
