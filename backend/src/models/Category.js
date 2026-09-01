@@ -21,6 +21,11 @@ const categorySchema = new mongoose.Schema(
       maxlength: [120, "Slug must not exceed 120 characters"],
     },
 
+    /* ── Publishing workflow ─────────────────────────────────────────
+     * Owned exclusively by services/categoryService.js's publish/
+     * unpublish/archive/restore/scheduleCategory — never set directly
+     * via the generic rename update. See utils/contentStatus.js.
+     * ---------------------------------------------------------------- */
     status: {
       type: String,
       enum: {
@@ -29,12 +34,12 @@ const categorySchema = new mongoose.Schema(
       },
       default: DEFAULT_CONTENT_STATUS,
     },
+    publishAt: { type: Date, default: null },
+    publishedAt: { type: Date, default: null },
+    unpublishedAt: { type: Date, default: null },
+    archivedAt: { type: Date, default: null },
 
     // Manual display order, curated via the admin drag-reorder UI.
-    // Mirrors Project.order / reorderProjects (see
-    // services/categoryService.js reorderCategories()). New categories
-    // are appended to the end (see createCategory); deleting a
-    // category resequences the remainder so order stays gap-free.
     order: {
       type: Number,
       required: true,
@@ -48,6 +53,7 @@ const categorySchema = new mongoose.Schema(
 categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
 categorySchema.index({ status: 1 });
+categorySchema.index({ status: 1, publishAt: 1 }); // scheduled-publish sweep
 categorySchema.index({ order: 1 });
 
 categorySchema.pre("save", async function () {

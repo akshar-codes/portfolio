@@ -3,19 +3,17 @@ import {
   CONTENT_STATUSES,
   PROJECT_ADMIN_SORT_FIELDS,
 } from "../constants/index.js";
+import { publishAtValidator } from "./common.js";
 
 export const projectIdParamValidator = [
   param("id").isMongoId().withMessage("Invalid project ID"),
 ];
 
-/**
- * Validates the `seo` field, sent as a JSON-stringified object in
- * multipart/form-data — same convention AddProject/ManageProjects
- * already use for `technologies`/`features` (see
- * services/projectService.js parseSeoField for the persistence-side
- * counterpart). Deep field limits mirror models/Project.js's
- * projectSeoSchema.
- */
+export const scheduleProjectValidator = [
+  param("id").isMongoId().withMessage("Invalid project ID"),
+  publishAtValidator(),
+];
+
 function validateSeoField(value) {
   if (value === undefined || value === "") return true;
 
@@ -86,11 +84,6 @@ export const projectCreateValidators = [
     .isLength({ min: 2, max: 120 })
     .withMessage("Title must be between 2 and 120 characters"),
 
-  // Rich text (Tiptap HTML). The authoritative 5000-character ceiling
-  // is enforced by the Mongoose schema AFTER server-side sanitization
-  // (services/projectService.js) strips markup — this is only a
-  // generous first-line-of-defense against absurdly large payloads on
-  // the raw, pre-sanitized HTML (mirrors validators/aboutValidators.js).
   body("description")
     .trim()
     .notEmpty()
@@ -130,6 +123,8 @@ export const projectCreateValidators = [
     .isLength({ max: 20000 })
     .withMessage("Solution is too long"),
 
+  // Initial value only — no prior status exists to transition from at
+  // creation time, so this is a literal assignment, not a transition.
   body("status")
     .optional()
     .isIn(CONTENT_STATUSES)
@@ -144,6 +139,12 @@ export const projectCreateValidators = [
   body("seo").optional({ checkFalsy: true }).custom(validateSeoField),
 ];
 
+/**
+ * `status` is deliberately NOT validated/accepted here — status changes
+ * go exclusively through the dedicated publish/unpublish/archive/
+ * restore/schedule endpoints (routes/admin/projectRoutes.js), each of
+ * which validates the transition via utils/contentStatus.js.
+ */
 export const projectUpdateValidators = [
   body("title")
     .optional()
@@ -192,11 +193,6 @@ export const projectUpdateValidators = [
     .isLength({ max: 20000 })
     .withMessage("Solution is too long"),
 
-  body("status")
-    .optional()
-    .isIn(CONTENT_STATUSES)
-    .withMessage(`status must be one of: ${CONTENT_STATUSES.join(", ")}`),
-
   body("featured")
     .optional()
     .isBoolean()
@@ -215,11 +211,6 @@ export const reorderProjectsValidator = [
     .withMessage("Each orderedId must be a valid MongoDB ObjectId"),
 ];
 
-/**
- * Query validators for GET /api/admin/projects — the admin-only
- * listing that, unlike the public listing, can filter by status,
- * featured flag, and sort by an admin-chosen field.
- */
 export const projectAdminListValidators = [
   query("page").optional().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
   query("limit").optional().isInt({ min: 1 }).withMessage("limit must be a positive integer").toInt(),
