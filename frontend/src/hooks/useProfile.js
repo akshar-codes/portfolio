@@ -8,14 +8,15 @@ export const ADMIN_PROFILE_QUERY_KEY = ["profile", "admin"];
 
 /* ── Public read ───────────────────────────────────────────────────── */
 
-export function useProfile() {
+export function useProfile({ preview = false } = {}) {
   return useQuery({
-    queryKey: PROFILE_QUERY_KEY,
+    queryKey: [...PROFILE_QUERY_KEY, { preview }],
     queryFn: async () => {
-      const { data } = await api.get(API_ENDPOINTS.profile);
+      const endpoint = preview ? API_ENDPOINTS.adminProfile : API_ENDPOINTS.profile;
+      const { data } = await api.get(endpoint);
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes — profile changes rarely
+    staleTime: preview ? 0 : 5 * 60 * 1000,
     retry: 2,
   });
 }

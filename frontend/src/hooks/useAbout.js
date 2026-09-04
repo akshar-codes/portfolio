@@ -8,14 +8,15 @@ export const ADMIN_ABOUT_QUERY_KEY = ["about", "admin"];
 
 /* ── Public read ───────────────────────────────────────────────────── */
 
-export function useAbout() {
+export function useAbout({ preview = false } = {}) {
   return useQuery({
-    queryKey: ABOUT_QUERY_KEY,
+    queryKey: [...ABOUT_QUERY_KEY, { preview }],
     queryFn: async () => {
-      const { data } = await api.get(API_ENDPOINTS.about);
+      const endpoint = preview ? API_ENDPOINTS.adminAbout : API_ENDPOINTS.about;
+      const { data } = await api.get(endpoint);
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes — content changes rarely
+    staleTime: preview ? 0 : 5 * 60 * 1000,
     retry: 2,
   });
 }

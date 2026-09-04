@@ -24,4 +24,10 @@ export const ROUTES = {
   adminFooter: "/admin/footer",
   adminSeo: "/admin/seo",
   adminSettings: "/admin/settings",
+
+  previewHome: "/?preview=1",
+  previewResume: "/resume?preview=1",
+  previewWork: "/work?preview=1",
+  previewServices: "/services?preview=1",
+  previewProject: (id) => `/work?preview=1&projectId=${id}`,
 };

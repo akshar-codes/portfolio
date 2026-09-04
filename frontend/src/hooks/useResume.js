@@ -8,14 +8,15 @@ export const ADMIN_RESUME_QUERY_KEY = ["resume", "admin"];
 
 /* ── Public read ───────────────────────────────────────────────────── */
 
-export function useResume() {
+export function useResume({ preview = false } = {}) {
   return useQuery({
-    queryKey: RESUME_QUERY_KEY,
+    queryKey: [...RESUME_QUERY_KEY, { preview }],
     queryFn: async () => {
-      const { data } = await api.get(API_ENDPOINTS.resume);
+      const endpoint = preview ? API_ENDPOINTS.adminResume : API_ENDPOINTS.resume;
+      const { data } = await api.get(endpoint);
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes — content changes rarely
+    staleTime: preview ? 0 : 5 * 60 * 1000,
     retry: 2,
   });
 }
