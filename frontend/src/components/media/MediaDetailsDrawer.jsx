@@ -12,9 +12,11 @@ import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { toast } from "sonner";
 
 import TagInput from "../common/TagInput";
+import MediaPreviewDialog from "./MediaPreviewDialog";
 import { getPreviewUrl } from "../../utils/cloudinaryTransform";
 import { downloadMediaBatch } from "../../utils/downloadFiles";
 import { useUpdateMediaMetadata, useReplaceMedia, useDeleteMedia } from "../../hooks/useMediaLibrary";
@@ -40,6 +42,7 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState([]);
   const [folder, setFolder] = useState("general");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: folders = [] } = useMediaFoldersQuery();
   const { mutateAsync: updateMetadata, isPending: saving } = useUpdateMediaMetadata();
@@ -137,6 +140,9 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
           </Box>
 
           <Box className="flex items-center gap-2 flex-wrap">
+            <Button size="small" variant="outlined" startIcon={<VisibilityIcon fontSize="small" />} onClick={() => setPreviewOpen(true)}>
+              Preview
+            </Button>
             <Button size="small" variant="outlined" startIcon={<ContentCopyIcon fontSize="small" />} onClick={handleCopyUrl}>
               Copy URL
             </Button>
@@ -243,6 +249,7 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
           </Button>
         </Box>
       </Box>
+      <MediaPreviewDialog open={previewOpen} media={media} onClose={() => setPreviewOpen(false)} />
     </Drawer>
   );
 }
