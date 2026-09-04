@@ -5,6 +5,7 @@ import { useProfile } from "../../hooks/useProfile";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { resolveIcon } from "../../utils/iconMap";
 import { getInitials } from "../../utils/strings";
 import { excerptFromHtml } from "../../utils/html";
@@ -84,8 +85,9 @@ function CtaButton({ button }) {
 }
 
 export default function Home() {
-  const { data: profile, isLoading, isError, error, refetch } = useProfile();
-  const { data: seo } = usePublicSeo();
+  const { isPreview } = usePreviewMode();
+  const { data: profile, isLoading, isError, error, refetch } = useProfile({ preview: isPreview });
+  const { data: seo } = usePublicSeo({ preview: isPreview });
 
   const [statsVisible, setStatsVisible] = useState(false);
   const [typedText, setTypedText] = useState("");

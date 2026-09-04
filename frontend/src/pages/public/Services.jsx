@@ -5,6 +5,7 @@ import { useAbout } from "../../hooks/useAbout";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonPillRow, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
@@ -24,8 +25,9 @@ import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
  * tokens the rest of the site already uses.
  */
 export default function Services() {
-  const { data: about, isLoading, isError, error, refetch } = useAbout();
-  const { data: seo } = usePublicSeo();
+  const { isPreview } = usePreviewMode();
+  const { data: about, isLoading, isError, error, refetch } = useAbout({ preview: isPreview });
+  const { data: seo } = usePublicSeo({ preview: isPreview });
 
   const pageDescription = about?.biography
     ? excerptFromHtml(about.biography)

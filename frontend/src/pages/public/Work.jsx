@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
 import { usePublicProjectsQuery } from "../../hooks/usePublicProjects";
@@ -6,6 +6,7 @@ import { usePublicCategoriesQuery } from "../../hooks/usePublicCategories";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { flattenTechNames } from "../../utils/projectHelpers";
 import { excerptFromHtml } from "../../utils/html";
@@ -82,12 +83,20 @@ function ProjectCard({ project, onViewDetails }) {
             </span>
           )}
         </div>
-        {project.featured && (
+        {project.featured && project.status === "published" && (
           <span
             className="font-mono text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
             style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
           >
             FEATURED
+          </span>
+        )}
+        {project.status && project.status !== "published" && (
+          <span
+            className="font-mono text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
+            style={{ backgroundColor: "var(--warning-main, #ed6c02)", color: "#fff" }}
+          >
+            {project.status.toUpperCase()}
           </span>
         )}
       </div>
@@ -154,20 +163,32 @@ function ProjectCard({ project, onViewDetails }) {
 
 export default function Work() {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(1);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  const debouncedSearch = useDebouncedValue(search, 350);
+  const { isPreview, previewProjectId } = usePreviewMode();
 
-  const { data: categories } = usePublicCategoriesQuery();
+  const { data: categories } = usePublicCategoriesQuery({ preview: isPreview });
+
   const { data, isLoading, isFetching, isError, error, refetch } = usePublicProjectsQuery({
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
     category: category || undefined,
+    preview: isPreview,
   });
-  const { data: seo } = usePublicSeo();
+
+  useEffect(() => {
+    if (previewProjectId) {
+      // In a real scenario, this might need an extra query if the project is not on the first page,
+      // but passing it as an ID to the modal will let the modal's own query fetch it if we just fake the object.
+      setSelectedProject({ _id: previewProjectId });
+    }
+  }, [previewProjectId]);
+
+  const { data: seo } = usePublicSeo({ preview: isPreview });
 
   const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/work` : "";
 

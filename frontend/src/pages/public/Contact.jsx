@@ -7,6 +7,7 @@ import { usePublicSiteSettings, usePublicSeo } from "../../hooks/usePublicSite";
 import { useSendMessage } from "../../hooks/useContactForm";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { isContactFormValid } from "../../validators/contact";
 import { SkeletonBlock } from "../../components/public/Skeletons";
 
@@ -32,8 +33,9 @@ const inputStyles = {
 };
 
 export default function Contact() {
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: about } = useAbout();
+  const { isPreview } = usePreviewMode();
+  const { data: profile, isLoading: profileLoading } = useProfile({ preview: isPreview });
+  const { data: about } = useAbout({ preview: isPreview });
   const { data: settings } = usePublicSiteSettings();
   const { data: seo } = usePublicSeo();
   const { mutateAsync: sendMessage, isPending } = useSendMessage();

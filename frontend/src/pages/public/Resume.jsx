@@ -6,6 +6,7 @@ import { useProfile } from "../../hooks/useProfile";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
@@ -59,9 +60,10 @@ function ItemCard({ dateRange, title, subtitle, description, logo }) {
 
 export default function Resume() {
   const [activeTab, setActiveTab] = useState("Experience");
-  const { data: resume, isLoading, isError, error, refetch } = useResume();
-  const { data: profile } = useProfile();
-  const { data: seo } = usePublicSeo();
+  const { isPreview } = usePreviewMode();
+  const { data: resume, isLoading, isError, error, refetch } = useResume({ preview: isPreview });
+  const { data: profile } = useProfile({ preview: isPreview });
+  const { data: seo } = usePublicSeo({ preview: isPreview });
 
   const pageDescription = resume?.hero?.summary
     ? excerptFromHtml(resume.hero.summary)
