@@ -8,10 +8,13 @@ import { usePublicSiteSettings, usePublicSeo } from "../hooks/usePublicSite";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { useStructuredData } from "../hooks/useStructuredData";
+import { usePreviewMode } from "../hooks/usePreviewMode";
+import PreviewBanner from "../components/cms/PreviewBanner";
 
 export default function PublicLayout() {
-  const { data: settings } = usePublicSiteSettings();
-  const { data: seo } = usePublicSeo();
+  const { isPreview } = usePreviewMode();
+  const { data: settings } = usePublicSiteSettings({ preview: isPreview });
+  const { data: seo } = usePublicSeo({ preview: isPreview });
 
   // ── Global Organization JSON-LD ────────────────────────────────────
   // Emitted once at the layout level (not per-page) because Organization
@@ -71,16 +74,19 @@ export default function PublicLayout() {
   // scripts into <head> once per session, guarded against double-injection.
   useAnalytics(settings);
 
+  const { isPreview } = usePreviewMode();
+
   // ── Maintenance mode ───────────────────────────────────────────────
   // When maintenance mode is active the entire public site is replaced
   // by a full-viewport maintenance screen. AnnouncementBar and regular
   // chrome are suppressed to avoid a confusing half-rendered state.
-  if (settings?.maintenanceMode) {
+  if (settings?.maintenanceMode && !isPreview) {
     return <MaintenancePage />;
   }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
+      {isPreview && <PreviewBanner />}
       {/* Announcement bar sits above the sticky Navbar so it scrolls away
           while the Navbar stays fixed — preserves the sticky UX. */}
       <AnnouncementBar />

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { usePublicFooter, usePublicSiteSettings } from "../../hooks/usePublicSite";
 import { useProfile } from "../../hooks/useProfile";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { resolveIcon } from "../../utils/iconMap";
 import { SkeletonBlock, SkeletonText } from "../public/Skeletons";
 
@@ -28,9 +29,10 @@ function formatAddress(address) {
  * would misrepresent what actually happens to a visitor's email.
  */
 export default function Footer() {
+  const { isPreview } = usePreviewMode();
   const { data: footer, isLoading: footerLoading, isError: footerError } = usePublicFooter();
   const { data: settings } = usePublicSiteSettings();
-  const { data: profile } = useProfile();
+  const { data: profile } = useProfile({ preview: isPreview });
 
   if (footerError) return null; // degrade silently — see Navbar's resilience note
   if (footerLoading) {

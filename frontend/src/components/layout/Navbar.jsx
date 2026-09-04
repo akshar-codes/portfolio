@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePublicNavigation, usePublicSiteSettings } from "../../hooks/usePublicSite";
+import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { SkeletonBlock } from "../public/Skeletons";
 
 /**
@@ -17,8 +18,9 @@ import { SkeletonBlock } from "../public/Skeletons";
  */
 export default function Navbar() {
   const location = useLocation();
-  const { data: nav, isLoading: navLoading } = usePublicNavigation();
-  const { data: settings } = usePublicSiteSettings();
+  const { isPreview } = usePreviewMode();
+  const { data: nav, isLoading: navLoading } = usePublicNavigation({ preview: isPreview });
+  const { data: settings } = usePublicSiteSettings({ preview: isPreview });
 
   const [openDesktopId, setOpenDesktopId] = useState(null);
 
