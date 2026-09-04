@@ -16,11 +16,13 @@ import Stack from "@mui/material/Stack";
 import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
 import ImageGalleryField from "../../components/ImageGalleryField";
+import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import TagInput from "../../components/common/TagInput";
 import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
 import { ABOUT_ICON_OPTIONS, resolveAboutIcon } from "../../utils/aboutIconMap";
@@ -488,6 +490,7 @@ export default function ManageAbout() {
   const [timelineDialog, setTimelineDialog] = useState(null);
   const [highlightDialog, setHighlightDialog] = useState(null);
   const [personalInfoDialog, setPersonalInfoDialog] = useState(null);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
 
   const [savingServices, setSavingServices] = useState(false);
   const [savingTimeline, setSavingTimeline] = useState(false);
@@ -631,9 +634,19 @@ export default function ManageAbout() {
           />
         }
         actions={
-          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
-            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<VisibilityIcon fontSize="small" />}
+              onClick={() => setPreviewDrawerOpen(true)}
+            >
+              Preview
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
+              {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+            </Button>
+          </Stack>
         }
       />
 
@@ -949,6 +962,12 @@ export default function ManageAbout() {
               : prev.map((p) => (p._tempId === personalInfoDialog.tempId ? { ...p, ...values } : p)),
           )
         }
+      />
+      <PreviewDrawer
+        open={previewDrawerOpen}
+        onClose={() => setPreviewDrawerOpen(false)}
+        previewUrl="/services?preview=1"
+        title="Preview — About / Services"
       />
     </>
   );

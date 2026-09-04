@@ -18,6 +18,9 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import LaunchIcon from "@mui/icons-material/Launch";
 
+import FileUploadArea from "../../components/cms/FileUploadArea";
+import FileUploadButton from "../../components/cms/FileUploadButton";
+import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import {
@@ -357,6 +360,7 @@ export default function ProjectEditor() {
 
   const [autosaveStatus, setAutosaveStatus] = useState(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
   const lastSavedSnapshotRef = useRef(null);
   // Tracks which project _id the form was last seeded from. Autosave's
   // onSuccess (hooks/useProjects.js useUpdateProject) writes the fresh
@@ -590,16 +594,21 @@ export default function ProjectEditor() {
               Back
             </Button>
             {isEditMode && (
-              <Button variant="outlined" onClick={handleTogglePublish}>
-                {isDraft ? "Publish" : "Unpublish"}
-              </Button>
+              <>
+                <Button variant="outlined" onClick={() => setPreviewDrawerOpen(true)}>
+                  Live Preview
+                </Button>
+                <Button variant="outlined" onClick={handleTogglePublish}>
+                  {isDraft ? "Publish" : "Unpublish"}
+                </Button>
+              </>
             )}
             <Button
               variant={showPreview ? "contained" : "outlined"}
               startIcon={<VisibilityIcon />}
               onClick={() => setShowPreview((p) => !p)}
             >
-              Preview
+              Toggle Form Preview
             </Button>
           </Stack>
         }
@@ -804,6 +813,15 @@ export default function ProjectEditor() {
           </Box>
         </Box>
       </FormProvider>
+      
+      {isEditMode && (
+        <PreviewDrawer
+          open={previewDrawerOpen}
+          onClose={() => setPreviewDrawerOpen(false)}
+          previewUrl={`/work?preview=1&projectId=${id}`}
+          title="Live Preview — Project"
+        />
+      )}
     </>
   );
 }

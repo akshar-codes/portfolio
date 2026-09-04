@@ -17,11 +17,13 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
 import LibraryImageField from "../../components/LibraryImageField";
+import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import TagInput from "../../components/common/TagInput";
 import {
   TextField as RHFTextField,
@@ -719,6 +721,7 @@ export default function ManageResume() {
   const [server, setServer] = useState({});
   const [saving, setSaving] = useState({});
   const [dialogs, setDialogs] = useState({});
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -857,9 +860,19 @@ export default function ManageResume() {
           <Chip size="small" variant={isDraft ? "outlined" : "filled"} color={isDraft ? "default" : "success"} label={isDraft ? "Draft" : "Published"} />
         }
         actions={
-          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
-            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<VisibilityIcon fontSize="small" />}
+              onClick={() => setPreviewDrawerOpen(true)}
+            >
+              Preview
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
+              {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+            </Button>
+          </Stack>
         }
       />
 
@@ -1086,6 +1099,12 @@ export default function ManageResume() {
         initialValues={dialogs.downloads?.initialValues}
         onClose={() => setDialogs((p) => ({ ...p, downloads: null }))}
         onSave={(v) => addOrUpdate("downloads", dialogs.downloads, v)}
+      />
+      <PreviewDrawer
+        open={previewDrawerOpen}
+        onClose={() => setPreviewDrawerOpen(false)}
+        previewUrl="/resume?preview=1"
+        title="Preview — Resume"
       />
     </>
   );

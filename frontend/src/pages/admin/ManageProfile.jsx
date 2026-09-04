@@ -18,11 +18,13 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
 import LibraryImageField from "../../components/LibraryImageField";
+import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
 import { resolveIcon } from "../../utils/iconMap";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
@@ -459,7 +461,7 @@ export default function ManageProfile() {
   const [linkDialog, setLinkDialog] = useState(null);
   const [ctaDialog, setCtaDialog] = useState(null);
   const [statDialog, setStatDialog] = useState(null);
-
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
   const [savingLinks, setSavingLinks] = useState(false);
   const [savingCtas, setSavingCtas] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
@@ -692,9 +694,19 @@ export default function ManageProfile() {
           />
         }
         actions={
-          <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
-            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<VisibilityIcon fontSize="small" />}
+              onClick={() => setPreviewDrawerOpen(true)}
+            >
+              Preview
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
+              {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+            </Button>
+          </Stack>
         }
       />
 
@@ -919,6 +931,12 @@ export default function ManageProfile() {
         initialValues={statDialog?.initialValues}
         onClose={() => setStatDialog(null)}
         onSave={handleSaveStatDialog}
+      />
+      <PreviewDrawer
+        open={previewDrawerOpen}
+        onClose={() => setPreviewDrawerOpen(false)}
+        previewUrl="/?preview=1"
+        title="Preview — Homepage"
       />
     </>
   );

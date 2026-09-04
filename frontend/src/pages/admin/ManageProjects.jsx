@@ -30,6 +30,7 @@ import RequirePermission from "../../components/auth/RequirePermission";
 import StatusBadge from "../../components/cms/StatusBadge";
 import PublishActionsMenu from "../../components/cms/PublishActionsMenu";
 import ProjectDetails from "./ProjectDetails";
+import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useGlobalLoading } from "../../hooks/useGlobalLoading";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
@@ -181,6 +182,7 @@ export default function ManageProjects() {
   const [reorderTruncated, setReorderTruncated] = useState(false);
   const [loadingReorder, setLoadingReorder] = useState(false);
   const [statusBusyId, setStatusBusyId] = useState(null);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
 
   const confirm = useConfirmDialog();
   const { showLoading, hideLoading } = useGlobalLoading();
@@ -374,6 +376,14 @@ export default function ManageProjects() {
         badge={typeof data?.total === "number" ? <Chip size="small" variant="outlined" label={`${data.total} total`} /> : null}
         actions={
           <Box className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<VisibilityOutlinedIcon fontSize="small" />}
+              onClick={() => setPreviewDrawerOpen(true)}
+            >
+              Preview
+            </Button>
             <RequirePermission permission={PERMISSIONS.PROJECTS_REORDER}>
               <Tooltip title={canReorder ? "" : "Clear search/filters to reorder"}>
                 <span>
@@ -540,6 +550,12 @@ export default function ManageProjects() {
       />
 
       {previewProject && <ProjectDetails project={previewProject} onClose={() => setPreviewProject(null)} />}
+      <PreviewDrawer
+        open={previewDrawerOpen}
+        onClose={() => setPreviewDrawerOpen(false)}
+        previewUrl="/work?preview=1"
+        title="Preview — Projects"
+      />
     </>
   );
 }
