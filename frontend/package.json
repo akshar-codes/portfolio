@@ -35,8 +35,8 @@
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.5.0",
-    "react-router": "7.11.0",
-    "react-router-dom": "^7.18.1",
+    "react-router": "7.18.4",
+    "react-router-dom": "7.18.4",
     "sonner": "^2.0.7",
     "zod": "^3.24.1"
   },
@@ -57,7 +57,5 @@
   "allowScripts": {
     "esbuild@0.28.1": true
   },
-  "overrides": {
-    "brace-expansion": "5.0.8"
-  }
+  "overrides": {}
 }
