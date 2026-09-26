@@ -13,6 +13,7 @@ import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import AllInboxOutlinedIcon from "@mui/icons-material/AllInboxOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
+import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { toast } from "sonner";
 
@@ -35,6 +36,24 @@ export default function FolderSidebar({ activeFolder, onSelectFolder, showTrash,
 
   const [formDialog, setFormDialog] = useState(null); // { mode: 'add' | 'edit', folder? }
   const [menuState, setMenuState] = useState(null); // { anchorEl, folder }
+
+  const renderFolder = (folder, depth = 0) => (
+    <Box key={folder._id}>
+      <ListItemButton
+        selected={!showTrash && activeFolder === folder.slug}
+        onClick={() => onSelectFolder(folder.slug)}
+        sx={{ borderRadius: 2, pr: 0.5, pl: 1 + depth * 2 }}
+      >
+        <ListItemIcon sx={{ minWidth: 32 }}><FolderOutlinedIcon fontSize="small" /></ListItemIcon>
+        <ListItemText primaryTypographyProps={{ fontSize: 13, noWrap: true }} sx={{ minWidth: 0 }}>{folder.name}</ListItemText>
+        <Chip label={folder.mediaCount ?? 0} size="small" sx={{ height: 18, fontSize: 10, mr: 0.5 }} />
+        {folder.slug !== PROTECTED_FOLDER_SLUG && <RequirePermission permission={PERMISSIONS.MEDIA_MANAGE_FOLDERS}>
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setMenuState({ anchorEl: e.currentTarget, folder }); }} aria-label={`Folder options for ${folder.name}`}><MoreVertIcon fontSize="small" /></IconButton>
+        </RequirePermission>}
+      </ListItemButton>
+      {folders.filter((child) => child.parentId === folder._id).map((child) => renderFolder(child, depth + 1))}
+    </Box>
+  );
 
   const handleDelete = async (folder) => {
     setMenuState(null);
@@ -81,36 +100,7 @@ export default function FolderSidebar({ activeFolder, onSelectFolder, showTrash,
         </ListItemButton>
 
         {!isLoading &&
-          folders.map((folder) => (
-            <ListItemButton
-              key={folder._id}
-              selected={!showTrash && activeFolder === folder.slug}
-              onClick={() => onSelectFolder(folder.slug)}
-              sx={{ borderRadius: 2, pr: 0.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <FolderOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ fontSize: 13, noWrap: true }} sx={{ minWidth: 0 }}>
-                {folder.name}
-              </ListItemText>
-              <Chip label={folder.mediaCount ?? 0} size="small" sx={{ height: 18, fontSize: 10, mr: 0.5 }} />
-              {folder.slug !== PROTECTED_FOLDER_SLUG && (
-                <RequirePermission permission={PERMISSIONS.MEDIA_MANAGE_FOLDERS}>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuState({ anchorEl: e.currentTarget, folder });
-                    }}
-                    aria-label={`Folder options for ${folder.name}`}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                </RequirePermission>
-              )}
-            </ListItemButton>
-          ))}
+          folders.filter((folder) => !folder.parentId).map((folder) => renderFolder(folder))}
 
         <ListItemButton selected={showTrash} onClick={onSelectTrash} sx={{ borderRadius: 2, mt: 1 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
@@ -121,6 +111,7 @@ export default function FolderSidebar({ activeFolder, onSelectFolder, showTrash,
       </List>
 
       <Menu anchorEl={menuState?.anchorEl} open={!!menuState} onClose={() => setMenuState(null)}>
+        <MenuItem onClick={() => { setFormDialog({ mode: "add", parentId: menuState.folder._id }); setMenuState(null); }}><CreateNewFolderOutlinedIcon fontSize="small" sx={{ mr: 1 }} />Add subfolder</MenuItem>
         <MenuItem onClick={() => setFormDialog({ mode: "edit", folder: menuState.folder })}>Rename</MenuItem>
         <MenuItem onClick={() => handleDelete(menuState.folder)} sx={{ color: "error.main" }}>
           Delete
@@ -131,6 +122,8 @@ export default function FolderSidebar({ activeFolder, onSelectFolder, showTrash,
         open={!!formDialog}
         mode={formDialog?.mode}
         folder={formDialog?.folder}
+        folders={folders}
+        parentId={formDialog?.parentId}
         onClose={() => setFormDialog(null)}
       />
     </Box>

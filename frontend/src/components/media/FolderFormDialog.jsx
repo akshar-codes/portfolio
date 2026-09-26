@@ -6,18 +6,23 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
 import { toast } from "sonner";
 
 import { useCreateMediaFolder, useRenameMediaFolder } from "../../hooks/useMediaFolders";
 
-export default function FolderFormDialog({ open, mode, folder, onClose }) {
+export default function FolderFormDialog({ open, mode, folder, folders = [], parentId = "", onClose }) {
   const [name, setName] = useState("");
+  const [selectedParent, setSelectedParent] = useState("");
   const { mutateAsync: createFolder, isPending: creating } = useCreateMediaFolder();
   const { mutateAsync: renameFolder, isPending: renaming } = useRenameMediaFolder();
 
   useEffect(() => {
-    if (open) setName(mode === "edit" ? folder?.name ?? "" : "");
-  }, [open, mode, folder]);
+    if (open) {
+      setName(mode === "edit" ? folder?.name ?? "" : "");
+      setSelectedParent(mode === "edit" ? folder?.parentId ?? "" : parentId);
+    }
+  }, [open, mode, folder, parentId]);
 
   const saving = creating || renaming;
 
@@ -31,7 +36,7 @@ export default function FolderFormDialog({ open, mode, folder, onClose }) {
         await renameFolder({ id: folder._id, name: trimmed });
         toast.success("Folder renamed.");
       } else {
-        await createFolder(trimmed);
+        await createFolder({ name: trimmed, parentId: selectedParent || null });
         toast.success("Folder created.");
       }
       onClose();
@@ -54,6 +59,10 @@ export default function FolderFormDialog({ open, mode, folder, onClose }) {
             onChange={(e) => setName(e.target.value)}
             slotProps={{ htmlInput: { maxLength: 60 } }}
           />
+          {mode !== "edit" && <TextField select fullWidth size="small" label="Parent folder" value={selectedParent} onChange={(e) => setSelectedParent(e.target.value)} sx={{ mt: 2 }}>
+            <MenuItem value="">No parent (top level)</MenuItem>
+            {folders.map((entry) => <MenuItem key={entry._id} value={entry._id}>{entry.name}</MenuItem>)}
+          </TextField>}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={onClose} color="inherit" disabled={saving}>

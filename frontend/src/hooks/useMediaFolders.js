@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { mediaFoldersApi } from "../api/mediaFoldersApi";
+import { mediaFoldersApi } from "../services/api/mediaFoldersApi";
 
 export const MEDIA_FOLDERS_QUERY_KEY = ["mediaFolders"];
 
@@ -15,7 +15,7 @@ export function useMediaFoldersQuery(options = {}) {
 export function useCreateMediaFolder(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name) => mediaFoldersApi.create(name),
+    mutationFn: ({ name, parentId }) => mediaFoldersApi.create(name, parentId),
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: MEDIA_FOLDERS_QUERY_KEY });
       options.onSuccess?.(...args);
