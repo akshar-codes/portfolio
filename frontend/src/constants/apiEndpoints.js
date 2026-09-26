@@ -4,6 +4,9 @@
  * here so a path change only needs to happen in one place.
  */
 export const API_ENDPOINTS = {
+  portfolioAnalyticsEvent: "/analytics/events",
+  adminPortfolioAnalytics: "/admin/analytics",
+  adminPortfolioAnalyticsExport: "/admin/analytics/export.csv",
   adminActivity: "/admin/activity",
   adminActivityExport: "/admin/activity/export.csv",
   // Profile

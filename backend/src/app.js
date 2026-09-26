@@ -29,10 +29,12 @@ import adminNavigationRoutes from "./routes/admin/navigationRoutes.js";
 import adminFooterRoutes from "./routes/admin/footerRoutes.js";
 import adminSeoRoutes from "./routes/admin/seoRoutes.js";
 import adminActivityRoutes from "./routes/admin/activityRoutes.js";
+import adminPortfolioAnalyticsRoutes from "./routes/admin/portfolioAnalyticsRoutes.js";
 import activityLogger from "./middleware/activityLogger.js";
 
 // ── General (public) routes ──────────────────────────────────────────
 import healthRoutes from "./routes/general/healthRoutes.js";
+import portfolioAnalyticsRoutes from "./routes/general/portfolioAnalyticsRoutes.js";
 import categoryRoutes from "./routes/general/categoryRoutes.js";
 import projectRoutes from "./routes/general/projectRoutes.js";
 import messageRoutes from "./routes/general/messageRoutes.js";
@@ -134,6 +136,8 @@ app.use(globalLimiter);
  * ------------------------------------------------------------------ */
 app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin/activity", adminActivityRoutes);
+app.use("/api/admin/analytics", adminPortfolioAnalyticsRoutes);
+app.use("/api/analytics", portfolioAnalyticsRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
 
