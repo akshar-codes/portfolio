@@ -10,6 +10,7 @@ import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
+import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
 
 const TABS = ["Experience", "Education", "Certifications", "Skills", "Languages", "Interests", "About me"];
 
@@ -182,7 +183,7 @@ export default function Resume() {
             </div>
 
             {hero.ctaEnabled && primaryDownload && (
-              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="no-underline">
+              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="no-underline" onClick={() => { if (!isPreview) trackPortfolioEvent("download"); }}>
                 <button
                   className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold border-2 cursor-pointer transition-all duration-200 whitespace-nowrap"
                   style={{ borderColor: "var(--text-primary)", color: "var(--text-primary)", backgroundColor: "transparent" }}

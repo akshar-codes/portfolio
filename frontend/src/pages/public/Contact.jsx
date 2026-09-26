@@ -10,6 +10,7 @@ import { useStructuredData } from "../../hooks/useStructuredData";
 import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { isContactFormValid } from "../../validators/contact";
 import { SkeletonBlock } from "../../components/public/Skeletons";
+import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
 
 const EXTRA_SERVICE_OPTIONS = ["Offer a role", "Other"];
 
@@ -136,6 +137,7 @@ export default function Contact() {
         message: composedMessage,
         website: form.website,
       });
+      if (!isPreview) trackPortfolioEvent("contact_request");
       setSubmitted(true);
       setForm({ firstName: "", lastName: "", email: "", phone: "", service: "", message: "", website: "" });
     } catch (err) {

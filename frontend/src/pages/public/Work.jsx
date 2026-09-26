@@ -13,6 +13,7 @@ import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
 import ProjectDetailsModal from "../../components/public/ProjectDetailsModal";
+import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
 
 const PAGE_SIZE = 6;
 
@@ -170,6 +171,10 @@ export default function Work() {
 
   const { isPreview, previewProjectId } = usePreviewMode();
   const { data: previewProject } = usePublicProjectQuery(previewProjectId, { preview: isPreview });
+  const handleProjectView = (project) => {
+    if (!isPreview) trackPortfolioEvent("project_view", { projectId: project._id });
+    setSelectedProject(project);
+  };
 
   const { data: categories } = usePublicCategoriesQuery({ preview: isPreview });
 
@@ -296,7 +301,7 @@ export default function Work() {
               style={{ opacity: isFetching ? 0.6 : 1, transition: "opacity 0.15s ease" }}
             >
               {projects.map((project) => (
-                <ProjectCard key={project._id} project={project} onViewDetails={setSelectedProject} />
+                <ProjectCard key={project._id} project={project} onViewDetails={handleProjectView} />
               ))}
             </div>
 

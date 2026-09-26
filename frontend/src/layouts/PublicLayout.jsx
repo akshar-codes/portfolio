@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import AnnouncementBar from "../components/layout/AnnouncementBar";
@@ -10,9 +10,14 @@ import { useAnalytics } from "../hooks/useAnalytics";
 import { useStructuredData } from "../hooks/useStructuredData";
 import { usePreviewMode } from "../hooks/usePreviewMode";
 import PreviewBanner from "../components/cms/PreviewBanner";
+import { trackPortfolioEvent } from "../utils/portfolioAnalytics";
 
 export default function PublicLayout() {
+  const location = useLocation();
   const { isPreview } = usePreviewMode();
+  useEffect(() => {
+    if (!isPreview) trackPortfolioEvent("page_view");
+  }, [isPreview, location.pathname]);
   const { data: settings } = usePublicSiteSettings({ preview: isPreview });
   const { data: seo } = usePublicSeo({ preview: isPreview });
 

@@ -12,6 +12,7 @@ import { ROUTES } from "../../constants/routes";
 import { useMessageSummaryQuery } from "../../hooks/useMessages";
 import { getInitials, truncate } from "../../utils/strings";
 import { relativeTime } from "../../utils/date";
+import PortfolioAnalyticsDashboard from "../../components/analytics/PortfolioAnalyticsDashboard";
 
 const ACTIONS = [
   {
@@ -192,6 +193,8 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+
+      <PortfolioAnalyticsDashboard />
 
       <Box sx={{ mt: 4 }}>
         <RecentMessagesWidget />
