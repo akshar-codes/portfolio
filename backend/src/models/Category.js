@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import versionHistoryPlugin from "./plugins/versionHistoryPlugin.js";
 import { generateSlug } from "../utils/slug.js";
 import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
 
@@ -53,6 +54,7 @@ const categorySchema = new mongoose.Schema(
 categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
 categorySchema.index({ status: 1 });
+categorySchema.plugin(versionHistoryPlugin);
 categorySchema.index({ status: 1, publishAt: 1 }); // scheduled-publish sweep
 categorySchema.index({ order: 1 });
 

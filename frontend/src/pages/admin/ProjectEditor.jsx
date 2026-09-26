@@ -17,6 +17,7 @@ import SyncOutlinedIcon from "@mui/icons-material/SyncOutlined";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import LaunchIcon from "@mui/icons-material/Launch";
+import HistoryIcon from "@mui/icons-material/History";
 
 import FileUploadArea from "../../components/cms/FileUploadArea";
 import FileUploadButton from "../../components/cms/FileUploadButton";
@@ -49,6 +50,7 @@ import {
   CONTENT_STATUS_OPTIONS,
 } from "../../schemas/projectSchema";
 import { normaliseTechnologies } from "../../utils/projectHelpers";
+import VersionHistoryDialog from "../../components/cms/VersionHistoryDialog";
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
@@ -361,6 +363,7 @@ export default function ProjectEditor() {
   const [autosaveStatus, setAutosaveStatus] = useState(null);
   const [showPreview, setShowPreview] = useState(true);
   const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const lastSavedSnapshotRef = useRef(null);
   // Tracks which project _id the form was last seeded from. Autosave's
   // onSuccess (hooks/useProjects.js useUpdateProject) writes the fresh
@@ -405,6 +408,14 @@ export default function ProjectEditor() {
   }, [project, isEditMode]);
 
   const watchedValues = form.watch();
+  const hasUnsavedChanges = isEditMode && lastSavedSnapshotRef.current !== null &&
+    (JSON.stringify(watchedValues) !== lastSavedSnapshotRef.current || Boolean(thumbnail || bannerImage || newGalleryFiles.length || deletedGalleryIds.length));
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges]);
   const debouncedValues = useDebouncedValue(watchedValues, AUTOSAVE_DEBOUNCE_MS);
 
   /** Builds the multipart FormData payload the backend project routes expect. */
@@ -595,6 +606,7 @@ export default function ProjectEditor() {
             </Button>
             {isEditMode && (
               <>
+                <Button variant="outlined" startIcon={<HistoryIcon />} onClick={() => setHistoryOpen(true)}>History</Button>
                 <Button variant="outlined" onClick={() => setPreviewDrawerOpen(true)}>
                   Live Preview
                 </Button>
@@ -822,6 +834,13 @@ export default function ProjectEditor() {
           title="Live Preview — Project"
         />
       )}
+      <VersionHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        resource="Project"
+        id={id}
+        onRestored={() => refetch()}
+      />
     </>
   );
 }

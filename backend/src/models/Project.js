@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import versionHistoryPlugin from "./plugins/versionHistoryPlugin.js";
 
 /* ------------------------------------------------------------------ *
  * Sub-schema: one technology group (e.g. "Frontend": ["React","Vite"])
@@ -284,5 +285,6 @@ projectSchema.index({ status: 1 });
 projectSchema.index({ status: 1, publishAt: 1 }); // scheduled-publish sweep
 projectSchema.index({ title: 1 });
 projectSchema.index({ featured: 1 });
+projectSchema.plugin(versionHistoryPlugin);
 
 export default mongoose.model("Project", projectSchema);

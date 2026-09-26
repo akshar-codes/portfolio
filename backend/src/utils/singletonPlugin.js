@@ -1,4 +1,5 @@
 import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import versionHistoryPlugin from "../models/plugins/versionHistoryPlugin.js";
 
 /**
  * Mongoose schema plugin that turns a schema into a singleton-per-owner
@@ -19,6 +20,7 @@ import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js"
  * schema shape (owner field + status field + their indexes).
  */
 export default function singletonPlugin(schema) {
+  schema.plugin(versionHistoryPlugin);
   schema.add({
     owner: {
       type: String,
