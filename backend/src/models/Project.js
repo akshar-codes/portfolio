@@ -283,6 +283,9 @@ projectSchema.index({ order: 1 });
 projectSchema.index({ category: 1 });
 projectSchema.index({ status: 1 });
 projectSchema.index({ status: 1, publishAt: 1 }); // scheduled-publish sweep
+projectSchema.index({ status: 1, order: 1, createdAt: -1 });
+projectSchema.index({ status: 1, category: 1, order: 1, createdAt: -1 });
+projectSchema.index({ status: 1, featured: 1, order: 1 });
 projectSchema.index({ title: 1 });
 projectSchema.index({ featured: 1 });
 projectSchema.plugin(versionHistoryPlugin);
