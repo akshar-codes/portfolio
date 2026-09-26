@@ -150,7 +150,8 @@ const mediaSchema = new mongoose.Schema(
 mediaSchema.index({ public_id: 1 }, { unique: true, name: "public_id_unique" });
 
 mediaSchema.index({ folder: 1, createdAt: -1 });
-mediaSchema.index({ deletedAt: 1, createdAt: -1 });
+mediaSchema.index({ folder: 1, deletedAt: 1, createdAt: -1, _id: -1 });
+mediaSchema.index({ deletedAt: 1, createdAt: -1, _id: -1 });
 
 mediaSchema.index(
   { originalName: "text", altText: "text", caption: "text", tags: "text" },

@@ -25,10 +25,16 @@ export function useInfiniteMediaLibraryQuery(params, options = {}) {
 
   return useInfiniteQuery({
     queryKey: [...LIST_KEY, "infinite", restParams, limit],
-    queryFn: ({ pageParam = 1 }) => mediaApi.list({ ...restParams, limit, page: pageParam }),
+    queryFn: ({ pageParam = 1 }) => mediaApi.list({
+      ...restParams,
+      limit,
+      ...(typeof pageParam === "object" ? { cursorAt: pageParam.createdAt, cursorId: pageParam.id } : { page: pageParam }),
+    }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => {
+      if (Object.hasOwn(lastPage, "nextCursor")) return lastPage.nextCursor ?? undefined;
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+    },
     ...options,
   });
 }

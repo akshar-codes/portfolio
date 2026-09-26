@@ -36,11 +36,11 @@ import {
 
 const CACHE_PREFIX = "media:";
 
-function buildCacheKey({ page, limit, folder, search, format, status, sortBy, sortOrder, dateFrom, dateTo }) {
+function buildCacheKey({ page, cursor, limit, folder, search, format, status, sortBy, sortOrder, dateFrom, dateTo }) {
   return (
     `${CACHE_PREFIX}page=${page}:limit=${limit}:folder=${folder || "all"}:` +
     `search=${search || ""}:format=${format || "all"}:status=${status}:` +
-    `sort=${sortBy}:${sortOrder}:dateFrom=${dateFrom || ""}:dateTo=${dateTo || ""}`
+    `sort=${sortBy}:${sortOrder}:dateFrom=${dateFrom || ""}:dateTo=${dateTo || ""}:cursor=${cursor?.createdAt || ""}:${cursor?.id || ""}`
   );
 }
 
@@ -118,6 +118,7 @@ export const fetchMediaLibrary = async ({
   sortOrder = "desc",
   dateFrom = "",
   dateTo = "",
+  cursor = null,
 } = {}) => {
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
@@ -126,6 +127,7 @@ export const fetchMediaLibrary = async ({
 
   const cacheKey = buildCacheKey({
     page: safePage,
+    cursor,
     limit: safeLimit,
     folder,
     search,
@@ -158,20 +160,30 @@ export const fetchMediaLibrary = async ({
     filter.createdAt = { ...filter.createdAt, $lte: to };
   }
 
+  const countFilter = { ...filter };
+  const cursorMode = !search && sortBy === "createdAt" && sortOrder === "desc";
   const sort = search ? { score: { $meta: "textScore" } } : buildSort(sortBy, sortOrder);
+  if (cursorMode) sort._id = -1;
+  if (cursor && cursorMode && mongoose.Types.ObjectId.isValid(cursor.id) && !Number.isNaN(new Date(cursor.createdAt).getTime())) {
+    const cursorDate = new Date(cursor.createdAt);
+    filter.$and = [...(filter.$and ?? []), { $or: [{ createdAt: { $lt: cursorDate } }, { createdAt: cursorDate, _id: { $lt: cursor.id } }] }];
+  }
   const projection = search ? { score: { $meta: "textScore" } } : null;
 
   const [media, total] = await Promise.all([
-    findPaginated({ filter, skip, limit: safeLimit, sort, projection }),
-    countAll(filter),
+    findPaginated({ filter, skip: cursorMode && cursor ? 0 : skip, limit: safeLimit + (cursorMode ? 1 : 0), sort, projection }),
+    countAll(countFilter),
   ]);
 
+  const hasMore = cursorMode && media.length > safeLimit;
+  const rows = hasMore ? media.slice(0, safeLimit) : media;
   const result = {
-    media,
+    media: rows,
     total,
     page: safePage,
     limit: safeLimit,
     totalPages: Math.ceil(total / safeLimit),
+    ...(cursorMode ? { nextCursor: hasMore && rows.length ? { createdAt: rows.at(-1).createdAt, id: rows.at(-1)._id } : null } : {}),
   };
 
   cache.set(cacheKey, result, CACHE_TTL_MS);

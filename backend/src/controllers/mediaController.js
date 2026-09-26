@@ -64,6 +64,9 @@ export const getMedia = asyncHandler(async (req, res) => {
     sortOrder,
     dateFrom,
     dateTo,
+    cursor: req.query.cursorAt && req.query.cursorId
+      ? { createdAt: req.query.cursorAt, id: req.query.cursorId }
+      : null,
   });
   return sendSuccess(res, result, "Media retrieved successfully");
 });
