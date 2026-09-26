@@ -72,9 +72,7 @@ export default function PublicLayout() {
   // ── Analytics injection ────────────────────────────────────────────
   // Injects GA4, GTM, Facebook Pixel, Hotjar, and Microsoft Clarity
   // scripts into <head> once per session, guarded against double-injection.
-  useAnalytics(settings);
-
-  const { isPreview } = usePreviewMode();
+  useAnalytics(isPreview ? null : settings);
 
   // ── Maintenance mode ───────────────────────────────────────────────
   // When maintenance mode is active the entire public site is replaced

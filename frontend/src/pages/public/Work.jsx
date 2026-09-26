@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
-import { usePublicProjectsQuery } from "../../hooks/usePublicProjects";
+import { usePublicProjectsQuery, usePublicProjectQuery } from "../../hooks/usePublicProjects";
 import { usePublicCategoriesQuery } from "../../hooks/usePublicCategories";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
@@ -169,6 +169,7 @@ export default function Work() {
   const [selectedProject, setSelectedProject] = useState(null);
 
   const { isPreview, previewProjectId } = usePreviewMode();
+  const { data: previewProject } = usePublicProjectQuery(previewProjectId, { preview: isPreview });
 
   const { data: categories } = usePublicCategoriesQuery({ preview: isPreview });
 
@@ -181,12 +182,8 @@ export default function Work() {
   });
 
   useEffect(() => {
-    if (previewProjectId) {
-      // In a real scenario, this might need an extra query if the project is not on the first page,
-      // but passing it as an ID to the modal will let the modal's own query fetch it if we just fake the object.
-      setSelectedProject({ _id: previewProjectId });
-    }
-  }, [previewProjectId]);
+    if (previewProject) setSelectedProject(previewProject);
+  }, [previewProject]);
 
   const { data: seo } = usePublicSeo({ preview: isPreview });
 

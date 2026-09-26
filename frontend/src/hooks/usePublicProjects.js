@@ -20,12 +20,14 @@ export function usePublicProjectsQuery(params, options = {}) {
 }
 
 /** Single project — backs the details modal. */
-export function usePublicProjectQuery(id, options = {}) {
+export function usePublicProjectQuery(id, { preview = false, ...options } = {}) {
   return useQuery({
-    queryKey: ["projects", "public", "item", id],
-    queryFn: () => publicProjectsApi.getById(id),
+    queryKey: ["projects", preview ? "preview" : "public", "item", id],
+    queryFn: () => preview
+      ? api.get(API_ENDPOINTS.adminProjectById(id)).then((res) => res.data)
+      : publicProjectsApi.getById(id),
     enabled: Boolean(id),
-    staleTime: LIST_STALE_TIME,
+    staleTime: preview ? 0 : LIST_STALE_TIME,
     ...options,
   });
 }
