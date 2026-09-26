@@ -30,6 +30,8 @@ export const projectsApi = {
 
   remove: (id) => api.delete(API_ENDPOINTS.projectById(id)).then((res) => res.data),
 
+  duplicate: (id) => api.post(`${API_ENDPOINTS.projectById(id)}/duplicate`).then((res) => res.data),
+
   reorder: (orderedIds) =>
     api
       .patch(API_ENDPOINTS.projectReorder, { orderedIds })

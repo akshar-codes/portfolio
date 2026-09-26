@@ -14,6 +14,7 @@ import {
   archiveProject,
   restoreProject,
   scheduleProject,
+  duplicateProject,
 } from "../services/projectService.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -184,6 +185,11 @@ export const editProject = asyncHandler(async (req, res) => {
 export const deleteProject = asyncHandler(async (req, res) => {
   await removeProject(req.params.id);
   return sendNoContent(res);
+});
+
+export const duplicateProjectHandler = asyncHandler(async (req, res) => {
+  const project = await duplicateProject(req.params.id);
+  return sendSuccess(res, project, "Project duplicated as a draft", 201);
 });
 
 /* ------------------------------------------------------------------ *

@@ -9,6 +9,7 @@ import {
   archiveProjectHandler,
   restoreProjectHandler,
   scheduleProjectHandler,
+  duplicateProjectHandler,
 } from "../../controllers/projectController.js";
 import { protect } from "../../middleware/authMiddleware.js";
 import { uploadProjectImages } from "../../config/cloudinary.js";
@@ -35,6 +36,7 @@ router.use(protect);
 router.post("/", projectUpload, projectCreateValidators, createProject);
 
 router.patch("/reorder", reorderProjectsValidator, reorderProjectsHandler);
+router.post("/:id/duplicate", projectIdParamValidator, duplicateProjectHandler);
 
 // Publish/unpublish/archive/restore/schedule — dedicated JSON-friendly
 // status-transition endpoints (no body required except schedule).

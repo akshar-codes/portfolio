@@ -18,6 +18,7 @@ import {
   cloudinaryFolder,
   uploadToCloudinary,
   destroyManyFromCloudinary,
+  cloudinary,
 } from "../config/cloudinary.js";
 import { ServiceError } from "./ServiceError.js";
 import cache from "../utils/cache.js";
@@ -729,6 +730,35 @@ export const removeProject = async (id) => {
 
   invalidateProjectsCache();
   invalidateCategoryCache();
+};
+
+/** Duplicate a project and copy its Cloudinary assets so either entry can be deleted safely. */
+export const duplicateProject = async (id) => {
+  const source = await findById(id);
+  if (!source) throw new ServiceError("Project not found.", 404, "PROJECT_NOT_FOUND");
+  const createdPublicIds = [];
+  const copyAsset = async (asset, folder) => {
+    if (!asset?.url) return { url: "", public_id: "" };
+    const copied = await cloudinary.uploader.upload(asset.url, { folder: cloudinaryFolder(folder), resource_type: "image" });
+    createdPublicIds.push(copied.public_id);
+    return { url: copied.secure_url, public_id: copied.public_id };
+  };
+  try {
+    const data = source.toObject();
+    delete data._id; delete data.__v; delete data.createdAt; delete data.updatedAt;
+    data.title = `${data.title} (copy)`.slice(0, 120);
+    data.status = CONTENT_STATUS_DRAFT; data.publishAt = null; data.publishedAt = null;
+    data.unpublishedAt = null; data.archivedAt = null; data.featured = false;
+    data.image = await copyAsset(source.image, "portfolio/projects");
+    data.bannerImage = source.bannerImage?.url ? await copyAsset(source.bannerImage, "portfolio/projects/banners") : { url: "", public_id: "" };
+    data.gallery = await Promise.all((source.gallery ?? []).map(async (item, order) => ({ ...await copyAsset(item, "portfolio/projects/gallery"), order })));
+    const copy = await create(data);
+    invalidateProjectsCache();
+    return copy;
+  } catch (error) {
+    if (createdPublicIds.length) await destroyManyFromCloudinary(createdPublicIds, logger);
+    throw error;
+  }
 };
 
 /* ================================================================== *
