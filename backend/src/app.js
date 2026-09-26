@@ -30,6 +30,7 @@ import adminFooterRoutes from "./routes/admin/footerRoutes.js";
 import adminSeoRoutes from "./routes/admin/seoRoutes.js";
 import adminActivityRoutes from "./routes/admin/activityRoutes.js";
 import adminPortfolioAnalyticsRoutes from "./routes/admin/portfolioAnalyticsRoutes.js";
+import adminContentVersionRoutes from "./routes/admin/contentVersionRoutes.js";
 import activityLogger from "./middleware/activityLogger.js";
 
 // ── General (public) routes ──────────────────────────────────────────
@@ -137,6 +138,7 @@ app.use(globalLimiter);
 app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin/activity", adminActivityRoutes);
 app.use("/api/admin/analytics", adminPortfolioAnalyticsRoutes);
+app.use("/api/admin/content", adminContentVersionRoutes);
 app.use("/api/analytics", portfolioAnalyticsRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
