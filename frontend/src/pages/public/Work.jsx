@@ -21,7 +21,7 @@ const PAGE_SIZE = 6;
 const inputStyles = {
   padding: "12px 16px",
   backgroundColor: "var(--bg-card)",
-  border: "1px solid var(--border)",
+  border: "1px solid #707074",
   borderRadius: "8px",
   color: "var(--text-primary)",
   fontFamily: "'JetBrains Mono', monospace",

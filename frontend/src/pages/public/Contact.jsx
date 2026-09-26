@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Phone as PhoneIcon, Email as EmailIcon, LocationOn as LocationOnIcon } from "@mui/icons-material";
 
 import { useProfile } from "../../hooks/useProfile";
@@ -24,12 +24,12 @@ const inputStyles = {
   width: "100%",
   padding: "14px 16px",
   backgroundColor: "var(--bg-primary)",
-  border: "1px solid var(--bg-primary)",
+  border: "1px solid #707074",
   borderRadius: "8px",
   color: "#ffffff",
   fontFamily: "'JetBrains Mono', monospace",
   fontSize: "0.85rem",
-  outline: "none",
+  borderColor: "var(--border)",
   transition: "border-color 0.2s ease",
 };
 
@@ -95,10 +95,12 @@ export default function Contact() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState("");
+  const successHeadingRef = useRef(null);
+  useEffect(() => { if (submitted) successHeadingRef.current?.focus(); }, [submitted]);
 
   const handleChange = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
   const handleFocus = (e) => (e.target.style.borderColor = "#00ff88");
-  const handleBlur = (e) => (e.target.style.borderColor = "var(--bg-primary)");
+  const handleBlur = (e) => (e.target.style.borderColor = "#707074");
 
   const serviceOptions = [...(about?.services ?? []).map((s) => s.title), ...EXTRA_SERVICE_OPTIONS];
 
@@ -112,7 +114,8 @@ export default function Contact() {
     { icon: LocationOnIcon, label: "Address", value: contactAddress, href: null },
   ].filter((item) => item.value);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event) => {
+    event?.preventDefault();
     setFormError("");
 
     const fullname = `${form.firstName} ${form.lastName}`.trim();
@@ -151,11 +154,11 @@ export default function Contact() {
         <div className="flex flex-col lg:flex-row gap-12 items-start">
           <div className="flex-1 w-full lg:w-2/3 rounded-2xl p-8 md:p-10" style={{ backgroundColor: "var(--bg-secondary)" }}>
             {submitted ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="flex flex-col items-center justify-center py-16 gap-4" role="status" aria-live="polite">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,255,136,0.15)" }}>
                   <EmailIcon sx={{ color: "var(--accent)", fontSize: 32 }} />
                 </div>
-                <h3 className="font-mono text-xl font-bold" style={{ color: "var(--accent)" }}>
+                <h3 ref={successHeadingRef} tabIndex={-1} className="font-mono text-xl font-bold" style={{ color: "var(--accent)" }}>
                   Message sent!
                 </h3>
                 <p className="font-mono text-sm text-center" style={{ color: "var(--text-secondary)" }}>
@@ -170,13 +173,14 @@ export default function Contact() {
                 </button>
               </div>
             ) : (
-              <>
+              <form onSubmit={handleSubmit}>
                 <h2 className="font-mono text-3xl md:text-4xl font-bold mb-8" style={{ color: "var(--accent)" }}>
                   Let&apos;s work together
                 </h2>
 
                 {formError && (
                   <div
+                    id="contact-form-error"
                     className="font-mono text-xs px-4 py-3 rounded-lg mb-6"
                     style={{ backgroundColor: "rgba(214,83,74,0.12)", border: "1px solid rgba(214,83,74,0.35)", color: "#e08c85" }}
                     role="alert"
@@ -186,17 +190,19 @@ export default function Contact() {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                  <input type="text" placeholder="First Name" value={form.firstName} onChange={handleChange("firstName")} onFocus={handleFocus} onBlur={handleBlur} style={inputStyles} />
-                  <input type="text" placeholder="Last Name" value={form.lastName} onChange={handleChange("lastName")} onFocus={handleFocus} onBlur={handleBlur} style={inputStyles} />
+                  <label className="flex-1"><span className="contact-field-label">First name</span><input id="contact-first-name" name="firstName" type="text" autoComplete="given-name" required placeholder="First Name" value={form.firstName} onChange={handleChange("firstName")} onFocus={handleFocus} onBlur={handleBlur} aria-describedby={formError ? "contact-form-error" : undefined} style={inputStyles} /></label>
+                  <label className="flex-1"><span className="contact-field-label">Last name</span><input id="contact-last-name" name="lastName" type="text" autoComplete="family-name" required placeholder="Last Name" value={form.lastName} onChange={handleChange("lastName")} onFocus={handleFocus} onBlur={handleBlur} aria-describedby={formError ? "contact-form-error" : undefined} style={inputStyles} /></label>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                  <input type="email" placeholder="Email Address" value={form.email} onChange={handleChange("email")} onFocus={handleFocus} onBlur={handleBlur} style={inputStyles} />
-                  <input type="tel" placeholder="Phone" value={form.phone} onChange={handleChange("phone")} onFocus={handleFocus} onBlur={handleBlur} style={inputStyles} />
+                  <label className="flex-1"><span className="contact-field-label">Email address</span><input id="contact-email" name="email" type="email" autoComplete="email" required placeholder="Email Address" value={form.email} onChange={handleChange("email")} onFocus={handleFocus} onBlur={handleBlur} aria-describedby={formError ? "contact-form-error" : undefined} style={inputStyles} /></label>
+                  <label className="flex-1"><span className="contact-field-label">Phone number (optional)</span><input id="contact-phone" name="phone" type="tel" autoComplete="tel" placeholder="Phone" value={form.phone} onChange={handleChange("phone")} onFocus={handleFocus} onBlur={handleBlur} style={inputStyles} /></label>
                 </div>
 
                 <div className="mb-4">
-                  <select
+                  <label htmlFor="contact-service" className="contact-field-label">Service of interest (optional)</label><select
+                    id="contact-service"
+                    name="service"
                     value={form.service}
                     onChange={handleChange("service")}
                     onFocus={handleFocus}
@@ -209,7 +215,7 @@ export default function Contact() {
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "right 16px center",
                       paddingRight: "40px",
-                      color: form.service ? "#ffffff" : "#6b6b6e",
+                      color: form.service ? "#ffffff" : "#a0a0a0",
                     }}
                   >
                     <option value="" disabled>
@@ -224,7 +230,11 @@ export default function Contact() {
                 </div>
 
                 <div className="mb-6">
-                  <textarea
+                  <label htmlFor="contact-message" className="contact-field-label">Your message</label><textarea
+                    id="contact-message"
+                    name="message"
+                    required
+                    minLength={10}
                     placeholder="Type your message here."
                     rows={5}
                     value={form.message}
@@ -248,7 +258,7 @@ export default function Contact() {
                 />
 
                 <button
-                  onClick={handleSubmit}
+                  type="submit"
                   disabled={isPending}
                   className="flex items-center justify-center gap-2 px-8 py-3 rounded-full text-sm font-semibold border-0 cursor-pointer transition-all duration-200"
                   style={{
@@ -265,7 +275,8 @@ export default function Contact() {
                 >
                   {isPending ? "Sending..." : "Send message"}
                 </button>
-              </>
+                <span className="sr-only" role="status" aria-live="polite">{isPending ? "Sending your message" : ""}</span>
+              </form>
             )}
           </div>
 

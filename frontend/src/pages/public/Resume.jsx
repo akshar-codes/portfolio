@@ -184,22 +184,9 @@ export default function Resume() {
             </div>
 
             {hero.ctaEnabled && primaryDownload && (
-              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="no-underline" onClick={() => { if (!isPreview) trackPortfolioEvent("download"); }}>
-                <button
-                  className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold border-2 cursor-pointer transition-all duration-200 whitespace-nowrap"
-                  style={{ borderColor: "var(--text-primary)", color: "var(--text-primary)", backgroundColor: "transparent" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--accent)";
-                    e.currentTarget.style.color = "var(--accent)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--text-primary)";
-                    e.currentTarget.style.color = "var(--text-primary)";
-                  }}
-                >
+              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold border-2 no-underline whitespace-nowrap" aria-label={`${hero.ctaLabel || "Download CV"}, download file`} onClick={() => { if (!isPreview) trackPortfolioEvent("download"); }} style={{ minHeight: 48, borderColor: "var(--text-primary)", color: "var(--text-primary)", backgroundColor: "transparent" }}>
                   {(hero.ctaLabel || "Download CV").toUpperCase()}
                   <DownloadIcon fontSize="small" />
-                </button>
               </a>
             )}
           </div>
@@ -208,13 +195,14 @@ export default function Resume() {
 
       <section className="section-container py-8">
         <div className="flex flex-col md:flex-row gap-12 min-h-[400px]">
-          <aside className="flex flex-col gap-3 md:w-72 flex-shrink-0">
+          <aside aria-label="Resume sections" className="flex flex-col gap-3 md:w-72 flex-shrink-0">
             {TABS.map((tab) => {
               const active = activeTab === tab;
               return (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  aria-pressed={active}
                   className="w-full py-4 px-5 rounded-lg text-center text-sm font-semibold cursor-pointer border-0 transition-all duration-200"
                   style={{
                     backgroundColor: active ? "var(--accent)" : "var(--bg-card)",

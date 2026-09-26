@@ -144,6 +144,7 @@ export default function ProjectDetailsModal({ project, onClose }) {
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
   const closeBtnRef = useRef(null);
+  const openerRef = useRef(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -157,6 +158,7 @@ export default function ProjectDetailsModal({ project, onClose }) {
   }, [onClose]);
 
   useEffect(() => {
+    openerRef.current = document.activeElement;
     closeBtnRef.current?.focus();
 
     const handleKey = (e) => {
@@ -184,6 +186,7 @@ export default function ProjectDetailsModal({ project, onClose }) {
     return () => {
       window.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
+      if (openerRef.current?.isConnected) openerRef.current.focus();
     };
   }, [handleClose]);
 
