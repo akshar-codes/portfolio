@@ -39,3 +39,8 @@ export function getThumbnailUrl(url, size = 320) {
 export function getPreviewUrl(url, maxWidth = 1200) {
   return buildOptimizedUrl(url, { width: maxWidth, crop: "limit" });
 }
+
+/** On-demand WebP generation and automatic compression/resizing on Cloudinary delivery. */
+export function getWebpUrl(url, { width = 1600, quality = "auto" } = {}) {
+  return buildOptimizedUrl(url, { width, crop: "limit", quality, format: "webp" });
+}

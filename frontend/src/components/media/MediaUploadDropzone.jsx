@@ -3,12 +3,16 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import LinearProgress from "@mui/material/LinearProgress";
 import IconButton from "@mui/material/IconButton";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Slider from "@mui/material/Slider";
 import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import { toast } from "sonner";
 
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_MB } from "../../api/uploads";
 import { useUploadMedia } from "../../hooks/useMediaLibrary";
+import { processMediaFile } from "../../utils/processMediaFile";
 
 let uploadIdCounter = 0;
 
@@ -20,6 +24,8 @@ let uploadIdCounter = 0;
  */
 export default function MediaUploadDropzone({ folder = "" }) {
   const [dragActive, setDragActive] = useState(false);
+  const [cropAspect, setCropAspect] = useState("original");
+  const [quality, setQuality] = useState(82);
   const [uploads, setUploads] = useState([]); // [{ id, name, progress, status, error? }]
   const inputRef = useRef(null);
   const { mutateAsync: uploadMedia } = useUploadMedia();
@@ -33,8 +39,8 @@ export default function MediaUploadDropzone({ folder = "" }) {
     if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
       return `Unsupported file type: ${file.type || "unknown"}.`;
     }
-    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      return `File exceeds ${MAX_IMAGE_SIZE_MB} MB.`;
+    if (file.size > 20 * 1024 * 1024) {
+      return "Source file exceeds 20 MB.";
     }
     return null;
   };
@@ -51,10 +57,14 @@ export default function MediaUploadDropzone({ folder = "" }) {
       }
 
       const fd = new FormData();
-      fd.append("file", file);
       if (folder) fd.append("folder", folder);
 
       try {
+        const processedFile = await processMediaFile(file, { aspect: cropAspect, quality: quality / 100 });
+        if (processedFile.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+          throw new Error(`Processed image exceeds ${MAX_IMAGE_SIZE_MB} MB. Lower quality or use a smaller crop.`);
+        }
+        fd.append("file", processedFile, processedFile.name);
         await uploadMedia({
           formData: fd,
           onUploadProgress: (evt) => {
@@ -69,14 +79,18 @@ export default function MediaUploadDropzone({ folder = "" }) {
         toast.error(`${file.name}: ${err.message}`);
       }
     },
-    [folder, uploadMedia],
+    [folder, uploadMedia, cropAspect, quality],
   );
 
   const handleFiles = useCallback(
     (fileList) => {
       const files = Array.from(fileList ?? []);
       if (files.length === 0) return;
-      files.forEach((file) => uploadFile(file));
+      void (async () => {
+        for (let index = 0; index < files.length; index += 3) {
+          await Promise.all(files.slice(index, index + 3).map((file) => uploadFile(file)));
+        }
+      })();
     },
     [uploadFile],
   );
@@ -96,6 +110,19 @@ export default function MediaUploadDropzone({ folder = "" }) {
 
   return (
     <Box>
+      <Box className="flex items-center gap-3 flex-wrap mb-3">
+        <TextField select size="small" label="Crop" value={cropAspect} onChange={(e) => setCropAspect(e.target.value)} sx={{ minWidth: 150 }}>
+          <MenuItem value="original">Keep original</MenuItem>
+          <MenuItem value="square">Square</MenuItem>
+          <MenuItem value="portrait">Portrait 4:5</MenuItem>
+          <MenuItem value="landscape">Landscape 16:9</MenuItem>
+        </TextField>
+        <Box sx={{ width: 190 }}>
+          <Typography variant="caption" color="text.secondary">Compression quality: {quality}%</Typography>
+          <Slider size="small" min={50} max={95} step={5} value={quality} onChange={(_, value) => setQuality(value)} aria-label="Compression quality" />
+        </Box>
+        <Typography variant="caption" color="text.secondary">Images resize to 2560px max and upload as WebP. GIF animation is preserved.</Typography>
+      </Box>
       <Box
         onDragOver={(e) => {
           e.preventDefault();

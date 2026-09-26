@@ -116,6 +116,7 @@ export default function ManageMedia() {
   }, [activeFolder, showTrash, debouncedSearch, filters.format]);
 
   const sentinelRef = useRef(null);
+  const gridRef = useRef(null);
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node) return;
@@ -142,6 +143,15 @@ export default function ManageMedia() {
   };
 
   const selectedItems = items.filter((m) => selectedIds.has(m._id));
+
+  const handleGridKeyNavigate = (item, key) => {
+    const index = items.findIndex((entry) => entry._id === item._id);
+    const targetIndex = key === "Home" ? 0 : key === "End" ? items.length - 1 : index + (["ArrowLeft", "ArrowUp"].includes(key) ? -1 : 1);
+    const target = items[Math.max(0, Math.min(items.length - 1, targetIndex))];
+    if (target) gridRef.current?.querySelector(`[data-media-id="${target._id}"]`)?.focus();
+  };
+
+  const handlePreviewNavigate = (target) => setDetailsItem(target);
 
   const handleDelete = async (item) => {
     const confirmed = await confirm({
@@ -404,25 +414,21 @@ export default function ManageMedia() {
 
           {!isLoading && !isError && items.length > 0 && (
             <>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                  gap: 2,
-                }}
-              >
+              <Box ref={gridRef} sx={{ columnCount: { xs: 2, sm: 3, md: 4, lg: 5 }, columnGap: 2 }}>
                 {items.map((item) => (
-                  <MediaGridItem
-                    key={item._id}
-                    item={item}
-                    selected={selectedIds.has(item._id)}
-                    onToggleSelect={toggleSelect}
-                    onOpenDetails={showTrash ? undefined : setDetailsItem}
-                    isTrash={showTrash}
-                    onRestore={handleRestore}
-                    onDelete={showTrash ? handlePermanentDelete : handleDelete}
-                    onDownload={(m) => downloadMediaBatch([m])}
-                  />
+                  <Box key={item._id} sx={{ display: "inline-block", width: "100%", mb: 2, breakInside: "avoid" }}>
+                    <MediaGridItem
+                      item={item}
+                      selected={selectedIds.has(item._id)}
+                      onToggleSelect={toggleSelect}
+                      onOpenDetails={showTrash ? undefined : setDetailsItem}
+                      onKeyNavigate={handleGridKeyNavigate}
+                      isTrash={showTrash}
+                      onRestore={handleRestore}
+                      onDelete={showTrash ? handlePermanentDelete : handleDelete}
+                      onDownload={(m) => downloadMediaBatch([m])}
+                    />
+                  </Box>
                 ))}
               </Box>
 
@@ -439,6 +445,8 @@ export default function ManageMedia() {
         media={detailsItem}
         onClose={() => setDetailsItem(null)}
         onDeleted={() => setDetailsItem(null)}
+        mediaItems={items}
+        onNavigateMedia={handlePreviewNavigate}
       />
     </>
   );

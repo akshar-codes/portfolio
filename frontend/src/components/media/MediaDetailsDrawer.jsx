@@ -5,6 +5,7 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -18,6 +19,8 @@ import { toast } from "sonner";
 import TagInput from "../common/TagInput";
 import MediaPreviewDialog from "./MediaPreviewDialog";
 import { getPreviewUrl } from "../../utils/cloudinaryTransform";
+import { getWebpUrl } from "../../utils/cloudinaryTransform";
+import { processMediaFile } from "../../utils/processMediaFile";
 import { downloadMediaBatch } from "../../utils/downloadFiles";
 import { useUpdateMediaMetadata, useReplaceMedia, useDeleteMedia } from "../../hooks/useMediaLibrary";
 import { useMediaFoldersQuery } from "../../hooks/useMediaFolders";
@@ -37,12 +40,14 @@ function formatBytes(bytes = 0) {
  * hooks/useMediaLibrary.js set, so the grid's cache invalidates the
  * same way regardless of which surface triggered the change.
  */
-export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) {
+export default function MediaDetailsDrawer({ open, media, onClose, onDeleted, mediaItems = [], onNavigateMedia }) {
   const [altText, setAltText] = useState("");
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState([]);
   const [folder, setFolder] = useState("general");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [cropAspect, setCropAspect] = useState("original");
+  const [quality, setQuality] = useState(82);
 
   const { data: folders = [] } = useMediaFoldersQuery();
   const { mutateAsync: updateMetadata, isPending: saving } = useUpdateMediaMetadata();
@@ -80,10 +85,10 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
     e.target.value = "";
     if (!file) return;
 
-    const fd = new FormData();
-    fd.append("file", file);
-
     try {
+      const processed = await processMediaFile(file, { aspect: cropAspect, quality: quality / 100 });
+      const fd = new FormData();
+      fd.append("file", processed, processed.name);
       await replaceMedia({ id: media._id, formData: fd });
       toast.success("Image replaced. Anything referencing the old URL by value will need re-selecting.");
     } catch (err) {
@@ -98,6 +103,13 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
     } catch {
       toast.error("Could not copy URL.");
     }
+  };
+
+  const handleCopyWebpUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(getWebpUrl(media.url));
+      toast.success("Optimized WebP URL copied.");
+    } catch { toast.error("Could not copy WebP URL."); }
   };
 
   const handleDownload = async () => {
@@ -146,6 +158,7 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
             <Button size="small" variant="outlined" startIcon={<ContentCopyIcon fontSize="small" />} onClick={handleCopyUrl}>
               Copy URL
             </Button>
+            <Button size="small" variant="outlined" onClick={handleCopyWebpUrl}>Copy WebP URL</Button>
             <Button size="small" variant="outlined" startIcon={<DownloadOutlinedIcon fontSize="small" />} onClick={handleDownload}>
               Download
             </Button>
@@ -156,6 +169,14 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
           </Box>
 
           <Box>
+            <Box className="flex items-center gap-2 mb-2">
+              <TextField select size="small" label="Replace crop" value={cropAspect} onChange={(e) => setCropAspect(e.target.value)} sx={{ minWidth: 155 }}>
+                <MenuItem value="original">Keep original</MenuItem><MenuItem value="square">Square</MenuItem><MenuItem value="portrait">Portrait 4:5</MenuItem><MenuItem value="landscape">Landscape 16:9</MenuItem>
+              </TextField>
+              <TextField select size="small" label="Quality" value={quality} onChange={(e) => setQuality(Number(e.target.value))} sx={{ minWidth: 115 }}>
+                <MenuItem value={95}>High</MenuItem><MenuItem value={82}>Balanced</MenuItem><MenuItem value={65}>Smaller</MenuItem>
+              </TextField>
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
               {formatBytes(media.bytes)} · {media.width}×{media.height} · {media.format?.toUpperCase()}
             </Typography>
@@ -249,7 +270,7 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted }) 
           </Button>
         </Box>
       </Box>
-      <MediaPreviewDialog open={previewOpen} media={media} onClose={() => setPreviewOpen(false)} />
+      <MediaPreviewDialog open={previewOpen} media={media} mediaItems={mediaItems} onNavigate={onNavigateMedia} onClose={() => setPreviewOpen(false)} />
     </Drawer>
   );
 }

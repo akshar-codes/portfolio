@@ -36,6 +36,7 @@ export default function MediaGridItem({
   onRestore,
   onDelete,
   onDownload,
+  onKeyNavigate,
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -51,7 +52,21 @@ export default function MediaGridItem({
 
   return (
     <Box
+      role={onOpenDetails ? "button" : undefined}
+      tabIndex={onOpenDetails ? 0 : -1}
+      data-media-grid-item="true"
+      data-media-id={item._id}
       onClick={() => onOpenDetails?.(item)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          onKeyNavigate?.(item, event.key);
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenDetails?.(item);
+        }
+      }}
       className="group"
       sx={{
         position: "relative",
@@ -64,7 +79,7 @@ export default function MediaGridItem({
         transition: "border-color 0.15s ease",
       }}
     >
-      <Box sx={{ position: "relative", aspectRatio: "1 / 1", bgcolor: "action.hover" }}>
+      <Box sx={{ position: "relative", aspectRatio: item.width && item.height ? `${item.width} / ${item.height}` : "1 / 1", bgcolor: "action.hover" }}>
         {!imgLoaded && <Box sx={{ position: "absolute", inset: 0, bgcolor: "action.hover" }} />}
         <img
           src={getThumbnailUrl(item.url, 320)}

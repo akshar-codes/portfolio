@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import Dialog from "@mui/material/Dialog";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
@@ -5,10 +6,28 @@ import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import Button from "@mui/material/Button";
 import { downloadMediaBatch } from "../../utils/downloadFiles";
+import { getWebpUrl } from "../../utils/cloudinaryTransform";
 
-export default function MediaPreviewDialog({ open, media, onClose }) {
+export default function MediaPreviewDialog({ open, media, mediaItems = [], onNavigate, onClose }) {
+  const [webp, setWebp] = useState(false);
+  useEffect(() => setWebp(false), [media?._id]);
+  const handleKeys = useCallback((event) => {
+    if (!open || !media || !onNavigate || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    const index = mediaItems.findIndex((item) => item._id === media._id);
+    if (index < 0 || mediaItems.length < 2) return;
+    const delta = event.key === "ArrowRight" ? 1 : -1;
+    onNavigate(mediaItems[(index + delta + mediaItems.length) % mediaItems.length]);
+  }, [open, media, mediaItems, onNavigate]);
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [handleKeys]);
   if (!media) return null;
+
+  const displayUrl = webp ? getWebpUrl(media.url) : media.url;
 
   const handleDownload = async () => {
     await downloadMediaBatch([media]);
@@ -36,6 +55,7 @@ export default function MediaPreviewDialog({ open, media, onClose }) {
       }}
     >
       <Box sx={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 1, zIndex: 10 }}>
+        <Button size="small" variant="contained" onClick={() => setWebp((value) => !value)}>{webp ? "Original" : "WebP"}</Button>
         <IconButton
           component="a"
           href={media.url}
@@ -66,7 +86,7 @@ export default function MediaPreviewDialog({ open, media, onClose }) {
       </Box>
 
       <img
-        src={media.url}
+        src={displayUrl}
         alt={media.altText || media.originalName}
         style={{
           maxWidth: "90vw",
