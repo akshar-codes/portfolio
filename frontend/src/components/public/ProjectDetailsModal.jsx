@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IoCloseOutline, IoLogoGithub, IoOpenOutline } from "react-icons/io5";
 import { flattenTechNames } from "../../utils/projectHelpers";
+import { getPreviewUrl, getThumbnailUrl } from "../../utils/cloudinaryTransform";
 
 function preventDefault(e) {
   e.preventDefault();
@@ -30,7 +31,7 @@ function GalleryViewer({ thumbnail, banner, gallery = [] }) {
         style={{ backgroundColor: "var(--bg-secondary)", lineHeight: 0 }}
       >
         <img
-          src={images[active].url}
+          src={getPreviewUrl(images[active].url, 1200)}
           alt={images[active].label}
           loading="lazy"
           className="w-full block"
@@ -56,7 +57,7 @@ function GalleryViewer({ thumbnail, banner, gallery = [] }) {
               }}
             >
               <img
-                src={img.url}
+                src={getThumbnailUrl(img.url, 180)}
                 alt={img.label}
                 loading="lazy"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}

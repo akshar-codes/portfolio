@@ -56,6 +56,7 @@ export default function MediaGridItem({
       tabIndex={onOpenDetails ? 0 : -1}
       data-media-grid-item="true"
       data-media-id={item._id}
+      sx={{ contentVisibility: "auto", containIntrinsicSize: "1px 280px" }}
       onClick={() => onOpenDetails?.(item)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;

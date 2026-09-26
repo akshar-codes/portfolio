@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useCallback, useState, useEffect } from "react";
 import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
 import { usePublicProjectsQuery, usePublicProjectQuery } from "../../hooks/usePublicProjects";
@@ -14,6 +14,7 @@ import { SkeletonGrid } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
 import ProjectDetailsModal from "../../components/public/ProjectDetailsModal";
 import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
+import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
 
 const PAGE_SIZE = 6;
 
@@ -45,6 +46,8 @@ function BrowserFrame({ image, label }) {
           <img
             src={image}
             alt={label}
+            loading="lazy"
+            decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
           />
         ) : (
@@ -59,7 +62,7 @@ function BrowserFrame({ image, label }) {
   );
 }
 
-function ProjectCard({ project, onViewDetails }) {
+const ProjectCard = memo(function ProjectCard({ project, onViewDetails }) {
   const techNames = flattenTechNames(project.technologies);
   const liveUrl = project.liveUrl || project.projectUrl;
 
@@ -70,7 +73,7 @@ function ProjectCard({ project, onViewDetails }) {
         onClick={() => onViewDetails(project)}
         className="cursor-pointer border-0 p-0 bg-transparent text-left w-full"
       >
-        <BrowserFrame image={project.image?.url} label={project.title} />
+          <BrowserFrame image={getThumbnailUrl(project.image?.url, 720)} label={project.title} />
       </button>
 
       <div className="flex items-start justify-between gap-3">
@@ -160,7 +163,7 @@ function ProjectCard({ project, onViewDetails }) {
       </div>
     </div>
   );
-}
+});
 
 export default function Work() {
   const [search, setSearch] = useState("");
@@ -171,10 +174,10 @@ export default function Work() {
 
   const { isPreview, previewProjectId } = usePreviewMode();
   const { data: previewProject } = usePublicProjectQuery(previewProjectId, { preview: isPreview });
-  const handleProjectView = (project) => {
+  const handleProjectView = useCallback((project) => {
     if (!isPreview) trackPortfolioEvent("project_view", { projectId: project._id });
     setSelectedProject(project);
-  };
+  }, [isPreview]);
 
   const { data: categories } = usePublicCategoriesQuery({ preview: isPreview });
 

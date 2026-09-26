@@ -19,8 +19,6 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import LaunchIcon from "@mui/icons-material/Launch";
 import HistoryIcon from "@mui/icons-material/History";
 
-import FileUploadArea from "../../components/cms/FileUploadArea";
-import FileUploadButton from "../../components/cms/FileUploadButton";
 import PreviewDrawer from "../../components/cms/PreviewDrawer";
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";

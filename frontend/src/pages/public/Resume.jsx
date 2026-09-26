@@ -11,6 +11,7 @@ import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
 import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
+import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
 
 const TABS = ["Experience", "Education", "Certifications", "Skills", "Languages", "Interests", "About me"];
 
@@ -38,7 +39,7 @@ function ItemCard({ dateRange, title, subtitle, description, logo }) {
             {dateRange}
           </span>
         )}
-        {logo && <img src={logo} alt="" className="w-8 h-8 rounded object-cover" />}
+        {logo && <img src={getThumbnailUrl(logo, 128)} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />}
       </div>
       <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
         {title}
@@ -289,7 +290,7 @@ export default function Resume() {
                             {item.issueDate}
                           </span>
                         )}
-                        {item.badgeImage && <img src={item.badgeImage} alt="" className="w-8 h-8 rounded object-cover" />}
+                        {item.badgeImage && <img src={getThumbnailUrl(item.badgeImage, 128)} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />}
                       </div>
                       <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
                         {item.title}

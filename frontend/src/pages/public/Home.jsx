@@ -9,6 +9,7 @@ import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { resolveIcon } from "../../utils/iconMap";
 import { getInitials } from "../../utils/strings";
 import { excerptFromHtml } from "../../utils/html";
+import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
 import { SkeletonAvatar, SkeletonBlock, SkeletonText } from "../../components/public/Skeletons";
 import { PublicError } from "../../components/public/StatusStates";
 
@@ -349,7 +350,7 @@ export default function Home() {
                       style={{ background: "linear-gradient(160deg, #2a2a2d 0%, #1c1c1e 60%, #252527 100%)" }}
                     >
                       {profile?.avatar ? (
-                        <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover object-top" />
+                        <img src={getThumbnailUrl(profile.avatar, 512)} alt={profile.name} fetchPriority="high" decoding="async" className="w-full h-full object-cover object-top" />
                       ) : (
                         <span
                           className="absolute inset-0 flex items-center justify-center font-mono text-5xl font-bold"
