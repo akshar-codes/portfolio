@@ -28,6 +28,8 @@ import adminSiteSettingsRoutes from "./routes/admin/siteSettingsRoutes.js";
 import adminNavigationRoutes from "./routes/admin/navigationRoutes.js";
 import adminFooterRoutes from "./routes/admin/footerRoutes.js";
 import adminSeoRoutes from "./routes/admin/seoRoutes.js";
+import adminActivityRoutes from "./routes/admin/activityRoutes.js";
+import activityLogger from "./middleware/activityLogger.js";
 
 // ── General (public) routes ──────────────────────────────────────────
 import healthRoutes from "./routes/general/healthRoutes.js";
@@ -115,6 +117,7 @@ app.use(cookieParser());
  * 8. MongoDB injection sanitizer
  * ------------------------------------------------------------------ */
 app.use(mongoSanitize);
+app.use(activityLogger);
 
 /* ------------------------------------------------------------------ *
  * 9. Health check — mounted BEFORE the global rate limiter so
@@ -130,6 +133,7 @@ app.use(globalLimiter);
  * 11. Routes
  * ------------------------------------------------------------------ */
 app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin/activity", adminActivityRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
 

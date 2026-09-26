@@ -20,6 +20,7 @@ import { ROUTES } from "./constants/routes";
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout/AdminLayout"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
+const Activity = lazy(() => import("./pages/admin/Activity"));
 const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
 const ProjectEditor = lazy(() => import("./pages/admin/ProjectEditor"));
 const ManageCategories = lazy(() => import("./pages/admin/ManageCategories"));
@@ -102,6 +103,7 @@ export default function App() {
                     </Suspense>
                   }
                 />
+                <Route path="activity" element={<Suspense fallback={<Fallback />}><Activity /></Suspense>} />
                 <Route
                   path="profile"
                   element={

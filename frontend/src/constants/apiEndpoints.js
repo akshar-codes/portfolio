@@ -4,6 +4,8 @@
  * here so a path change only needs to happen in one place.
  */
 export const API_ENDPOINTS = {
+  adminActivity: "/admin/activity",
+  adminActivityExport: "/admin/activity/export.csv",
   // Profile
   profile: "/profile",
   adminProfile: "/admin/profile",

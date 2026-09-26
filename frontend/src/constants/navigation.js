@@ -10,6 +10,7 @@ import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ViewAgendaOutlinedIcon from "@mui/icons-material/ViewAgendaOutlined";
 import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 
 import { ROUTES } from "./routes";
 import { PERMISSIONS } from "./permissions";
@@ -40,6 +41,13 @@ export const ADMIN_NAV_TREE = [
     label: "Dashboard",
     path: ROUTES.adminDashboard,
     icon: DashboardOutlinedIcon,
+    permission: PERMISSIONS.DASHBOARD_VIEW,
+  },
+  {
+    id: "activity",
+    label: "Activity Log",
+    path: ROUTES.adminActivity,
+    icon: HistoryOutlinedIcon,
     permission: PERMISSIONS.DASHBOARD_VIEW,
   },
   {

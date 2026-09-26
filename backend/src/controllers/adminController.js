@@ -5,9 +5,11 @@ import {
   getClearCookieOptions,
   COOKIE_NAME,
 } from "../services/authService.js";
-import { incrementTokenVersion } from "../repositories/adminRepository.js";
+import { findByUsername, incrementTokenVersion } from "../repositories/adminRepository.js";
 import { sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { recordActivity } from "../services/activityLogService.js";
+import logger from "../utils/logger.js";
 
 /* ---------------------------------------------------------------
    POST /api/admin/login
@@ -15,7 +17,18 @@ import asyncHandler from "../utils/asyncHandler.js";
 export const loginAdmin = asyncHandler(async (req, res) => {
   const { username, password } = req.body;
 
-  const token = await attemptLogin(username, password);
+  let token;
+  try {
+    token = await attemptLogin(username, password);
+  } catch (error) {
+    void recordActivity({ actor: { username: String(username || "Unknown admin") }, action: "login", resource: "admin", description: `${String(username || "Unknown admin").slice(0, 80)} failed login`, ip: req.ip, method: req.method, path: req.originalUrl })
+      .catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
+    throw error;
+  }
+
+  const admin = await findByUsername(username);
+  void recordActivity({ actor: admin, action: "login", resource: "admin", description: `${admin?.username ?? username} logged in`, ip: req.ip, method: req.method, path: req.originalUrl })
+    .catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
 
   res.cookie(COOKIE_NAME, token, getCookieOptions());
   return sendSuccess(res, null, "Login successful");
