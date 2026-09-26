@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "crypto";
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -90,6 +91,8 @@ app.use(
  * ------------------------------------------------------------------ */
 const morganFormat = NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(morganFormat, { stream: morganStream }));
+// Compress JSON, HTML, CSS, and JavaScript responses over the wire.
+app.use(compression({ threshold: 1024 }));
 
 /* ------------------------------------------------------------------ *
  * 6. CORS
@@ -115,6 +118,15 @@ app.use(
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 app.use(cookieParser());
+app.use("/api", (req, res, next) => {
+  if (req.method !== "GET") return next();
+  if (req.path.startsWith("/admin") || req.path.startsWith("/messages") || req.path.startsWith("/analytics") || req.query.preview) {
+    res.setHeader("Cache-Control", "private, no-store");
+  } else {
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+  }
+  return next();
+});
 
 /* ------------------------------------------------------------------ *
  * 8. MongoDB injection sanitizer
