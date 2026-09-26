@@ -17,7 +17,10 @@ export function useProfile({ preview = false } = {}) {
       return data;
     },
     staleTime: preview ? 0 : 5 * 60 * 1000,
-    retry: 2,
+    // A missing or unpublished profile is a stable 404; retrying it only
+    // adds duplicate requests and noisy server logs. Keep retries for
+    // transient network/server failures.
+    retry: (failureCount, error) => error.statusCode !== 404 && failureCount < 2,
   });
 }
 

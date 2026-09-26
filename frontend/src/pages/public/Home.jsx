@@ -203,9 +203,9 @@ export default function Home() {
         <div className="flex flex-col gap-16">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="flex-1 max-w-xl">
-              <p className="font-mono text-sm tracking-widest mb-3" style={{ color: "var(--text-secondary)" }}>
+              <div className="font-mono text-sm tracking-widest mb-3" style={{ color: "var(--text-secondary)" }}>
                 {isLoading ? <SkeletonBlock className="h-3 w-40" /> : profile?.title}
-              </p>
+              </div>
 
               <h1
                 className="font-mono text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2"
