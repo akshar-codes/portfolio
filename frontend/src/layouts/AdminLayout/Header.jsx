@@ -21,7 +21,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 import { ROUTES } from "../../constants/routes";
 
-export default function Header({ onMenuClick, pageTitle }) {
+export default function Header({ onMenuClick, pageTitle, menuOpen = false }) {
   const navigate = useNavigate();
   const { logout, admin } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -49,7 +49,7 @@ export default function Header({ onMenuClick, pageTitle }) {
       sx={{ borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}
     >
       <Toolbar sx={{ gap: 1.5 }}>
-        <IconButton onClick={onMenuClick} edge="start" sx={{ display: { md: "none" } }} aria-label="Open navigation menu">
+        <IconButton onClick={onMenuClick} edge="start" sx={{ display: { md: "none" } }} aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
           <MenuIcon />
         </IconButton>
 

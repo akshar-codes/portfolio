@@ -32,6 +32,8 @@ export default function AdminLayout() {
     <>
       <MessageNotificationWatcher />
       <GlobalSearch open={isOpen} onClose={close} />
+      <a className="skip-link" href="#admin-main-content">Skip to main content</a>
+      <span className="sr-only" aria-live="polite" aria-atomic="true">{pageTitle}</span>
 
       <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
         {isDesktop && (
@@ -47,6 +49,7 @@ export default function AdminLayout() {
               height: "100vh",
               overflowY: "auto",
             }}
+            aria-label="Admin navigation"
           >
             <Sidebar />
           </Box>
@@ -54,8 +57,8 @@ export default function AdminLayout() {
 
         <MobileDrawer open={!isDesktop && mobileOpen} onClose={() => setMobileOpen(false)} />
 
-        <Box component="main" sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <Header onMenuClick={() => setMobileOpen(true)} pageTitle={pageTitle} />
+        <Box component="main" id="admin-main-content" tabIndex={-1} sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <Header onMenuClick={() => setMobileOpen((open) => !open)} pageTitle={pageTitle} menuOpen={mobileOpen} />
           <PageContainer>
             <Outlet />
           </PageContainer>

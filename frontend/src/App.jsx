@@ -43,7 +43,7 @@ const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const AdminNotFound = lazy(() => import("./pages/NotFound"));
 
 const Fallback = () => (
-  <div className="admin-shell__loading">
+  <div className="admin-shell__loading" role="status" aria-label="Loading page">
     <div className="a-spinner" />
   </div>
 );

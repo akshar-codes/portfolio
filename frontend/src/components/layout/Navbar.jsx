@@ -52,6 +52,9 @@ export default function Navbar() {
         color: active ? "var(--accent)" : "var(--text-primary)",
         fontFamily: "Inter, sans-serif",
       },
+      "aria-current": active ? "page" : undefined,
+      "aria-haspopup": item.children?.length ? "true" : undefined,
+      "aria-expanded": item.children?.length ? openDesktopId === (item._id ?? item.path) : undefined,
     };
 
     const content = (
@@ -92,7 +95,7 @@ export default function Navbar() {
         className="sticky top-0 z-50 w-full"
         style={{ backgroundColor: "var(--bg-primary)", borderBottom: "1px solid transparent" }}
       >
-        <nav className="section-container flex items-center justify-between h-20">
+        <nav aria-label="Primary" className="section-container flex items-center justify-between h-20">
           <Link to="/" className="flex items-center gap-2 no-underline" style={{ textDecoration: "none" }}>
             {logoUrl ? (
               <img src={logoUrl} alt={siteName} style={{ height: 34, width: "auto" }} />
@@ -129,10 +132,15 @@ export default function Navbar() {
                     className="relative"
                     onMouseEnter={() => setOpenDesktopId(item._id ?? item.path)}
                     onMouseLeave={() => setOpenDesktopId(null)}
+                    onFocus={() => setOpenDesktopId(item._id ?? item.path)}
+                    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpenDesktopId(null); }}
+                    onKeyDown={(event) => { if (event.key === "Escape") setOpenDesktopId(null); }}
                   >
                     {renderLink(item)}
                     {openDesktopId === (item._id ?? item.path) && (
                       <div
+                        role="group"
+                        aria-label={`${item.label} links`}
                         className="absolute top-full left-0 mt-3 py-2 rounded-xl"
                         style={{
                           backgroundColor: "var(--bg-secondary)",
@@ -162,46 +170,23 @@ export default function Navbar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="no-underline"
-                style={{ textDecoration: "none" }}
-              >
-                <button
-                  className="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer"
-                  style={{
+                style={{
+                    display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 20px", borderRadius: 9999,
                     backgroundColor: "transparent",
                     color: "var(--accent)",
                     border: "1px solid var(--accent)",
                     fontFamily: "Inter, sans-serif",
+                    textDecoration: "none", fontWeight: 600,
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--accent)";
-                    e.currentTarget.style.color = "#1c1c1e";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "var(--accent)";
-                  }}
-                >
-                  {settings.resumeDownload.label || "Download CV"}
-                </button>
+                aria-label={`${settings.resumeDownload.label || "Download CV"} (opens in a new tab)`}
+              >
+                {settings.resumeDownload.label || "Download CV"}
               </a>
             )}
 
             {nav?.ctaEnabled && nav?.ctaUrl && (
-              <Link to={nav.ctaUrl} className="no-underline" style={{ textDecoration: "none" }}>
-                <button
-                  className="px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer border-0"
-                  style={{ backgroundColor: "var(--accent)", color: "#1c1c1e", fontFamily: "Inter, sans-serif" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--accent-dark)";
-                    e.currentTarget.style.transform = "scale(1.04)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--accent)";
-                    e.currentTarget.style.transform = "scale(1)";
-                  }}
-                >
+              <Link to={nav.ctaUrl} className="no-underline" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 24px", borderRadius: 9999, textDecoration: "none", fontSize: 14, fontWeight: 600, backgroundColor: "var(--accent)", color: "#1c1c1e", fontFamily: "Inter, sans-serif" }}>
                   {nav.ctaLabel || "Contact"}
-                </button>
               </Link>
             )}
           </div>

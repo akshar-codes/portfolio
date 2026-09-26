@@ -38,7 +38,7 @@ const muiTheme = createTheme({
             fontFamily: "JetBrains Mono, monospace",
             fontSize: "0.85rem",
             "& fieldset": {
-              borderColor: "#3a3a3d",
+              borderColor: "#707074",
             },
             "&:hover fieldset": {
               borderColor: "#00ff88",
@@ -48,7 +48,7 @@ const muiTheme = createTheme({
             },
           },
           "& .MuiInputLabel-root": {
-            color: "#6b6b6e",
+            color: "#a0a0a0",
             fontFamily: "JetBrains Mono, monospace",
             fontSize: "0.85rem",
           },

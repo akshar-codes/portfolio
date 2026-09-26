@@ -90,11 +90,13 @@ export default function PublicLayout() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
       {isPreview && <PreviewBanner />}
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <span className="sr-only" aria-live="polite" aria-atomic="true">Page: {location.pathname}</span>
       {/* Announcement bar sits above the sticky Navbar so it scrolls away
           while the Navbar stays fixed — preserves the sticky UX. */}
       <AnnouncementBar />
       <Navbar />
-      <main className="pb-24 md:pb-0">
+      <main id="main-content" tabIndex={-1} className="pb-24 md:pb-0">
         <Outlet />
       </main>
       <Footer />

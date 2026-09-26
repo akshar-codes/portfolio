@@ -15,6 +15,7 @@ export default function MobileDrawer({ open, onClose }) {
       variant="temporary"
       open={open}
       onClose={onClose}
+      PaperProps={{ id: "admin-mobile-navigation", "aria-label": "Admin navigation" }}
       ModalProps={{ keepMounted: true }}
       sx={{
         display: { xs: "block", md: "none" },
