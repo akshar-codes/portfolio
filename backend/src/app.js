@@ -13,6 +13,7 @@ import { globalLimiter } from "./middleware/rateLimiters.js";
 import logger, { morganStream } from "./utils/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import { JSON_BODY_LIMIT } from "./constants/index.js";
+import AppError from "./utils/AppError.js";
 
 // ── Admin (protected) routes ────────────────────────────────────────
 import adminAuthRoutes from "./routes/admin/authRoutes.js";
@@ -65,8 +66,9 @@ app.set("trust proxy", 1);
 /* ------------------------------------------------------------------ *
  * 3. Request correlation IDs
  * ------------------------------------------------------------------ */
-app.use((req, _res, next) => {
+app.use((req, res, next) => {
   req.id = randomUUID();
+  res.setHeader("X-Request-Id", req.id);
   next();
 });
 
@@ -89,7 +91,13 @@ app.use(
 /* ------------------------------------------------------------------ *
  * 5. HTTP request logging (morgan → winston)
  * ------------------------------------------------------------------ */
-const morganFormat = NODE_ENV === "production" ? "combined" : "dev";
+// Log the route path without query parameters, which can contain private
+// search terms or accidentally supplied credentials.
+morgan.token("request-id", (req) => req.id);
+morgan.token("route-path", (req) => req.path);
+const morganFormat = NODE_ENV === "production"
+  ? ":request-id :remote-addr :method :route-path :status :res[content-length] - :response-time ms"
+  : "dev";
 app.use(morgan(morganFormat, { stream: morganStream }));
 // Compress JSON, HTML, CSS, and JavaScript responses over the wire.
 app.use(compression({ threshold: 1024 }));
@@ -103,7 +111,7 @@ app.use(
       if (!incomingOrigin || incomingOrigin === ALLOWED_ORIGIN) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS: origin '${incomingOrigin}' is not allowed`));
+        callback(new AppError("Origin is not allowed.", 403));
       }
     },
     credentials: true,

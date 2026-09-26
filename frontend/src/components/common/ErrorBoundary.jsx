@@ -11,8 +11,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    /* Replace with your logger / Sentry call if available */
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    console.error("[ErrorBoundary]", error.message, info.componentStack);
   }
 
   render() {

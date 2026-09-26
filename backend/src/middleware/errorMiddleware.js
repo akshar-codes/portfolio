@@ -62,6 +62,8 @@ const errorMiddleware = (err, req, res, next) => {
   else if (err.name === "TokenExpiredError") error = handleJWTExpired();
   else if (err.name === "MulterError") error = handleMulter(err);
   else if (isSafeUtilityError(err)) error = new AppError(err.message, 400);
+  else if (err.type === "entity.parse.failed") error = new AppError("Request body contains invalid JSON.", 400);
+  else if (err.type === "entity.too.large") error = new AppError("Request body is too large.", 413);
 
   const isOperational = error.isOperational === true;
   const statusCode = error.statusCode || 500;
@@ -76,7 +78,7 @@ const errorMiddleware = (err, req, res, next) => {
       status: statusCode,
       errorCode,
       method: req.method,
-      url: req.originalUrl,
+      url: req.path,
     });
   } else {
     logger.error("Unhandled error", {
@@ -84,7 +86,7 @@ const errorMiddleware = (err, req, res, next) => {
       message: err.message,
       stack: err.stack,
       method: req.method,
-      url: req.originalUrl,
+      url: req.path,
     });
   }
 

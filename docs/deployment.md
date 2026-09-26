@@ -147,3 +147,42 @@ to rolling back the actual Vercel/Render production deployment.
       Vercel production domain are rejected
 - [ ] `VITE_API_BASE_URL` in the Vercel build points at the Render URL,
       not `localhost`
+
+---
+
+## Operations and recovery
+
+### Monitoring and health
+
+- Configure an external HTTPS uptime check for `https://<render-service>.onrender.com/health` at a 1–5 minute interval. Alert on non-200 responses and missed checks; the endpoint returns `503` when MongoDB is disconnected.
+- Review Render service logs for startup failures, repeated 5xx responses, database reconnects, and `X-Request-Id` values reported by users. The API emits structured JSON in production. Logs are diagnostic and are not a durable audit or backup store.
+- Review Vercel deployment/build status and MongoDB Atlas alerts (availability, storage, connections) at least weekly. Keep alerts routed to a monitored mailbox or on-call destination.
+- Rate limits use the process-local memory store. Keep one backend instance unless a shared store is configured; restarting the service clears counters. This is an abuse throttle, not a substitute for upstream DDoS protection.
+
+### Backup and restore
+
+- Enable MongoDB Atlas automated backups / point-in-time recovery for the production cluster. Use a retention period that meets the site's recovery needs and verify backup success in Atlas.
+- Before schema migrations or major content changes, create an on-demand snapshot. Keep Cloudinary as the media source of truth and retain access to its account; MongoDB backups do not include uploaded media bytes.
+- At least quarterly, restore a recent snapshot into a separate staging cluster and verify the CMS can read content and media references. Never test restores against production.
+- Record the Atlas restore procedure, authorized operators, and secret retrieval path in the team's private runbook. After restoring, update the Render `MONGO_URI` only when ready, deploy/restart, and verify `/health` plus the post-deploy checklist.
+
+### Release and rollback procedure
+
+1. Review the change and CI result on the commit intended for release. Confirm `npm audit` and the frontend build/lint jobs pass.
+2. Back up the Atlas database before any migration; run only the migration scripts required by the release and check their output.
+3. Merge/push to `main`; Render auto-deploys the backend. Confirm its deploy is healthy and `/health` reports `db: "connected"`.
+4. Deploy the Vercel frontend with the production `VITE_API_BASE_URL`. Confirm the URL targets the deployed Render API and review the production deployment output.
+5. Complete the smoke checks below. If a release is unhealthy, roll back backend and frontend independently using their provider dashboards, then restore a database snapshot only if the release changed data incompatibly.
+
+### Production smoke QA
+
+- [ ] Open `/`, `/services`, `/resume`, `/work`, and `/contact`; verify images, fonts, navigation, and browser console/network errors.
+- [ ] Submit a valid contact form and verify the message appears in the protected CMS. Verify invalid email/empty fields are rejected and the honeypot does not create a message.
+- [ ] Open `/admin/login`, sign in, verify refresh preserves the session, then log out and confirm protected pages return to login.
+- [ ] Edit and publish a low-risk content item; confirm it appears publicly, then restore its prior state. Check project image upload and CMS media browsing if Cloudinary is enabled.
+- [ ] Confirm a request from the configured site origin succeeds, an unrelated browser origin is rejected, invalid JSON returns 400, and repeated login failures eventually return 429.
+- [ ] Check narrow mobile (320–375 px), tablet, and desktop layouts; keyboard navigation; and current Chrome, Firefox, Safari, and Edge. These are manual release checks and should be recorded with the release.
+
+### Known verification limits
+
+The repository does not provide a browser automation suite or real production credentials, so end-to-end cross-browser QA, provider alert delivery, snapshot restoration, and production API checks must be performed by an operator using the checklist above. Current verification also found existing frontend ESLint errors (including synchronous state updates in effects and unused declarations), and 28 moderate advisories in TipTap 2.x; the available npm fix requires the breaking TipTap 3 upgrade. Resolve these before treating the CI/release gate as green. Backend `npm audit --audit-level=high` reports no vulnerabilities; frontend reports no high/critical advisories after the compatible dependency updates.
