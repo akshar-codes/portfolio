@@ -18,12 +18,12 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="error-page">
+        <main className="error-page" role="alert">
           <h1>500</h1>
           <h2>Something went wrong</h2>
           <p>An unexpected error occurred. Please refresh the page.</p>
           <a href="/">Go Home</a>
-        </div>
+        </main>
       );
     }
     return this.props.children;

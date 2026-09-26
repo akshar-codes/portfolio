@@ -11,6 +11,8 @@ import Skeleton from "@mui/material/Skeleton";
 export default function MediaGridSkeleton({ count = 12 }) {
   return (
     <Box
+      role="status"
+      aria-label="Loading media"
       sx={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",

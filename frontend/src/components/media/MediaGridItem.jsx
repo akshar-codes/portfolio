@@ -52,53 +52,49 @@ export default function MediaGridItem({
 
   return (
     <Box
-      role={onOpenDetails ? "button" : undefined}
-      tabIndex={onOpenDetails ? 0 : -1}
       data-media-grid-item="true"
       data-media-id={item._id}
-      sx={{ contentVisibility: "auto", containIntrinsicSize: "1px 280px" }}
-      onClick={() => onOpenDetails?.(item)}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
-          event.preventDefault();
-          onKeyNavigate?.(item, event.key);
-        } else if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpenDetails?.(item);
-        }
-      }}
       className="group"
       sx={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "280px",
         position: "relative",
         borderRadius: 2,
         overflow: "hidden",
         border: "1px solid",
         borderColor: selected ? "primary.main" : "divider",
-        cursor: onOpenDetails ? "pointer" : "default",
+        cursor: "default",
         bgcolor: "background.paper",
         transition: "border-color 0.15s ease",
       }}
     >
       <Box sx={{ position: "relative", aspectRatio: item.width && item.height ? `${item.width} / ${item.height}` : "1 / 1", bgcolor: "action.hover" }}>
         {!imgLoaded && <Box sx={{ position: "absolute", inset: 0, bgcolor: "action.hover" }} />}
-        <img
-          src={getThumbnailUrl(item.url, 320)}
-          alt={item.altText || item.originalName}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-            opacity: imgLoaded ? 1 : 0,
-            transition: "opacity 0.2s ease",
+        <Box
+          component="button"
+          type="button"
+          data-media-preview="true"
+          onClick={() => onOpenDetails?.(item)}
+          onKeyDown={(event) => {
+            if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+              event.preventDefault(); onKeyNavigate?.(item, event.key);
+            }
           }}
-        />
+          aria-label={`Preview ${item.altText || item.originalName}`}
+          sx={{ display: "block", width: "100%", height: "100%", p: 0, border: 0, bgcolor: "transparent", cursor: "pointer" }}
+        >
+          <img
+            src={getThumbnailUrl(item.url, 320)}
+            alt=""
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
+          />
+        </Box>
 
         {/* Selection checkbox */}
         <Checkbox
+          inputProps={{ "aria-label": `Select ${item.originalName}` }}
           checked={selected}
           onClick={(e) => e.stopPropagation()}
           onChange={() => onToggleSelect?.(item)}
@@ -121,7 +117,7 @@ export default function MediaGridItem({
 
         {/* Hover action bar */}
         <Box
-          className="opacity-0 group-hover:opacity-100"
+          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           sx={{
             position: "absolute",
             bottom: 0,
@@ -132,6 +128,7 @@ export default function MediaGridItem({
             p: 0.5,
             background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
             transition: "opacity 0.15s ease",
+            "@media (hover: none)": { opacity: 1 },
           }}
         >
           {isTrash ? (
@@ -139,6 +136,7 @@ export default function MediaGridItem({
               <Tooltip title="Restore">
                 <IconButton
                   size="small"
+                  aria-label={`Restore ${item.originalName}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestore?.(item);
@@ -151,6 +149,7 @@ export default function MediaGridItem({
               <Tooltip title="Delete permanently">
                 <IconButton
                   size="small"
+                  aria-label={`Delete ${item.originalName} permanently`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete?.(item);
@@ -164,13 +163,14 @@ export default function MediaGridItem({
           ) : (
             <>
               <Tooltip title="Copy URL">
-                <IconButton size="small" onClick={handleCopyUrl} sx={{ color: "#fff" }}>
+                <IconButton size="small" onClick={handleCopyUrl} aria-label={`Copy URL for ${item.originalName}`} sx={{ color: "#fff" }}>
                   <ContentCopyIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Download">
                 <IconButton
                   size="small"
+                  aria-label={`Download ${item.originalName}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDownload?.(item);
@@ -183,6 +183,7 @@ export default function MediaGridItem({
               <Tooltip title="Edit details">
                 <IconButton
                   size="small"
+                  aria-label={`Edit details for ${item.originalName}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenDetails?.(item);
@@ -195,6 +196,7 @@ export default function MediaGridItem({
               <Tooltip title="Move to trash">
                 <IconButton
                   size="small"
+                  aria-label={`Move ${item.originalName} to trash`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete?.(item);

@@ -7,13 +7,13 @@
 
 export function PublicError({ title = "Something went wrong", message, onRetry }) {
   return (
-    <div className="flex flex-col items-center text-center gap-3 py-16 px-4">
+    <div className="flex flex-col items-center text-center gap-3 py-16 px-4" role="alert">
       <span className="text-3xl" aria-hidden="true">
         ⚠️
       </span>
-      <p className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+      <h2 className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
         {title}
-      </p>
+      </h2>
       {message && (
         <p className="font-mono text-sm max-w-md" style={{ color: "var(--text-secondary)" }}>
           {message}
@@ -24,7 +24,7 @@ export function PublicError({ title = "Something went wrong", message, onRetry }
           type="button"
           onClick={onRetry}
           className="px-5 py-2 rounded-full font-mono text-sm font-semibold border-0 cursor-pointer transition-all duration-200"
-          style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
+          style={{ backgroundColor: "var(--accent)", color: "#1c1c1e", minHeight: 44 }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--accent-dark)")}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--accent)")}
         >
@@ -37,13 +37,13 @@ export function PublicError({ title = "Something went wrong", message, onRetry }
 
 export function PublicEmpty({ icon = "📭", title = "Nothing here yet", message }) {
   return (
-    <div className="flex flex-col items-center text-center gap-2 py-16 px-4">
+    <div className="flex flex-col items-center text-center gap-2 py-16 px-4" role="status">
       <span className="text-3xl" aria-hidden="true">
         {icon}
       </span>
-      <p className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+      <h2 className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
         {title}
-      </p>
+      </h2>
       {message && (
         <p className="font-mono text-sm max-w-md" style={{ color: "var(--text-secondary)" }}>
           {message}

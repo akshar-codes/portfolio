@@ -15,6 +15,7 @@ export function SkeletonBlock({ className = "", style }) {
     <div
       className={`animate-pulse rounded-md ${className}`}
       style={{ backgroundColor: "var(--bg-card)", ...style }}
+      aria-hidden="true"
     />
   );
 }
@@ -56,7 +57,7 @@ export function SkeletonCard({ className = "", lines = 2 }) {
 
 export function SkeletonGrid({ count = 4, className = "", cardLines = 2 }) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${className}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${className}`} role="status" aria-label="Loading content">
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonCard key={i} lines={cardLines} />
       ))}
