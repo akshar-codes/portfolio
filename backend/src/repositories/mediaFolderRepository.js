@@ -5,6 +5,7 @@ export const findAll = () => MediaFolder.find().sort({ order: 1, name: 1 }).lean
 export const findBySlug = (slug) => MediaFolder.findOne({ slug }).lean();
 
 export const findById = (id) => MediaFolder.findById(id).lean();
+export const countChildren = (id) => MediaFolder.countDocuments({ parent: id });
 
 export const create = (data) => MediaFolder.create(data);
 

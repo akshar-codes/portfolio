@@ -22,7 +22,7 @@ export const createMediaFolder = asyncHandler(async (req, res) => {
     throw new AppError(errors.array()[0].msg, 400);
   }
 
-  const folder = await createFolder(req.body.name);
+  const folder = await createFolder(req.body.name, req.body.parentId || null);
   return sendSuccess(res, folder, "Folder created successfully", 201);
 });
 

@@ -36,6 +36,13 @@ const mediaFolderSchema = new mongoose.Schema(
       maxlength: [80, "Folder slug must not exceed 80 characters"],
     },
 
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MediaFolder",
+      default: null,
+      index: true,
+    },
+
     // Sort position in the folder sidebar. The protected "general"
     // folder is seeded with order -1 so it always sorts first.
     order: {

@@ -7,6 +7,7 @@ import {
   updateById,
   deleteById,
   findMaxOrder,
+  countChildren,
 } from "../repositories/mediaFolderRepository.js";
 import { countActiveByFolder, reassignFolder } from "../repositories/mediaRepository.js";
 import { invalidateMediaCache } from "./mediaService.js";
@@ -41,6 +42,7 @@ export const fetchFolders = async () => {
   const withCounts = await Promise.all(
     folders.map(async (folder) => ({
       ...folder,
+      parentId: folder.parent?.toString?.() ?? "",
       mediaCount: await countActiveByFolder(folder.slug),
     })),
   );
@@ -49,7 +51,7 @@ export const fetchFolders = async () => {
   return withCounts;
 };
 
-export const createFolder = async (rawName) => {
+export const createFolder = async (rawName, rawParentId = null) => {
   const name = normalizeName(rawName ?? "");
   const slug = generateSlug(name);
 
@@ -59,6 +61,15 @@ export const createFolder = async (rawName) => {
       400,
       "MEDIA_FOLDER_INVALID_NAME",
     );
+  }
+
+  let parent = null;
+  if (rawParentId) {
+    if (!mongoose.Types.ObjectId.isValid(rawParentId)) {
+      throw new ServiceError("Invalid parent folder.", 400, "MEDIA_FOLDER_INVALID_PARENT");
+    }
+    parent = await findById(rawParentId);
+    if (!parent) throw new ServiceError("Parent folder not found.", 404, "MEDIA_FOLDER_PARENT_NOT_FOUND");
   }
 
   const existing = await findBySlug(slug);
@@ -73,7 +84,7 @@ export const createFolder = async (rawName) => {
   const maxOrderDoc = await findMaxOrder();
   const nextOrder = maxOrderDoc ? (maxOrderDoc.order ?? 0) + 1 : 0;
 
-  const folder = await createFolderDoc({ name, slug, order: nextOrder });
+  const folder = await createFolderDoc({ name, slug, parent: parent?._id ?? null, order: nextOrder });
   invalidateMediaFolderCache();
   return folder;
 };
@@ -94,6 +105,10 @@ export const renameFolder = async (id, rawName) => {
       400,
       "MEDIA_FOLDER_PROTECTED",
     );
+  }
+
+  if (await countChildren(id)) {
+    throw new ServiceError("Move or delete child folders first.", 409, "MEDIA_FOLDER_HAS_CHILDREN");
   }
 
   const name = normalizeName(rawName ?? "");
