@@ -42,6 +42,7 @@ export default function Toolbar({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
           slotProps={{
+            htmlInput: { "aria-label": searchPlaceholder },
             input: {
               startAdornment: (
                 <InputAdornment position="start">

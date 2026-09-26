@@ -148,7 +148,7 @@ export default function ManageMedia() {
     const index = items.findIndex((entry) => entry._id === item._id);
     const targetIndex = key === "Home" ? 0 : key === "End" ? items.length - 1 : index + (["ArrowLeft", "ArrowUp"].includes(key) ? -1 : 1);
     const target = items[Math.max(0, Math.min(items.length - 1, targetIndex))];
-    if (target) gridRef.current?.querySelector(`[data-media-id="${target._id}"]`)?.focus();
+    if (target) gridRef.current?.querySelector(`[data-media-id="${target._id}"] [data-media-preview="true"]`)?.focus();
   };
 
   const handlePreviewNavigate = (target) => setDetailsItem(target);

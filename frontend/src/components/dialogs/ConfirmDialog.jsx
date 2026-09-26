@@ -18,13 +18,13 @@ export default function ConfirmDialog({
   onCancel,
 }) {
   return (
-    <Dialog open={open} onClose={loading ? undefined : onCancel} maxWidth="xs" fullWidth aria-labelledby="confirm-dialog-title">
+    <Dialog open={open} onClose={loading ? undefined : onCancel} maxWidth="xs" fullWidth aria-labelledby="confirm-dialog-title" aria-describedby={description ? "confirm-dialog-description" : undefined}>
       <DialogTitle id="confirm-dialog-title" fontWeight={700}>
         {title}
       </DialogTitle>
       {description && (
         <DialogContent>
-          <DialogContentText>{description}</DialogContentText>
+          <DialogContentText id="confirm-dialog-description">{description}</DialogContentText>
         </DialogContent>
       )}
       <DialogActions sx={{ px: 3, pb: 2.5 }}>

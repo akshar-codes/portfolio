@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import InputBase from "@mui/material/InputBase";
 import Typography from "@mui/material/Typography";
@@ -141,6 +143,7 @@ export default function GlobalSearch({ open, onClose }) {
     <Dialog 
       open={open} 
       onClose={onClose}
+      aria-labelledby="global-search-title"
       fullWidth
       maxWidth="sm"
       PaperProps={{
@@ -154,12 +157,11 @@ export default function GlobalSearch({ open, onClose }) {
         }
       }}
     >
+      <DialogTitle id="global-search-title" sx={{ position: "absolute", width: 1, height: 1, p: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
+        Search projects and messages
+      </DialogTitle>
       <Box 
         sx={{ display: "flex", alignItems: "center", px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "divider" }}
-        role="combobox" 
-        aria-expanded={open} 
-        aria-haspopup="listbox" 
-        aria-owns="global-search-listbox"
       >
         <SearchIcon color="action" sx={{ mr: 1.5 }} />
         <InputBase
@@ -170,15 +172,18 @@ export default function GlobalSearch({ open, onClose }) {
           onKeyDown={handleKeyDown}
           sx={{ flex: 1, fontSize: "1.1rem" }}
           inputProps={{
+            "aria-label": "Search projects and messages",
+            role: "combobox",
             "aria-autocomplete": "list",
+            "aria-expanded": open,
             "aria-controls": "global-search-listbox",
             "aria-activedescendant": activeId
           }}
         />
         {isFetching ? (
-          <CircularProgress size={20} color="inherit" sx={{ ml: 1 }} />
+          <CircularProgress size={20} color="inherit" aria-label="Searching" sx={{ ml: 1 }} />
         ) : query ? (
-          <IconButton size="small" onClick={() => setQuery("")} sx={{ ml: 1 }}>
+          <IconButton size="small" onClick={() => setQuery("")} aria-label="Clear search" sx={{ ml: 1 }}>
             <ClearIcon fontSize="small" />
           </IconButton>
         ) : (
@@ -188,43 +193,35 @@ export default function GlobalSearch({ open, onClose }) {
         )}
       </Box>
 
-      <DialogContent sx={{ p: 0, minHeight: 100, maxHeight: 400, overflowY: "auto" }} id="global-search-listbox" role="listbox">
+      <DialogContent sx={{ p: 0, minHeight: 100, maxHeight: 400, overflowY: "auto" }}>
         {!isSearchValid && recent.length > 0 && (
           <Box sx={{ p: 1 }} role="group" aria-label="Recent Searches">
             <Box sx={{ px: 2, py: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Typography variant="overline" color="text.secondary" fontWeight={600}>Recent Searches</Typography>
-              <Typography 
-                variant="caption" 
-                color="primary.main" 
-                sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
-                onClick={clearSearches}
-              >
+              <Button size="small" onClick={clearSearches} aria-label="Clear recent searches">
                 Clear
-              </Typography>
+              </Button>
             </Box>
             
-            {results.map((item, idx) => (
-              <ResultItem 
-                key={item.id}
-                item={item}
-                isActive={activeIndex === idx}
-                onMouseEnter={() => setActiveIndex(idx)}
-                icon={<HistoryIcon fontSize="small" />}
-              />
-            ))}
+            <Box id="global-search-listbox" role="listbox" aria-label="Recent searches">
+              {results.map((item, idx) => (
+                <ResultItem key={item.id} item={item} isActive={activeIndex === idx} onMouseEnter={() => setActiveIndex(idx)} icon={<HistoryIcon fontSize="small" />} />
+              ))}
+            </Box>
           </Box>
         )}
 
         {isSearchValid && (
           <Box sx={{ p: 1 }}>
             {!isFetching && results.length === 0 && (
-              <Box sx={{ p: 4, textAlign: "center" }}>
+              <Box id="global-search-listbox" role="listbox" aria-label="Search results" sx={{ p: 4, textAlign: "center" }}>
                 <Typography color="text.secondary">No results found for "{debouncedQuery}"</Typography>
               </Box>
             )}
+            {isFetching && results.length === 0 && <Box id="global-search-listbox" role="listbox" aria-label="Search results" />}
 
             {results.length > 0 && (
-              <Box>
+              <Box id="global-search-listbox" role="listbox" aria-label="Search results">
                 {(() => {
                   let currentType = "";
                   return results.map((item, idx) => {
@@ -253,6 +250,7 @@ export default function GlobalSearch({ open, onClose }) {
           </Box>
         )}
       </DialogContent>
+      {!isSearchValid && recent.length === 0 && <Box id="global-search-listbox" role="listbox" aria-label="Recent searches" />}
     </Dialog>
   );
 }

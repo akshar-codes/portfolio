@@ -64,7 +64,7 @@ export default function AdminLogin() {
           <div className="admin-login-card__logo" aria-hidden="true">
             🔐
           </div>
-          <h2 className="admin-login-card__title">Admin Login</h2>
+          <h1 className="admin-login-card__title">Admin Login</h1>
           <p className="admin-login-card__sub">
             Sign in to manage your portfolio
           </p>

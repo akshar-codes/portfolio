@@ -75,7 +75,8 @@ export default function DataTable({
   const colSpan = columns.length + (rowActions ? 1 : 0) + (selectable ? 1 : 0);
 
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+    <Paper variant="outlined" aria-busy={loading || fetching} sx={{ borderRadius: 3, overflow: "hidden" }}>
+      {(loading || fetching) && <span className="sr-only" role="status">{loading ? "Loading table rows" : "Updating table rows"}</span>}
       {toolbar && <Box className="px-4 pt-3">{toolbar}</Box>}
 
       {fetching && !showSkeleton && <LinearProgress sx={{ height: 2 }} />}
@@ -99,6 +100,7 @@ export default function DataTable({
                 {selectable && (
                   <TableCell padding="checkbox">
                     <Checkbox
+                      inputProps={{ "aria-label": "Select all rows on this page" }}
                       checked={allSelected}
                       indeterminate={!allSelected && someSelected}
                       onChange={(e) => toggleAll(e.target.checked)}
@@ -183,6 +185,7 @@ export default function DataTable({
                       {selectable && (
                         <TableCell padding="checkbox">
                           <Checkbox
+                            inputProps={{ "aria-label": `Select ${row.title ?? row.fullname ?? row.name ?? "row"}` }}
                             checked={!!selectedIds?.has(id)}
                             disabled={!rowSelectable}
                             onChange={(e) => toggleRow(id, e.target.checked)}
