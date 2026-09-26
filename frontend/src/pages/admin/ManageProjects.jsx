@@ -20,6 +20,11 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
+import PublishOutlinedIcon from "@mui/icons-material/PublishOutlined";
+import RestoreOutlinedIcon from "@mui/icons-material/RestoreOutlined";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
+import MenuItem from "@mui/material/MenuItem";
 
 import PageHeader from "../../components/common/PageHeader";
 import ToolbarBar from "../../components/common/Toolbar";
@@ -51,6 +56,7 @@ import { projectsApi } from "../../api/projectsApi";
 import { PERMISSIONS } from "../../constants/permissions";
 import { ROUTES } from "../../constants/routes";
 import { flattenTechNames } from "../../utils/projectHelpers";
+import ProjectQuickEditDialog from "../../components/cms/ProjectQuickEditDialog";
 
 const PROJECTS_ADMIN_PAGE_SIZE = 10;
 const MAX_REORDER_ITEMS = 50;
@@ -183,6 +189,8 @@ export default function ManageProjects() {
   const [loadingReorder, setLoadingReorder] = useState(false);
   const [statusBusyId, setStatusBusyId] = useState(null);
   const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [quickEditProject, setQuickEditProject] = useState(null);
 
   const confirm = useConfirmDialog();
   const { showLoading, hideLoading } = useGlobalLoading();
@@ -245,6 +253,40 @@ export default function ManageProjects() {
     } else {
       toast.error(`${failed} of ${ids.length} projects could not be deleted.`);
     }
+  };
+
+  const handleDuplicate = async (project) => {
+    try {
+      const copy = await projectsApi.duplicate(project._id);
+      toast.success("Project duplicated as a draft.");
+      navigate(`${ROUTES.adminProjects}/${copy._id}/edit`);
+    } catch (err) { toast.error(err.message); }
+  };
+
+  const handleBulkStatus = async (action, label) => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!await confirm({ title: `${label} ${ids.length} selected project${ids.length === 1 ? "" : "s"}?`, description: "This action applies to every selected project.", confirmLabel: label })) return;
+    const mutate = action === "publish" ? publishProject : restoreProject;
+    const results = await Promise.allSettled(ids.map((id) => mutate(id)));
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setSelectedIds(new Set());
+    const pastTense = action === "publish" ? "published" : "restored";
+    failed ? toast.error(`${failed} project${failed === 1 ? "" : "s"} could not be ${pastTense}.`) : toast.success(`${ids.length} projects ${pastTense}.`);
+  };
+
+  const handleBulkCategory = async () => {
+    if (!bulkCategory || selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const results = await Promise.allSettled(ids.map((id) => {
+      const formData = new FormData();
+      formData.append("category", bulkCategory);
+      return projectsApi.update(id, formData);
+    }));
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setSelectedIds(new Set());
+    setBulkCategory("");
+    failed ? toast.error(`${failed} project categories could not be updated.`) : toast.success(`Category assigned to ${ids.length} projects.`);
   };
 
   /** Wraps a per-row status mutation with the busy-row indicator + toast. */
@@ -489,7 +531,17 @@ export default function ManageProjects() {
             }
             selectedCount={selectedIds.size}
             bulkActions={
-              <RequirePermission permission={PERMISSIONS.PROJECTS_DELETE}>
+              <>
+                <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
+                  <Button size="small" variant="outlined" startIcon={<PublishOutlinedIcon fontSize="small" />} onClick={() => handleBulkStatus("publish", "Publish")}>Publish</Button>
+                  <Button size="small" variant="outlined" startIcon={<RestoreOutlinedIcon fontSize="small" />} onClick={() => handleBulkStatus("restore", "Restore")}>Restore</Button>
+                  <TextField select size="small" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} displayEmpty sx={{ minWidth: 145 }}>
+                    <MenuItem value="" disabled>Assign category</MenuItem>
+                    {categories.map((category) => <MenuItem key={category._id} value={category._id}>{category.name}</MenuItem>)}
+                  </TextField>
+                  <Button size="small" variant="outlined" disabled={!bulkCategory} onClick={handleBulkCategory}>Apply</Button>
+                </RequirePermission>
+                <RequirePermission permission={PERMISSIONS.PROJECTS_DELETE}>
                 <Button
                   size="small"
                   color="error"
@@ -500,7 +552,8 @@ export default function ManageProjects() {
                 >
                   Delete selected
                 </Button>
-              </RequirePermission>
+                </RequirePermission>
+              </>
             }
           />
         }
@@ -512,6 +565,14 @@ export default function ManageProjects() {
         }}
         rowActions={(row) => (
           <>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_EDIT}>
+              <IconButton size="small" onClick={() => setQuickEditProject(row)} aria-label={`Quick edit ${row.title}`}><EditNoteOutlinedIcon fontSize="small" /></IconButton>
+            </RequirePermission>
+            <RequirePermission permission={PERMISSIONS.PROJECTS_CREATE}>
+              <IconButton size="small" onClick={() => handleDuplicate(row)} aria-label={`Duplicate ${row.title}`}>
+                <ContentCopyOutlinedIcon fontSize="small" />
+              </IconButton>
+            </RequirePermission>
             <IconButton size="small" onClick={() => setPreviewProject(row)} aria-label={`Preview ${row.title}`}>
               <VisibilityOutlinedIcon fontSize="small" />
             </IconButton>
@@ -550,6 +611,7 @@ export default function ManageProjects() {
       />
 
       {previewProject && <ProjectDetails project={previewProject} onClose={() => setPreviewProject(null)} />}
+      {quickEditProject && <ProjectQuickEditDialog project={quickEditProject} categories={categories} onClose={() => setQuickEditProject(null)} onSaved={() => refetch()} />}
       <PreviewDrawer
         open={previewDrawerOpen}
         onClose={() => setPreviewDrawerOpen(false)}
