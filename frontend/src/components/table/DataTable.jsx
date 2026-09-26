@@ -14,7 +14,7 @@ import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 
-import EmptyState from "../../common/EmptyState";
+import EmptyState from "../common/EmptyState";
 import DataTablePagination from "./DataTablePagination";
 
 /**

@@ -9,12 +9,15 @@ import { GlobalLoadingProvider } from "./context/GlobalLoadingContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import PrivateRoute from "./components/common/PrivateRoute";
 import PublicLayout from "./layouts/PublicLayout";
-import Home from "./pages/public/Home";
-import Services from "./pages/public/Services";
-import Resume from "./pages/public/Resume";
-import Work from "./pages/public/Work";
-import Contact from "./pages/public/Contact";
 import { ROUTES } from "./constants/routes";
+
+// Split public pages too: the home route no longer ships the project gallery,
+// contact form, and resume editor dependencies in its initial JavaScript.
+const Home = lazy(() => import("./pages/public/Home"));
+const Services = lazy(() => import("./pages/public/Services"));
+const Resume = lazy(() => import("./pages/public/Resume"));
+const Work = lazy(() => import("./pages/public/Work"));
+const Contact = lazy(() => import("./pages/public/Contact"));
 
 // Admin lazy loads
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
@@ -64,11 +67,11 @@ export default function App() {
             <Routes>
               {/* ── PUBLIC ─────────────────────────────────────────── */}
               <Route element={<PublicLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/resume" element={<Resume />} />
-                <Route path="/work" element={<Work />} />
-                <Route path="/contact" element={<Contact />} />
+                <Route path="/" element={<Suspense fallback={<Fallback />}><Home /></Suspense>} />
+                <Route path="/services" element={<Suspense fallback={<Fallback />}><Services /></Suspense>} />
+                <Route path="/resume" element={<Suspense fallback={<Fallback />}><Resume /></Suspense>} />
+                <Route path="/work" element={<Suspense fallback={<Fallback />}><Work /></Suspense>} />
+                <Route path="/contact" element={<Suspense fallback={<Fallback />}><Contact /></Suspense>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
 
