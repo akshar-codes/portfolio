@@ -27,6 +27,8 @@ import FilterBar from "../../components/common/FilterBar";
 import DataTable from "../../components/table/DataTable";
 import { TextField, SelectField } from "../../components/form/fields";
 import DragReorderList from "../../components/cms/DragReorderList";
+import StatusBadge from "../../components/cms/StatusBadge";
+import PublishActionsMenu from "../../components/cms/PublishActionsMenu";
 import RequirePermission from "../../components/auth/RequirePermission";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useGlobalLoading } from "../../hooks/useGlobalLoading";
@@ -38,6 +40,11 @@ import {
   useUpdateCategory,
   useDeleteCategory,
   useReorderCategories,
+  usePublishCategory,
+  useUnpublishCategory,
+  useArchiveCategory,
+  useRestoreCategory,
+  useScheduleCategory,
 } from "../../hooks/useCategories";
 import {
   categorySchema,
@@ -51,11 +58,9 @@ const STATUS_OPTIONS = [
   { label: "All statuses", value: "" },
   { label: "Published", value: "published" },
   { label: "Draft", value: "draft" },
-];
-
-const STATUS_FORM_OPTIONS = [
-  { label: "Published", value: "published" },
-  { label: "Draft", value: "draft" },
+  { label: "Scheduled", value: "scheduled" },
+  { label: "Unpublished", value: "unpublished" },
+  { label: "Archived", value: "archived" },
 ];
 
 /* ------------------------------------------------------------------ *
@@ -69,7 +74,7 @@ function CategoryEditDialog({ open, category, onClose, onSave, saving }) {
 
   useEffect(() => {
     if (open && category) {
-      form.reset({ name: category.name, status: category.status ?? "published" });
+            form.reset({ name: category.name });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, category]);
@@ -85,7 +90,6 @@ function CategoryEditDialog({ open, category, onClose, onSave, saving }) {
           <DialogTitle fontWeight={700}>Edit category</DialogTitle>
           <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 3 }}>
             <TextField name="name" label="Category name" required maxLength={80} />
-            <SelectField name="status" label="Status" options={STATUS_FORM_OPTIONS} required />
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button onClick={onClose} color="inherit" disabled={saving}>
@@ -168,6 +172,11 @@ export default function ManageCategories() {
   const { data: categories, isLoading, isFetching, isError, error, refetch } = useCategoriesQuery(queryParams);
   const { mutateAsync: createCategory, isPending: adding } = useCreateCategory();
   const { mutateAsync: updateCategory, isPending: savingEdit } = useUpdateCategory();
+  const { mutateAsync: publishCategory } = usePublishCategory();
+  const { mutateAsync: unpublishCategory } = useUnpublishCategory();
+  const { mutateAsync: archiveCategory } = useArchiveCategory();
+  const { mutateAsync: restoreCategory } = useRestoreCategory();
+  const { mutateAsync: scheduleCategory } = useScheduleCategory();
   const { mutateAsync: deleteCategory } = useDeleteCategory();
   const { mutateAsync: reorderCategories, isPending: savingOrder } = useReorderCategories();
 
@@ -311,12 +320,7 @@ export default function ManageCategories() {
       headerName: "Status",
       align: "center",
       render: (row) => (
-        <Chip
-          size="small"
-          variant={row.status === "draft" ? "outlined" : "filled"}
-          color={row.status === "draft" ? "default" : "success"}
-          label={row.status === "draft" ? "Draft" : "Published"}
-        />
+        <StatusBadge status={row.status} publishAt={row.publishAt} />
       ),
     },
     {
@@ -454,6 +458,15 @@ export default function ManageCategories() {
         rowActions={(row) => (
           <>
             <RequirePermission permission={PERMISSIONS.CATEGORIES_EDIT}>
+              <PublishActionsMenu
+                status={row.status}
+                resourceLabel={`"${row.name}"`}
+                onPublish={() => publishCategory(row._id)}
+                onUnpublish={() => unpublishCategory(row._id)}
+                onArchive={() => archiveCategory(row._id)}
+                onRestore={() => restoreCategory(row._id)}
+                onSchedule={(publishAt) => scheduleCategory({ id: row._id, publishAt })}
+              />
               <IconButton size="small" onClick={() => setEditingCategory(row)} aria-label={`Edit ${row.name}`}>
                 <EditOutlinedIcon fontSize="small" />
               </IconButton>

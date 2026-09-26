@@ -40,6 +40,18 @@ export function useUnpublishSiteSettings() {
   return useSiteSettingsMutation(() => siteSettingsApi.unpublish());
 }
 
+export function useArchiveSiteSettings() {
+  return useSiteSettingsMutation(() => siteSettingsApi.archive());
+}
+
+export function useRestoreSiteSettings() {
+  return useSiteSettingsMutation(() => siteSettingsApi.restore());
+}
+
+export function useScheduleSiteSettings() {
+  return useSiteSettingsMutation((publishAt) => siteSettingsApi.schedule(publishAt));
+}
+
 export function useUploadLogo() {
   return useSiteSettingsMutation(({ file, onUploadProgress }) =>
     siteSettingsApi.uploadLogo(file, onUploadProgress),

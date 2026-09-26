@@ -21,6 +21,10 @@ export const siteSettingsApi = {
   unpublish: () =>
     api.patch(API_ENDPOINTS.adminSiteSettingsUnpublish).then((res) => res.data),
 
+  archive: () => api.patch(API_ENDPOINTS.adminSiteSettingsArchive).then((res) => res.data),
+  restore: () => api.patch(API_ENDPOINTS.adminSiteSettingsRestore).then((res) => res.data),
+  schedule: (publishAt) => api.patch(API_ENDPOINTS.adminSiteSettingsSchedule, { publishAt }).then((res) => res.data),
+
   uploadLogo: (file, onUploadProgress) => {
     const fd = new FormData();
     fd.append("file", file);

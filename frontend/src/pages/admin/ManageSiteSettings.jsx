@@ -7,6 +7,9 @@ import {
   useUpdateSiteSettings,
   usePublishSiteSettings,
   useUnpublishSiteSettings,
+  useArchiveSiteSettings,
+  useRestoreSiteSettings,
+  useScheduleSiteSettings,
   useUploadLogo,
   useRemoveLogo,
   useUploadFavicon,
@@ -15,6 +18,8 @@ import {
 import { stripTempIds } from "../../utils/ordering";
 import { ROUTES } from "../../constants/routes";
 import LogoFaviconUploader from "../../components/common/LogoFaviconUploader";
+import StatusBadge from "../../components/cms/StatusBadge";
+import PublishActionsMenu from "../../components/cms/PublishActionsMenu";
 import SectionCard from "../../components/common/SectionCard";
 import {
   AdminSkeleton,
@@ -791,6 +796,9 @@ export default function ManageSiteSettings() {
   const { mutateAsync: updateSiteSettings, isPending: saving } = useUpdateSiteSettings();
   const { mutateAsync: publish, isPending: publishing } = usePublishSiteSettings();
   const { mutateAsync: unpublish, isPending: unpublishing } = useUnpublishSiteSettings();
+  const { mutateAsync: archive, isPending: archiving } = useArchiveSiteSettings();
+  const { mutateAsync: restore, isPending: restoring } = useRestoreSiteSettings();
+  const { mutateAsync: schedule, isPending: scheduling } = useScheduleSiteSettings();
 
   const [activeSection, setActiveSection] = useState("website");
 
@@ -839,30 +847,27 @@ export default function ManageSiteSettings() {
     );
   }
 
-  const isDraft = settings.status === "draft";
+  const withStatusToast = (fn, message) => async (...args) => {
+    try { await fn(...args); toast.success(message); }
+    catch (err) { toast.error(err.message); }
+  };
 
   return (
     <div className="admin-page">
       <div className="admin-page__header">
         <h2 className="admin-page__title">Site Settings</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span
-            className="admin-item__badge"
-            style={
-              isDraft
-                ? { background: "transparent", color: "var(--light-gray)", borderColor: "var(--jet)" }
-                : undefined
-            }
-          >
-            {isDraft ? "Draft" : "Published"}
-          </span>
-          <button
-            className="btn btn--ghost"
-            onClick={handleTogglePublish}
-            disabled={publishing || unpublishing}
-          >
-            {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
-          </button>
+          <StatusBadge status={settings.status} publishAt={settings.publishAt} />
+          <PublishActionsMenu
+            status={settings.status}
+            busy={publishing || unpublishing || archiving || restoring || scheduling}
+            resourceLabel="Site settings"
+            onPublish={withStatusToast(publish, "Site settings published.")}
+            onUnpublish={withStatusToast(unpublish, "Site settings unpublished.")}
+            onArchive={withStatusToast(archive, "Site settings archived.")}
+            onRestore={withStatusToast(restore, "Site settings restored to draft.")}
+            onSchedule={withStatusToast(schedule, "Site settings scheduled.")}
+          />
         </div>
       </div>
 

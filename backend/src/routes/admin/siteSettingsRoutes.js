@@ -6,6 +6,9 @@ import {
   updateSiteSettings,
   publishSiteSettings,
   unpublishSiteSettings,
+  archiveSiteSettings,
+  restoreSiteSettings,
+  scheduleSiteSettings,
   uploadSiteSettingsLogo,
   deleteSiteSettingsLogo,
   uploadSiteSettingsFavicon,
@@ -13,6 +16,7 @@ import {
 } from "../../controllers/siteSettingsController.js";
 
 import { updateSiteSettingsValidator } from "../../validators/siteSettingsValidators.js";
+import { publishAtValidator } from "../../validators/common.js";
 
 const router = express.Router();
 
@@ -34,6 +38,9 @@ router.patch("/", updateSiteSettingsValidator, updateSiteSettings);
  * ------------------------------------------------------------------ */
 router.patch("/publish", publishSiteSettings);
 router.patch("/unpublish", unpublishSiteSettings);
+router.patch("/archive", archiveSiteSettings);
+router.patch("/restore", restoreSiteSettings);
+router.patch("/schedule", publishAtValidator(), scheduleSiteSettings);
 
 /* ------------------------------------------------------------------ *
  * Logo — dedicated upload/delete routes (Stage → Save → Destroy; see
