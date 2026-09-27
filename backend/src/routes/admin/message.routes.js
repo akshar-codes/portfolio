@@ -12,8 +12,10 @@ import {
   bulkArchiveHandler,
   bulkRestoreHandler,
   bulkDeleteHandler,
-} from "../../controllers/messageController.js";
+  replyToMessageHandler,
+} from "../../controllers/message.controller.js";
 import { protect } from "../../middleware/authMiddleware.js";
+import { emailReplyLimiter } from "../../middleware/rateLimiters.js";
 import {
   messageIdParamValidator,
   updateMessageStatusValidator,
@@ -21,7 +23,8 @@ import {
   messageListQueryValidator,
   bulkIdsValidator,
   bulkStatusValidator,
-} from "../../validators/messageValidators.js";
+  replyMessageValidator,
+} from "../../validators/message.validators.js";
 
 const router = express.Router();
 
@@ -53,6 +56,11 @@ router.post("/bulk-status", bulkStatusValidator, bulkUpdateStatusHandler);
 router.post("/bulk-archive", bulkIdsValidator, bulkArchiveHandler);
 router.post("/bulk-restore", bulkIdsValidator, bulkRestoreHandler);
 router.post("/bulk-delete", bulkIdsValidator, bulkDeleteHandler);
+
+/* ------------------------------------------------------------------ *
+ * POST /api/messages/:id/reply — send a reply from the configured site
+ * ------------------------------------------------------------------ */
+router.post("/:id/reply", emailReplyLimiter, replyMessageValidator, replyToMessageHandler);
 
 /* ------------------------------------------------------------------ *
  * GET /api/messages/:id

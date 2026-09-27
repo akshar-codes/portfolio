@@ -20,7 +20,7 @@ import adminAuthRoutes from "./routes/admin/authRoutes.js";
 import adminCategoryRoutes from "./routes/admin/categoryRoutes.js";
 import adminProjectRoutes from "./routes/admin/projectRoutes.js";
 import adminProjectListRoutes from "./routes/admin/projectAdminRoutes.js";
-import adminMessageRoutes from "./routes/admin/messageRoutes.js";
+import adminMessageRoutes from "./routes/admin/message.routes.js";
 import adminResumeRoutes from "./routes/admin/resumeRoutes.js";
 import adminProfileRoutes from "./routes/admin/profileRoutes.js";
 import adminAboutRoutes from "./routes/admin/aboutRoutes.js";

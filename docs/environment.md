@@ -14,6 +14,18 @@
 | `CLOUD_API_SECRET` | Yes                                         | Cloudinary API secret. Never expose client-side.                                                                                                                                                        |
 | `LOG_LEVEL`        | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
 
+Website replies from the admin inbox use these optional variables:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `RESEND_API_KEY` | Required for website replies | Backend-only Resend API key. |
+| `RESEND_FROM_EMAIL` | Required for website replies | Sender identity on a domain verified with Resend, e.g. `Akshar Gupta <replies@example.com>`. |
+
+Set both variables to enable **Reply from website**. The recipient comes
+from the stored message and the backend sends plain-text email through
+Resend. **Reply via email** continues to open your local mail app and does
+not depend on these settings.
+
 ### One-off migration script only (`scripts/migrateCloudinary.js`)
 
 Not required for normal operation — only needed if migrating assets to a

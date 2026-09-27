@@ -24,6 +24,9 @@ export default function validateEnv() {
     }
   }
   if (process.env.LOG_LEVEL && !["error", "warn", "info", "http", "verbose", "debug", "silly"].includes(process.env.LOG_LEVEL)) problems.push("LOG_LEVEL is not a supported Winston level");
+  if (Boolean(process.env.RESEND_API_KEY?.trim()) !== Boolean(process.env.RESEND_FROM_EMAIL?.trim())) {
+    problems.push("RESEND_API_KEY and RESEND_FROM_EMAIL must either both be set or both be empty");
+  }
   if (env === "production") {
     for (const key of ["PORTFOLIO_SNAPSHOT_TOKEN", "VERCEL_DEPLOY_HOOK_URL"]) {
       if (!process.env[key]?.trim()) problems.push(`${key} is required in production`);

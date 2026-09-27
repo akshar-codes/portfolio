@@ -14,7 +14,8 @@ import {
   bulkArchiveMessages,
   bulkRestoreMessages,
   bulkDeleteMessages,
-} from "../services/messageService.js";
+  replyToMessage,
+} from "../services/message.service.js";
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { DEFAULT_MESSAGES_PAGE_SIZE } from "../constants/index.js";
@@ -129,6 +130,19 @@ export const updateMessageStatusHandler = asyncHandler(async (req, res) => {
 
   const message = await setMessageStatus(req.params.id, req.body.status);
   return sendSuccess(res, message, "Message status updated successfully");
+});
+
+/* ------------------------------------------------------------------ *
+ * POST /api/messages/:id/reply (admin — send from the website)
+ * ------------------------------------------------------------------ */
+export const replyToMessageHandler = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
+  const result = await replyToMessage(req.params.id, req.body);
+  return sendSuccess(res, result, "Reply sent successfully");
 });
 
 /* ------------------------------------------------------------------ *

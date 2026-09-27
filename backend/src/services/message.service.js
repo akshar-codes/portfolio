@@ -10,7 +10,7 @@ import {
   deleteMany,
   findManyByIds,
   countRecentByIp,
-} from "../repositories/messageRepository.js";
+} from "../repositories/message.repository.js";
 import { ServiceError } from "./ServiceError.js";
 import { buildSearchFilter } from "../utils/queryHelpers.js";
 import { analyzeSpam } from "../utils/spamDetector.js";
@@ -25,6 +25,7 @@ import {
   MESSAGE_SORT_FIELDS,
   DEFAULT_MESSAGE_SORT_FIELD,
 } from "../constants/index.js";
+import { sendTransactionalEmail } from "./transactionalEmailService.js";
 
 /* ================================================================== *
  * Helpers
@@ -195,6 +196,13 @@ export const fetchMessageById = async (id) => {
     throw new ServiceError("Message not found", 404, "MESSAGE_NOT_FOUND");
   }
   return message;
+};
+
+/** Sends an admin-authored reply to the email address on a stored message. */
+export const replyToMessage = async (id, { subject, body }) => {
+  const message = await fetchMessageById(id);
+  const text = `Hello ${message.fullname},\n\n${body}\n\n--- Your original message ---\n${message.message}`;
+  return sendTransactionalEmail({ to: message.email, subject, text });
 };
 
 /* ================================================================== *

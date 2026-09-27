@@ -46,3 +46,15 @@ export const contactFormLimiter = rateLimit({
     message: "Too many messages sent. Try again later.",
   },
 });
+
+export const emailReplyLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    data: null,
+    message: "Too many email replies sent. Try again later.",
+  },
+});

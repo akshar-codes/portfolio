@@ -47,6 +47,23 @@ export const updateMessageStatusValidator = [
     .withMessage(`status must be one of: ${MESSAGE_STATUSES.join(", ")}`),
 ];
 
+export const replyMessageValidator = [
+  param("id").isMongoId().withMessage("Invalid message ID"),
+  body("subject")
+    .trim()
+    .customSanitizer((value) => value.replace(/[\r\n]+/g, " "))
+    .notEmpty()
+    .withMessage("Email subject is required")
+    .isLength({ max: 200 })
+    .withMessage("Email subject must not exceed 200 characters"),
+  body("body")
+    .trim()
+    .notEmpty()
+    .withMessage("Reply message is required")
+    .isLength({ max: 10000 })
+    .withMessage("Reply must not exceed 10,000 characters"),
+];
+
 export const toggleSpamValidator = [
   param("id").isMongoId().withMessage("Invalid message ID"),
   body("isSpam")
