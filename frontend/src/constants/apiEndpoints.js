@@ -131,4 +131,5 @@ export const API_ENDPOINTS = {
   adminLogout: "/admin/logout",
   adminVerify: "/admin/verify",
   adminPublish: "/admin/publish",
+  adminChangePassword: "/admin/password",
 };

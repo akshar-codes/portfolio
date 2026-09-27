@@ -10,5 +10,14 @@ export const findByUsername = (username) => Admin.findOne({ username });
 
 export const findByIdSafe = (id) => Admin.findById(id).select("-password");
 
+export const findByIdWithPassword = (id) => Admin.findById(id);
+
+export const updatePasswordAndIncrementTokenVersion = (id, currentHash, password) =>
+  Admin.findOneAndUpdate(
+    { _id: id, password: currentHash },
+    { $set: { password }, $inc: { tokenVersion: 1 } },
+    { new: true, runValidators: true },
+  );
+
 export const incrementTokenVersion = (id) =>
   Admin.findByIdAndUpdate(id, { $inc: { tokenVersion: 1 } });

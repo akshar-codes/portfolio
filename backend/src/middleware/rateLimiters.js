@@ -47,6 +47,18 @@ export const contactFormLimiter = rateLimit({
   },
 });
 
+export const passwordChangeLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    data: null,
+    message: "Too many password change attempts. Try again in 15 minutes.",
+  },
+});
+
 export const emailReplyLimiter = rateLimit({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: 20,

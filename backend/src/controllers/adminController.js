@@ -4,12 +4,15 @@ import {
   getCookieOptions,
   getClearCookieOptions,
   COOKIE_NAME,
+  changeAdminPassword,
 } from "../services/authService.js";
+import { validationResult } from "express-validator";
 import { findByUsername, incrementTokenVersion } from "../repositories/adminRepository.js";
 import { sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { recordActivity } from "../services/activityLogService.js";
 import logger from "../utils/logger.js";
+import AppError from "../utils/AppError.js";
 
 /* ---------------------------------------------------------------
    POST /api/admin/login
@@ -50,4 +53,34 @@ export const logoutAdmin = asyncHandler(async (req, res) => {
 
   res.clearCookie(COOKIE_NAME, getClearCookieOptions());
   return sendSuccess(res, null, "Logged out successfully");
+});
+
+/* ---------------------------------------------------------------
+   PATCH /api/admin/password
+--------------------------------------------------------------- */
+export const changeAdminPasswordHandler = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new AppError(errors.array()[0].msg, 400);
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  const { token, username } = await changeAdminPassword(
+    req.admin._id,
+    currentPassword,
+    newPassword,
+  );
+
+  void recordActivity({
+    actor: req.admin,
+    action: "update",
+    resource: "admin",
+    description: `${username} changed the admin password`,
+    ip: req.ip,
+    method: req.method,
+    path: req.originalUrl,
+  }).catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
+
+  res.cookie(COOKIE_NAME, token, getCookieOptions());
+  return sendSuccess(res, null, "Password changed successfully.");
 });
