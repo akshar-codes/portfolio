@@ -113,6 +113,8 @@ export default function ManageMedia() {
   // (folder/trash/search/format switch) so stale IDs from a different
   // view can't linger into a bulk action.
   useEffect(() => {
+    // Selection is only valid for the current folder/filter context.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIds(new Set());
   }, [activeFolder, showTrash, debouncedSearch, filters.format]);
 

@@ -470,6 +470,8 @@ export default function ManageProfile() {
     if (!data) return;
     if (localLinks === null) {
       const seeded = withTempIds(data.socialLinks);
+      // Seed editable form state from the first loaded server snapshot.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalLinks(seeded);
       setServerLinks(seeded);
     }

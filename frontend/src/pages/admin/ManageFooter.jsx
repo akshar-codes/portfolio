@@ -355,6 +355,8 @@ export default function ManageFooter() {
       const seeded = withTempIds(
         [...(data.columns ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
       );
+      // Seed editable and comparison snapshots after the query resolves.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalColumns(seeded);
       setServerColumns(seeded);
     }
@@ -367,6 +369,8 @@ export default function ManageFooter() {
       const seeded = [...(data.legalLinks ?? [])]
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map((l) => ({ ...l, _tempId: l._id ?? crypto.randomUUID() }));
+      // Seed editable and comparison snapshots after the query resolves.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalLegalLinks(seeded);
       setServerLegalLinks(seeded);
     }

@@ -280,6 +280,8 @@ export default function ManageNavigation() {
       const seeded = withTempIds(
         [...(data.items ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
       );
+      // Seed editable form state from the first loaded server snapshot.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalItems(seeded);
       setServerItems(seeded);
       const ctaValue = { ctaEnabled: data.ctaEnabled, ctaLabel: data.ctaLabel, ctaUrl: data.ctaUrl };

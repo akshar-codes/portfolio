@@ -112,6 +112,8 @@ function SkillsSummarySection({ about, onSave, saving }) {
   const [items, setItems] = useState(about.skillsSummary ?? []);
 
   useEffect(() => {
+    // Re-seed the editable list if the saved about data changes externally.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems(about.skillsSummary ?? []);
   }, [about.skillsSummary]);
 
@@ -502,6 +504,8 @@ export default function ManageAbout() {
     if (!data) return;
     if (services === null) {
       const seeded = withTempIds(data.services);
+      // Seed local editing state after the query resolves.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setServices(seeded);
       setServerServices(seeded);
     }

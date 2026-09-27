@@ -342,6 +342,8 @@ function SkillGroupDialog({ open, initialValues, onClose, onSave }) {
   useEffect(() => {
     if (open) {
       form.reset(initialValues ? { category: initialValues.category } : skillGroupFormDefaults);
+      // Reset the dialog's secondary list field alongside react-hook-form.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(initialValues?.items ?? []);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -725,6 +727,8 @@ export default function ManageResume() {
 
   useEffect(() => {
     if (!data) return;
+    // Seed local editor snapshots after the query resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocal((prev) => {
       const next = { ...prev };
       let changed = false;
