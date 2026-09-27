@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Download as DownloadIcon } from "@mui/icons-material";
 
 import { useProfile } from "../../hooks/useProfile";
-import { usePublicSeo } from "../../hooks/usePublicSite";
+import { usePublicSeo, usePublicSiteSettings } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
 import { usePreviewMode } from "../../hooks/usePreviewMode";
@@ -10,7 +10,11 @@ import { resolveIcon } from "../../utils/iconMap";
 import { getInitials } from "../../utils/strings";
 import { excerptFromHtml } from "../../utils/html";
 import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
-import { SkeletonAvatar, SkeletonBlock, SkeletonText } from "../../components/public/Skeletons";
+import {
+  SkeletonAvatar,
+  SkeletonBlock,
+  SkeletonText,
+} from "../../components/public/Skeletons";
 import { PublicError } from "../../components/public/StatusStates";
 
 function useCountUp(target, duration = 1600, started = false) {
@@ -41,7 +45,10 @@ function StatItem({ value, suffix, label, started }) {
         {count}
         {suffix}
       </span>
-      <span className="text-sm leading-tight" style={{ color: "var(--text-secondary)" }}>
+      <span
+        className="text-sm leading-tight"
+        style={{ color: "var(--text-secondary)" }}
+      >
         {label}
       </span>
     </div>
@@ -49,9 +56,21 @@ function StatItem({ value, suffix, label, started }) {
 }
 
 const CTA_STYLE = {
-  primary: { backgroundColor: "var(--accent)", color: "#1c1c1e", border: "2px solid var(--accent)" },
-  secondary: { backgroundColor: "var(--bg-card)", color: "var(--text-primary)", border: "2px solid var(--border)" },
-  outline: { backgroundColor: "transparent", color: "var(--text-primary)", border: "2px solid var(--text-primary)" },
+  primary: {
+    backgroundColor: "var(--accent)",
+    color: "#1c1c1e",
+    border: "2px solid var(--accent)",
+  },
+  secondary: {
+    backgroundColor: "var(--bg-card)",
+    color: "var(--text-primary)",
+    border: "2px solid var(--border)",
+  },
+  outline: {
+    backgroundColor: "transparent",
+    color: "var(--text-primary)",
+    border: "2px solid var(--text-primary)",
+  },
 };
 
 function CtaButton({ button }) {
@@ -67,10 +86,14 @@ function CtaButton({ button }) {
     >
       <button
         className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold cursor-pointer transition-all duration-200"
-        style={{ ...CTA_STYLE[button.style ?? "outline"], letterSpacing: "0.1em" }}
+        style={{
+          ...CTA_STYLE[button.style ?? "outline"],
+          letterSpacing: "0.1em",
+        }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = "var(--accent)";
-          e.currentTarget.style.color = button.style === "primary" ? "#1c1c1e" : "var(--accent)";
+          e.currentTarget.style.color =
+            button.style === "primary" ? "#1c1c1e" : "var(--accent)";
         }}
         onMouseLeave={(e) => {
           const base = CTA_STYLE[button.style ?? "outline"];
@@ -87,8 +110,15 @@ function CtaButton({ button }) {
 
 export default function Home() {
   const { isPreview } = usePreviewMode();
-  const { data: profile, isLoading, isError, error, refetch } = useProfile({ preview: isPreview });
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useProfile({ preview: isPreview });
   const { data: seo } = usePublicSeo({ preview: isPreview });
+  const { data: settings } = usePublicSiteSettings({ preview: isPreview });
 
   const [statsVisible, setStatsVisible] = useState(false);
   const [typedText, setTypedText] = useState("");
@@ -119,8 +149,10 @@ export default function Home() {
         setCharIndex((c) => c - 1);
       }, 40);
     } else if (deleting && charIndex === 0) {
-      setDeleting(false);
-      setStringIndex((i) => (i + 1) % typingStrings.length);
+      timeout = setTimeout(() => {
+        setDeleting(false);
+        setStringIndex((i) => (i + 1) % typingStrings.length);
+      }, 0);
     }
 
     return () => clearTimeout(timeout);
@@ -193,9 +225,15 @@ export default function Home() {
     );
   }
 
-  const socialLinks = [...(profile?.socialLinks ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const ctaButtons = [...(profile?.ctaButtons ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const statistics = [...(profile?.statistics ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const socialLinks = [...(profile?.socialLinks ?? [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  );
+  const ctaButtons = [...(profile?.ctaButtons ?? [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  );
+  const statistics = [...(profile?.statistics ?? [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  );
 
   return (
     <div className="page-enter md:h-[calc(100vh-80px)] md:overflow-hidden">
@@ -203,8 +241,15 @@ export default function Home() {
         <div className="flex flex-col gap-16">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="flex-1 max-w-xl">
-              <div className="font-mono text-sm tracking-widest mb-3" style={{ color: "var(--text-secondary)" }}>
-                {isLoading ? <SkeletonBlock className="h-3 w-40" /> : profile?.title}
+              <div
+                className="font-mono text-sm tracking-widest mb-3"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-40" />
+                ) : (
+                  profile?.title
+                )}
               </div>
 
               <h1
@@ -225,7 +270,10 @@ export default function Home() {
                     {typedText}
                     <span
                       className="inline-block w-0.5 h-10 ml-1 align-middle"
-                      style={{ backgroundColor: "var(--accent)", animation: "blink 1s step-end infinite" }}
+                      style={{
+                        backgroundColor: "var(--accent)",
+                        animation: "blink 1s step-end infinite",
+                      }}
                     />
                   </>
                 )}
@@ -247,8 +295,37 @@ export default function Home() {
                 {isLoading ? (
                   <SkeletonBlock className="h-12 w-40 rounded-full" />
                 ) : (
-                  ctaButtons.map((btn) => <CtaButton key={btn._id ?? btn.label} button={btn} />)
+                  ctaButtons.map((btn) => (
+                    <CtaButton key={btn._id ?? btn.label} button={btn} />
+                  ))
                 )}
+
+                {!isLoading &&
+                  settings?.resumeDownload?.enabled &&
+                  settings.resumeDownload.url && (
+                    <a
+                      href={settings.resumeDownload.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${settings.resumeDownload.label || "Download CV"} (opens in a new tab)`}
+                      className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold no-underline transition-all duration-200"
+                      style={{ ...CTA_STYLE.outline, letterSpacing: "0.1em" }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "var(--accent)";
+                        e.currentTarget.style.color = "var(--accent)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor =
+                          CTA_STYLE.outline.border.split(" ").pop();
+                        e.currentTarget.style.color = CTA_STYLE.outline.color;
+                      }}
+                    >
+                      {(
+                        settings.resumeDownload.label || "Download CV"
+                      ).toUpperCase()}
+                      <DownloadIcon fontSize="small" />
+                    </a>
+                  )}
 
                 {!isLoading && socialLinks.length > 0 && (
                   <div className="flex items-center gap-3">
@@ -262,13 +339,19 @@ export default function Home() {
                           rel="noopener noreferrer"
                           aria-label={link.label}
                           className="flex items-center justify-center w-11 h-11 rounded-full border transition-all duration-200 no-underline"
-                          style={{ borderColor: "var(--accent)", color: "var(--accent)", backgroundColor: "transparent" }}
+                          style={{
+                            borderColor: "var(--accent)",
+                            color: "var(--accent)",
+                            backgroundColor: "transparent",
+                          }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.backgroundColor =
+                              "var(--accent)";
                             e.currentTarget.style.color = "#1c1c1e";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                             e.currentTarget.style.color = "var(--accent)";
                           }}
                         >
@@ -282,7 +365,10 @@ export default function Home() {
             </div>
 
             <div className="relative flex-shrink-0">
-              <span className="absolute -top-4 left-4 font-mono text-lg font-bold" style={{ color: "var(--accent)" }}>
+              <span
+                className="absolute -top-4 left-4 font-mono text-lg font-bold"
+                style={{ color: "var(--accent)" }}
+              >
                 —
               </span>
               <span
@@ -291,7 +377,10 @@ export default function Home() {
               >
                 /
               </span>
-              <span className="absolute top-1/2 -left-6 font-mono text-lg font-bold" style={{ color: "var(--accent)" }}>
+              <span
+                className="absolute top-1/2 -left-6 font-mono text-lg font-bold"
+                style={{ color: "var(--accent)" }}
+              >
                 /
               </span>
               <span
@@ -344,13 +433,25 @@ export default function Home() {
                     />
                   </svg>
 
-                  <div className="absolute inset-3 rounded-full overflow-hidden" style={{ border: "2px solid var(--border)" }}>
+                  <div
+                    className="absolute inset-3 rounded-full overflow-hidden"
+                    style={{ border: "2px solid var(--border)" }}
+                  >
                     <div
                       className="w-full h-full flex items-end justify-center relative"
-                      style={{ background: "linear-gradient(160deg, #2a2a2d 0%, #1c1c1e 60%, #252527 100%)" }}
+                      style={{
+                        background:
+                          "linear-gradient(160deg, #2a2a2d 0%, #1c1c1e 60%, #252527 100%)",
+                      }}
                     >
                       {profile?.avatar ? (
-                        <img src={getThumbnailUrl(profile.avatar, 512)} alt={profile.name} fetchPriority="high" decoding="async" className="w-full h-full object-cover object-top" />
+                        <img
+                          src={getThumbnailUrl(profile.avatar, 512)}
+                          alt={profile.name}
+                          fetchPriority="high"
+                          decoding="async"
+                          className="w-full h-full object-cover object-top"
+                        />
                       ) : (
                         <span
                           className="absolute inset-0 flex items-center justify-center font-mono text-5xl font-bold"
