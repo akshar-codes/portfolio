@@ -39,6 +39,8 @@ export default function ImagePicker({
   useEffect(() => {
     if (value instanceof File) {
       const url = URL.createObjectURL(value);
+      // Store the URL created by this effect so it can be revoked on cleanup.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     }

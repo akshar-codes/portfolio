@@ -36,6 +36,8 @@ export default function MediaPickerDialog({ open, onClose, onSelect, title = "Se
 
   useEffect(() => {
     if (open) {
+      // Reset dialog-local selection when its owner opens it again.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearch("");
       setPage(1);
       setSelectedId(null);

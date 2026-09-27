@@ -56,6 +56,8 @@ export default function MediaDetailsDrawer({ open, media, onClose, onDeleted, me
 
   useEffect(() => {
     if (media) {
+      // Keep the editable metadata fields aligned when selection changes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAltText(media.altText ?? "");
       setCaption(media.caption ?? "");
       setTags(media.tags ?? []);
