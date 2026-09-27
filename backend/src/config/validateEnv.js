@@ -24,6 +24,12 @@ export default function validateEnv() {
     }
   }
   if (process.env.LOG_LEVEL && !["error", "warn", "info", "http", "verbose", "debug", "silly"].includes(process.env.LOG_LEVEL)) problems.push("LOG_LEVEL is not a supported Winston level");
+  if (env === "production") {
+    for (const key of ["PORTFOLIO_SNAPSHOT_TOKEN", "VERCEL_DEPLOY_HOOK_URL"]) {
+      if (!process.env[key]?.trim()) problems.push(`${key} is required in production`);
+    }
+    if (process.env.PORTFOLIO_SNAPSHOT_TOKEN && Buffer.byteLength(process.env.PORTFOLIO_SNAPSHOT_TOKEN, "utf8") < 32) problems.push("PORTFOLIO_SNAPSHOT_TOKEN must be at least 32 bytes");
+  }
   if (problems.length) {
     console.error(`[startup] FATAL: Invalid environment configuration:\n  ${problems.join("\n  ")}`);
     process.exit(1);

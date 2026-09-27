@@ -33,6 +33,7 @@ import adminSeoRoutes from "./routes/admin/seoRoutes.js";
 import adminActivityRoutes from "./routes/admin/activityRoutes.js";
 import adminPortfolioAnalyticsRoutes from "./routes/admin/portfolioAnalyticsRoutes.js";
 import adminContentVersionRoutes from "./routes/admin/contentVersionRoutes.js";
+import adminPublishRoutes from "./routes/admin/publishRoutes.js";
 import activityLogger from "./middleware/activityLogger.js";
 
 // ── General (public) routes ──────────────────────────────────────────
@@ -48,6 +49,7 @@ import siteSettingsRoutes from "./routes/general/siteSettingsRoutes.js";
 import navigationRoutes from "./routes/general/navigationRoutes.js";
 import footerRoutes from "./routes/general/footerRoutes.js";
 import seoRoutes from "./routes/general/seoRoutes.js";
+import buildSnapshotRoutes from "./routes/general/buildSnapshotRoutes.js";
 
 /* ------------------------------------------------------------------ *
  * 1. Validate all required environment variables before doing anything
@@ -156,6 +158,8 @@ app.use(globalLimiter);
  * 11. Routes
  * ------------------------------------------------------------------ */
 app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin", adminPublishRoutes);
+app.use("/api/public", buildSnapshotRoutes);
 app.use("/api/admin/activity", adminActivityRoutes);
 app.use("/api/admin/analytics", adminPortfolioAnalyticsRoutes);
 app.use("/api/admin/content", adminContentVersionRoutes);
