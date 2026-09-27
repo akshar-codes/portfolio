@@ -160,30 +160,6 @@ export default function Navbar() {
                 );
               })}
 
-            {/* Resume download CTA — shown when enabled in Site Settings.
-                Rendered as a subtle outlined link (distinct from the solid
-                nav CTA) so the two don't compete visually. Desktop-only:
-                the mobile bottom-tab bar is too narrow for an extra item. */}
-            {settings?.resumeDownload?.enabled && settings?.resumeDownload?.url && (
-              <a
-                href={settings.resumeDownload.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="no-underline"
-                style={{
-                    display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 20px", borderRadius: 9999,
-                    backgroundColor: "transparent",
-                    color: "var(--accent)",
-                    border: "1px solid var(--accent)",
-                    fontFamily: "Inter, sans-serif",
-                    textDecoration: "none", fontWeight: 600,
-                  }}
-                aria-label={`${settings.resumeDownload.label || "Download CV"} (opens in a new tab)`}
-              >
-                {settings.resumeDownload.label || "Download CV"}
-              </a>
-            )}
-
             {nav?.ctaEnabled && nav?.ctaUrl && (
               <Link to={nav.ctaUrl} className="no-underline" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 24px", borderRadius: 9999, textDecoration: "none", fontSize: 14, fontWeight: 600, backgroundColor: "var(--accent)", color: "#1c1c1e", fontFamily: "Inter, sans-serif" }}>
                   {nav.ctaLabel || "Contact"}

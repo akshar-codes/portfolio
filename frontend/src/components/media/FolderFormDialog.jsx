@@ -19,6 +19,8 @@ export default function FolderFormDialog({ open, mode, folder, folders = [], par
 
   useEffect(() => {
     if (open) {
+      // Hydrate the editable form from the selected folder on open.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(mode === "edit" ? folder?.name ?? "" : "");
       setSelectedParent(mode === "edit" ? folder?.parentId ?? "" : parentId);
     }

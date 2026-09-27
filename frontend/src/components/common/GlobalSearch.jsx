@@ -38,6 +38,8 @@ export default function GlobalSearch({ open, onClose }) {
         inputRef.current?.focus();
       }, 0);
     } else {
+      // Clear transient search state when the controlling dialog closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
       setActiveIndex(-1);
     }
@@ -45,6 +47,8 @@ export default function GlobalSearch({ open, onClose }) {
 
   // Reset active index when search results change
   useEffect(() => {
+    // The highlighted row belongs to the previous query's result set.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(-1);
   }, [debouncedQuery]);
 

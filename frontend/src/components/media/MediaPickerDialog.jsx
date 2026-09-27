@@ -59,6 +59,8 @@ export default function MediaPickerDialog({
 
   useEffect(() => {
     if (open) {
+      // Reset dialog-local selection when its owner opens it again.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearch("");
       setPage(1);
       setFolderTab(RECENT_TAB);
