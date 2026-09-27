@@ -9,6 +9,7 @@ import {
 import { sendSuccess, sendNoContent } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { DEFAULT_MESSAGES_PAGE_SIZE } from "../constants/index.js";
+import { countAll, findPaginated } from "../repositories/messageRepository.js";
 
 /* ------------------------------------------------------------------ *
  * POST /api/messages  (public)
@@ -56,6 +57,20 @@ export const getMessages = asyncHandler(async (req, res) => {
     sortOrder,
   });
   return sendSuccess(res, result, "Messages retrieved successfully");
+});
+
+/* GET /api/messages/summary (admin dashboard widget) */
+export const getMessagesSummary = asyncHandler(async (_req, res) => {
+  const [unreadCount, recent] = await Promise.all([
+    countAll({ status: "unread", isArchived: false, isSpam: false }),
+    findPaginated({
+      filter: { isArchived: false, isSpam: false },
+      skip: 0,
+      limit: 5,
+      sort: { createdAt: -1 },
+    }),
+  ]);
+  return sendSuccess(res, { unreadCount, recent }, "Message summary retrieved successfully");
 });
 
 /* ------------------------------------------------------------------ *

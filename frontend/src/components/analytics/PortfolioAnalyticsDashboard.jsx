@@ -56,7 +56,7 @@ function MetricChart({ series, granularity }) {
           return <g key={fraction}><line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="currentColor" opacity="0.12" /><text x={padding.left - 7} y={y + 4} textAnchor="end" fontSize="10" fill="currentColor" opacity="0.6">{Math.round(max * (1 - fraction))}</text></g>;
         })}
         {METRICS.map(([key, , color]) => <polyline key={key} points={pointsFor(key)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />)}
-        {series.length > 0 && [0, Math.floor((series.length - 1) / 2), series.length - 1].map((index) => <text key={index} x={padding.left + (series.length <= 1 ? plotW / 2 : index * plotW / (series.length - 1))} y={height - 5} textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.65">{labelAt(index)}</text>)}
+          {series.length > 0 && [...new Set([0, Math.floor((series.length - 1) / 2), series.length - 1])].map((index) => <text key={index} x={padding.left + (series.length <= 1 ? plotW / 2 : index * plotW / (series.length - 1))} y={height - 5} textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.65">{labelAt(index)}</text>)}
       </svg>
       <Stack direction="row" gap={2} flexWrap="wrap" sx={{ px: 1 }}>
         {METRICS.map(([, label, color]) => <Stack key={label} direction="row" spacing={0.75} alignItems="center"><Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: color }} /><Typography variant="caption">{label}</Typography></Stack>)}
