@@ -264,6 +264,12 @@ textarea::placeholder {
   outline-offset: 3px;
 }
 
+/* Prevent double borders on MUI text fields, which use fieldsets for focus */
+.MuiInputBase-root:focus-visible,
+.MuiInputBase-input:focus-visible {
+  outline: none !important;
+}
+
 .skip-link {
   position: fixed;
   z-index: 1000;
