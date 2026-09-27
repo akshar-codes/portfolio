@@ -33,6 +33,7 @@ import {
   useAdminMessagesQuery,
   useAdminMessageQuery,
   useUpdateMessageStatus,
+  useSendMessageReply,
   useArchiveMessage,
   useRestoreMessage,
   useToggleMessageSpam,
@@ -109,7 +110,6 @@ export default function ManageMessages() {
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       page,
       limit,
@@ -127,6 +127,7 @@ export default function ManageMessages() {
   const { data, isLoading, isFetching, isError, error, refetch } = useAdminMessagesQuery(queryParams);
 
   const { mutateAsync: updateStatus } = useUpdateMessageStatus();
+  const { mutateAsync: sendMessageReply, isPending: sendingReply } = useSendMessageReply();
   const { mutateAsync: archiveMessageMutation } = useArchiveMessage();
   const { mutateAsync: restoreMessageMutation } = useRestoreMessage();
   const { mutateAsync: toggleSpamMutation } = useToggleMessageSpam();
@@ -155,6 +156,8 @@ export default function ManageMessages() {
 
   useEffect(() => {
     if (deepLinkId && deepLinkMessage && !deepLinkLoading) {
+      // Resolve a URL deep link into the selected drawer message.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDetailsMessage(deepLinkMessage);
     }
   }, [deepLinkId, deepLinkMessage, deepLinkLoading]);
@@ -187,6 +190,17 @@ export default function ManageMessages() {
       toast.success(nextStatus === "read" ? "Marked as read." : "Marked as unread.");
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const handleSendReply = async (row, reply) => {
+    try {
+      await sendMessageReply({ id: row._id, ...reply });
+      toast.success(`Reply sent to ${row.email}.`);
+      return true;
+    } catch (err) {
+      toast.error(err.message);
+      return false;
     }
   };
 
@@ -554,8 +568,11 @@ export default function ManageMessages() {
       />
 
       <MessageDetailsDrawer
+        key={detailsMessage?._id ?? "closed"}
         open={!!detailsMessage}
         message={detailsMessage}
+        onSendReply={handleSendReply}
+        sendingReply={sendingReply}
         onClose={handleCloseDetails}
         onToggleRead={handleToggleRead}
         onToggleArchive={handleToggleArchive}

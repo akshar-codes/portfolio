@@ -65,6 +65,7 @@ export const API_ENDPOINTS = {
   messageById: (id) => `/messages/${id}`,
   messagesSummary: "/messages/summary",
   messageStatus: (id) => `/messages/${id}/status`,
+  messageReply: (id) => `/messages/${id}/reply`,
   messageArchive: (id) => `/messages/${id}/archive`,
   messageRestore: (id) => `/messages/${id}/restore`,
   messageSpam: (id) => `/messages/${id}/spam`,

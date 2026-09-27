@@ -17,6 +17,9 @@ export const messagesApi = {
   updateStatus: (id, status) =>
     api.patch(API_ENDPOINTS.messageStatus(id), { status }).then((res) => res.data),
 
+  sendReply: (id, { subject, body }) =>
+    api.post(API_ENDPOINTS.messageReply(id), { subject, body }).then((res) => res.data),
+
   archive: (id) => api.patch(API_ENDPOINTS.messageArchive(id)).then((res) => res.data),
 
   restore: (id) => api.patch(API_ENDPOINTS.messageRestore(id)).then((res) => res.data),

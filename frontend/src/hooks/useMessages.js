@@ -70,6 +70,13 @@ export function useUpdateMessageStatus(options = {}) {
   });
 }
 
+export function useSendMessageReply(options = {}) {
+  return useMutation({
+    mutationFn: ({ id, subject, body }) => messagesApi.sendReply(id, { subject, body }),
+    ...options,
+  });
+}
+
 export function useArchiveMessage(options = {}) {
   const queryClient = useQueryClient();
   const invalidate = useInvalidateMessages();

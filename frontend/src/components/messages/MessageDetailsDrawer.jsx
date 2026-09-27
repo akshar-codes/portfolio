@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Drawer from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -7,6 +8,7 @@ import Divider from "@mui/material/Divider";
 import Chip from "@mui/material/Chip";
 import Avatar from "@mui/material/Avatar";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { alpha } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
 import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
@@ -53,7 +55,13 @@ export default function MessageDetailsDrawer({
   onToggleArchive,
   onToggleSpam,
   onDelete,
+  onSendReply,
+  sendingReply = false,
 }) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replySubject, setReplySubject] = useState("Re: Your message via my portfolio");
+  const [replyBody, setReplyBody] = useState("");
+
   if (!message) return null;
 
   const isUnread = message.status === "unread";
@@ -63,8 +71,16 @@ export default function MessageDetailsDrawer({
   const handleToggleSpam = () => onToggleSpam(message);
   const handleDelete = () => onDelete(message);
 
-  const replySubject = encodeURIComponent("Re: Your message via my portfolio");
-  const mailtoHref = `mailto:${message.email}?subject=${replySubject}`;
+  const mailtoHref = `mailto:${message.email}?subject=${encodeURIComponent(replySubject)}`;
+
+  const handleSendReply = async (event) => {
+    event.preventDefault();
+    const sent = await onSendReply(message, { subject: replySubject, body: replyBody });
+    if (sent) {
+      setReplyBody("");
+      setReplyOpen(false);
+    }
+  };
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -189,6 +205,53 @@ export default function MessageDetailsDrawer({
           >
             Reply via email
           </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<ReplyOutlinedIcon fontSize="small" />}
+            onClick={() => setReplyOpen((open) => !open)}
+            fullWidth
+          >
+            Reply from website
+          </Button>
+
+          {replyOpen && (
+            <Box component="form" onSubmit={handleSendReply} sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <TextField
+                label="To"
+                value={message.email}
+                size="small"
+                fullWidth
+                slotProps={{ input: { readOnly: true } }}
+              />
+              <TextField
+                label="Subject"
+                value={replySubject}
+                onChange={(event) => setReplySubject(event.target.value)}
+                size="small"
+                required
+                inputProps={{ maxLength: 200 }}
+                fullWidth
+              />
+              <TextField
+                label="Your reply"
+                value={replyBody}
+                onChange={(event) => setReplyBody(event.target.value)}
+                multiline
+                minRows={5}
+                maxRows={10}
+                required
+                inputProps={{ maxLength: 10000 }}
+                fullWidth
+              />
+              <Typography variant="caption" color="text.secondary">
+                Sent from the verified email address configured for this site.
+              </Typography>
+              <Button type="submit" variant="contained" disabled={sendingReply || !replyBody.trim() || !replySubject.trim()}>
+                {sendingReply ? "Sending…" : "Send reply"}
+              </Button>
+            </Box>
+          )}
 
           <Box className="flex items-center gap-1.5 flex-wrap">
             <Button
