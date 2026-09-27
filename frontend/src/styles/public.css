@@ -103,8 +103,8 @@ body {
   font-family: "JetBrains Mono", monospace;
   font-size: 3.5rem;
   font-weight: 700;
-  color: var(--text-secondary);
-  -webkit-text-stroke: 0;
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.25);
+  color: transparent;
   line-height: 1;
   letter-spacing: -2px;
 }
@@ -298,9 +298,13 @@ textarea::placeholder {
 }
 
 .contact-field-label {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

@@ -1,13 +1,11 @@
-import { memo, useCallback, useState, useEffect } from "react";
-import { GitHub as GitHubIcon, Search as SearchIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
+import { useState } from "react";
+import { NorthEast as NorthEastIcon, GitHub as GitHubIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "@mui/icons-material";
 
 import { usePublicProjectsQuery, usePublicProjectQuery } from "../../hooks/usePublicProjects";
-import { usePublicCategoriesQuery } from "../../hooks/usePublicCategories";
 import { usePublicSeo } from "../../hooks/usePublicSite";
 import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
 import { usePreviewMode } from "../../hooks/usePreviewMode";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { flattenTechNames } from "../../utils/projectHelpers";
 import { excerptFromHtml } from "../../utils/html";
 import { SkeletonGrid } from "../../components/public/Skeletons";
@@ -16,45 +14,26 @@ import ProjectDetailsModal from "../../components/public/ProjectDetailsModal";
 import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
 import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 50;
 
-const inputStyles = {
-  padding: "12px 16px",
-  backgroundColor: "var(--bg-card)",
-  border: "1px solid #707074",
-  borderRadius: "8px",
-  color: "var(--text-primary)",
-  fontFamily: "'JetBrains Mono', monospace",
-  fontSize: "0.85rem",
-  outline: "none",
-};
-
-/* ------------------------------------------------------------------ *
- * BrowserFrame — preserved from the original single-project layout,
- * reused per-card in the new grid.
- * ------------------------------------------------------------------ */
-function BrowserFrame({ image, label }) {
+function BrowserFrame({ image, label, url }) {
   return (
     <div className="rounded-xl overflow-hidden shadow-2xl" style={{ border: "1px solid var(--border)", backgroundColor: "#1e1e1e" }}>
-      <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: "#2a2a2d", borderBottom: "1px solid var(--border)" }}>
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#ff5f57" }} />
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#febc2e" }} />
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#28c840" }} />
+      <div className="flex items-center gap-2 px-4 py-2" style={{ backgroundColor: "#2a2a2d", borderBottom: "1px solid var(--border)" }}>
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#ff5f57" }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#febc2e" }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#28c840" }} />
+        <div className="flex-1 ml-3 px-3 py-1 rounded-md font-mono text-xs truncate" style={{ backgroundColor: "#1c1c1e", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+          {url || label}
+        </div>
       </div>
       <div style={{ aspectRatio: "16 / 10", backgroundColor: "#f5f5f5", position: "relative", overflow: "hidden" }}>
         {image ? (
-          <img
-            src={image}
-            alt={label}
-            loading="lazy"
-            decoding="async"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
-          />
+          <img src={image} alt={label} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-            <p className="font-sans text-sm font-semibold" style={{ color: "#333" }}>
-              {label}
-            </p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ backgroundColor: "#f5f5f5" }}>
+            <p className="font-sans text-lg font-semibold" style={{ color: "#333" }}>{label}</p>
+            <p className="font-mono text-xs" style={{ color: "#999" }}>Preview image not available</p>
           </div>
         )}
       </div>
@@ -62,286 +41,103 @@ function BrowserFrame({ image, label }) {
   );
 }
 
-const ProjectCard = memo(function ProjectCard({ project, onViewDetails }) {
-  const techNames = flattenTechNames(project.technologies);
-  const liveUrl = project.liveUrl || project.projectUrl;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => onViewDetails(project)}
-        className="cursor-pointer border-0 p-0 bg-transparent text-left w-full"
-      >
-          <BrowserFrame image={getThumbnailUrl(project.image?.url, 720)} label={project.title} />
-      </button>
-
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-            {project.title}
-          </h3>
-          {project.category?.name && (
-            <span className="font-mono text-xs" style={{ color: "var(--accent)" }}>
-              {project.category.name}
-            </span>
-          )}
-        </div>
-        {project.featured && project.status === "published" && (
-          <span
-            className="font-mono text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
-            style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
-          >
-            FEATURED
-          </span>
-        )}
-        {project.status && project.status !== "published" && (
-          <span
-            className="font-mono text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
-            style={{ backgroundColor: "var(--warning-main, #ed6c02)", color: "#fff" }}
-          >
-            {project.status.toUpperCase()}
-          </span>
-        )}
-      </div>
-
-      {project.description && (
-        <p className="font-mono text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          {excerptFromHtml(project.description, 110)}
-        </p>
-      )}
-
-      {techNames.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {techNames.slice(0, 4).map((tech, i) => (
-            <span key={tech} className="font-mono text-xs" style={{ color: "var(--accent)" }}>
-              {tech}
-              {i < Math.min(techNames.length, 4) - 1 && <span style={{ color: "var(--text-muted)" }}>,</span>}
-            </span>
-          ))}
-          {techNames.length > 4 && (
-            <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>
-              +{techNames.length - 4}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 mt-1">
-        <button
-          type="button"
-          onClick={() => onViewDetails(project)}
-          className="font-mono text-xs font-semibold px-4 py-2 rounded-full border-0 cursor-pointer"
-          style={{ backgroundColor: "var(--accent)", color: "#1c1c1e" }}
-        >
-          View Details
-        </button>
-        {liveUrl && (
-          <a
-            href={liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View live project"
-            className="arrow-btn arrow-btn-dark no-underline"
-            style={{ width: 40, height: 40 }}
-          >
-            <OpenInNewIcon sx={{ fontSize: 18 }} />
-          </a>
-        )}
-        {project.githubUrl && (
-          <a
-            href={project.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View source on GitHub"
-            className="arrow-btn arrow-btn-dark no-underline"
-            style={{ width: 40, height: 40 }}
-          >
-            <GitHubIcon sx={{ fontSize: 18 }} />
-          </a>
-        )}
-      </div>
-    </div>
-  );
-});
-
 export default function Work() {
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const [category, setCategory] = useState("");
-  const [page, setPage] = useState(1);
+  const page = 1;
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
-
+  const [closedPreviewId, setClosedPreviewId] = useState(null);
   const { isPreview, previewProjectId } = usePreviewMode();
   const { data: previewProject } = usePublicProjectQuery(previewProjectId, { preview: isPreview });
-  const handleProjectView = useCallback((project) => {
-    if (!isPreview) trackPortfolioEvent("project_view", { projectId: project._id });
-    setSelectedProject(project);
-  }, [isPreview]);
-
-  const { data: categories } = usePublicCategoriesQuery({ preview: isPreview });
-
-  const { data, isLoading, isFetching, isError, error, refetch } = usePublicProjectsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: debouncedSearch || undefined,
-    category: category || undefined,
-    preview: isPreview,
-  });
-
-  useEffect(() => {
-    if (previewProject) setSelectedProject(previewProject);
-  }, [previewProject]);
-
+  const { data, isLoading, isFetching, isError, error, refetch } = usePublicProjectsQuery({ page, limit: PAGE_SIZE, preview: isPreview });
   const { data: seo } = usePublicSeo({ preview: isPreview });
-
+  const projects = data?.projects ?? [];
+  const project = projects[currentIndex];
   const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/work` : "";
 
-  useDocumentHead(
-    buildPageSeo(seo, {
-      pageTitle: seo?.defaultMetaTitle ? `Work — ${seo.defaultMetaTitle}` : "Work",
-      pageCanonical: canonical,
-    }),
+  const modalProject = selectedProject || (
+    previewProjectId && closedPreviewId !== previewProjectId ? previewProject : null
   );
 
-  // ── Structured Data ────────────────────────────────────────────────
-  const breadcrumbSchema = canonical
-    ? {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: seo?.canonicalBaseUrl || "",
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Work",
-            item: canonical,
-          },
-        ],
-      }
-    : null;
+  useDocumentHead(buildPageSeo(seo, {
+    pageTitle: seo?.defaultMetaTitle ? `Work — ${seo.defaultMetaTitle}` : "Work",
+    pageCanonical: canonical,
+  }));
+  useStructuredData(canonical ? [{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Projects",
+    url: canonical,
+    description: seo?.defaultMetaDescription || "",
+  }] : null);
 
-  const collectionSchema = canonical
-    ? {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        name: "Projects",
-        url: canonical,
-        description: seo?.defaultMetaDescription || "",
-      }
-    : null;
-
-  useStructuredData([breadcrumbSchema, collectionSchema].filter(Boolean));
-
-  const projects = data?.projects ?? [];
-  const totalPages = data?.totalPages ?? 1;
-
-  const handleFilterChange = (setter) => (value) => {
-    setter(value);
-    setPage(1);
+  const viewProject = (item) => {
+    if (!isPreview) trackPortfolioEvent("project_view", { projectId: item._id });
+    setSelectedProject(item);
+  };
+  const changeProject = (direction) => {
+    const next = (currentIndex + direction + projects.length) % projects.length;
+    setCurrentIndex(next);
+  };
+  const closeProjectDetails = () => {
+    setSelectedProject(null);
+    if (previewProjectId) setClosedPreviewId(previewProjectId);
   };
 
   if (isError) {
-    return (
-      <div className="page-enter">
-        <section className="section-container py-16">
-          <PublicError message={error?.message} onRetry={refetch} />
-        </section>
-      </div>
-    );
+    return <div className="page-enter"><section className="section-container py-16"><PublicError message={error?.message} onRetry={refetch} /></section></div>;
   }
+
+  const technologies = project ? flattenTechNames(project.technologies) : [];
+  const subtitle = project ? [project.category?.name, ...technologies].filter(Boolean).join(", ") : "";
+  const liveUrl = project?.liveUrl || project?.projectUrl;
 
   return (
     <div className="page-enter">
-      <section className="section-container py-16">
-        <div className="flex flex-col sm:flex-row gap-4 mb-10">
-          <div className="relative flex-1">
-            <SearchIcon
-              sx={{ fontSize: 18 }}
-              style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
-            />
-            <input
-              type="text"
-              placeholder="Search projects…"
-              value={search}
-              onChange={(e) => handleFilterChange(setSearch)(e.target.value)}
-              style={{ ...inputStyles, width: "100%", paddingLeft: 40 }}
-            />
-          </div>
-          <select
-            value={category}
-            onChange={(e) => handleFilterChange(setCategory)(e.target.value)}
-            style={{ ...inputStyles, minWidth: 200 }}
-          >
-            <option value="">All categories</option>
-            {(categories ?? []).map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name} ({cat.projectCount})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {isLoading && <SkeletonGrid count={6} cardLines={3} className="sm:grid-cols-2 lg:grid-cols-3" />}
-
-        {!isLoading && projects.length === 0 && (
-          <PublicEmpty
-            icon="🗂️"
-            title="No projects found"
-            message={search || category ? "Try a different search term or category." : "Projects will appear here once published."}
-          />
-        )}
-
-        {!isLoading && projects.length > 0 && (
-          <>
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10"
-              style={{ opacity: isFetching ? 0.6 : 1, transition: "opacity 0.15s ease" }}
-            >
-              {projects.map((project) => (
-                <ProjectCard key={project._id} project={project} onViewDetails={handleProjectView} />
-              ))}
+      {isLoading ? (
+        <section className="section-container py-16 min-h-[calc(100vh-80px)] flex items-center"><SkeletonGrid count={1} cardLines={5} /></section>
+      ) : projects.length === 0 ? (
+        <section className="section-container py-16 min-h-[calc(100vh-80px)] flex items-center justify-center"><PublicEmpty icon="🗂️" title="No projects found" message="Published projects will appear here." /></section>
+      ) : (
+        <section className="section-container py-16 min-h-[calc(100vh-80px)] flex items-center">
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-12 w-full" style={{ opacity: isFetching ? 0.65 : 1, transition: "opacity 0.15s ease" }}>
+            <div className="flex-1 max-w-md">
+              <div className="font-mono font-bold mb-6" style={{ fontSize: "6rem", WebkitTextStroke: "2px rgba(255,255,255,0.15)", color: "transparent", lineHeight: 1, letterSpacing: "-4px" }}>
+                {String((page - 1) * PAGE_SIZE + currentIndex + 1).padStart(2, "0")}
+              </div>
+              <button type="button" onClick={() => viewProject(project)} className="block text-left border-0 bg-transparent p-0 cursor-pointer">
+                <h1 className="font-mono text-4xl md:text-5xl font-bold leading-tight mb-4" style={{ color: "var(--accent)", whiteSpace: "pre-line" }}>{project.title}</h1>
+              </button>
+              {subtitle && <p className="font-mono text-base font-semibold mb-4" style={{ color: "var(--text-primary)" }}>{subtitle}</p>}
+              {project.description && <p className="font-mono text-base leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>{excerptFromHtml(project.description, 500)}</p>}
+              {technologies.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-8">
+                  {technologies.map((technology, index) => (
+                    <span key={technology} className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+                      {technology}{index < technologies.length - 1 && <span style={{ color: "var(--text-muted)", marginLeft: 6 }}>,</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <hr className="section-divider mb-8" />
+              <div className="flex items-center gap-4 mt-2">
+                {liveUrl && <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="arrow-btn arrow-btn-dark no-underline" aria-label="View live project"><NorthEastIcon sx={{ fontSize: 22 }} /></a>}
+                {project.githubUrl && <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="arrow-btn arrow-btn-dark no-underline" aria-label="View source on GitHub"><GitHubIcon sx={{ fontSize: 22 }} /></a>}
+              </div>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-14">
-                <button
-                  type="button"
-                  className="pagination-btn"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  aria-label="Previous page"
-                  style={{ opacity: page === 1 ? 0.4 : 1 }}
-                >
-                  ←
-                </button>
-                <span className="font-mono text-sm" style={{ color: "var(--text-secondary)" }}>
-                  {page} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="pagination-btn"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  aria-label="Next page"
-                  style={{ opacity: page === totalPages ? 0.4 : 1 }}
-                >
-                  →
-                </button>
+            <div className="flex-1 max-w-2xl w-full flex-shrink-0">
+              <button type="button" onClick={() => viewProject(project)} className="block w-full border-0 bg-transparent p-0 cursor-pointer text-left">
+                <BrowserFrame image={getThumbnailUrl(project.image?.url, 960)} label={project.title} url={liveUrl} />
+              </button>
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button type="button" onClick={() => changeProject(-1)} className="pagination-btn" aria-label="Previous project"><ChevronLeftIcon sx={{ fontSize: 24 }} /></button>
+                <button type="button" onClick={() => changeProject(1)} className="pagination-btn" aria-label="Next project"><ChevronRightIcon sx={{ fontSize: 24 }} /></button>
               </div>
-            )}
-          </>
-        )}
-      </section>
-
-      {selectedProject && (
-        <ProjectDetailsModal project={selectedProject} onClose={() => setSelectedProject(null)} />
+            </div>
+          </div>
+        </section>
       )}
+      {modalProject && <ProjectDetailsModal project={modalProject} onClose={closeProjectDetails} />}
     </div>
   );
 }

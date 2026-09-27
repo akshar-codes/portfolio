@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
-import AnnouncementBar from "../components/layout/AnnouncementBar";
 import MaintenancePage from "../components/layout/MaintenancePage";
 import { usePublicSiteSettings, usePublicSeo } from "../hooks/usePublicSite";
 import { useThemeColors } from "../hooks/useThemeColors";
@@ -92,14 +90,10 @@ export default function PublicLayout() {
       {isPreview && <PreviewBanner />}
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <span className="sr-only" aria-live="polite" aria-atomic="true">Page: {location.pathname}</span>
-      {/* Announcement bar sits above the sticky Navbar so it scrolls away
-          while the Navbar stays fixed — preserves the sticky UX. */}
-      <AnnouncementBar />
       <Navbar />
       <main id="main-content" tabIndex={-1} className="pb-24 md:pb-0">
         <Outlet />
       </main>
-      <Footer />
     </div>
   );
 }

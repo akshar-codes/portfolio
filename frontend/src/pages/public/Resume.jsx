@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download as DownloadIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
+import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 
 import { useResume } from "../../hooks/useResume";
 import { useProfile } from "../../hooks/useProfile";
@@ -8,18 +8,11 @@ import { useDocumentHead, buildPageSeo } from "../../hooks/useDocumentHead";
 import { useStructuredData } from "../../hooks/useStructuredData";
 import { usePreviewMode } from "../../hooks/usePreviewMode";
 import { excerptFromHtml } from "../../utils/html";
-import { SkeletonGrid, SkeletonText, SkeletonBlock } from "../../components/public/Skeletons";
+import { SkeletonGrid } from "../../components/public/Skeletons";
 import { PublicError, PublicEmpty } from "../../components/public/StatusStates";
-import { trackPortfolioEvent } from "../../utils/portfolioAnalytics";
 import { getThumbnailUrl } from "../../utils/cloudinaryTransform";
 
-const TABS = ["Experience", "Education", "Certifications", "Skills", "Languages", "Interests", "About me"];
-
-const AVAILABILITY_LABEL = {
-  available: "Available for work",
-  unavailable: "Not currently available",
-  open_to_offers: "Open to offers",
-};
+const TABS = ["Experience", "Education", "Certification", "Skills", "About me"];
 
 function sortByOrder(arr = []) {
   return [...arr].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -134,67 +127,32 @@ export default function Resume() {
     );
   }
 
-  const hero = resume?.hero ?? {};
   const experience = sortByOrder(resume?.experience);
   const education = sortByOrder(resume?.education);
   const certifications = sortByOrder(resume?.certifications);
   const skills = sortByOrder(resume?.skills);
   const languages = sortByOrder(resume?.languages);
   const interests = sortByOrder(resume?.interests);
-  const downloads = sortByOrder(resume?.downloads);
-  const primaryDownload = downloads.find((d) => d.fileType === "pdf") ?? downloads[0];
+  const panelHeading = {
+    Experience: "My experience",
+    Education: "My education",
+    Certification: "My certifications",
+    Skills: "My skills",
+    "About me": "About me",
+  }[activeTab];
+  const panelSummary = resume?.hero?.summary || resume?.aboutMe?.summary || "";
+  const aboutInfo = [
+    ["Name", profile?.name],
+    ["Phone", profile?.phone],
+    ["Email", profile?.email],
+    ["Languages", languages.map((item) => item.name).join(", ")],
+    ["Interests", interests.map((item) => item.name).join(", ")],
+  ].filter(([, value]) => value);
 
   return (
     <div className="page-enter">
-      <section className="section-container pt-16 pb-10">
-        {isLoading ? (
-          <div className="flex flex-col gap-3 max-w-2xl">
-            <SkeletonBlock className="h-3 w-24" />
-            <SkeletonBlock className="h-10 w-80" />
-            <SkeletonText lines={2} />
-          </div>
-        ) : (
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div className="max-w-2xl">
-              {hero.greeting && (
-                <p className="font-mono text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
-                  {hero.greeting}
-                </p>
-              )}
-              {hero.headline && (
-                <h1 className="font-mono text-3xl md:text-4xl font-bold mb-3" style={{ color: "var(--accent)" }}>
-                  {hero.headline}
-                </h1>
-              )}
-              {hero.summary && (
-                <div
-                  className="font-mono text-sm leading-relaxed"
-                  style={{ color: "var(--text-secondary)" }}
-                  dangerouslySetInnerHTML={{ __html: hero.summary }}
-                />
-              )}
-              {hero.availabilityStatus && (
-                <span
-                  className="inline-block mt-3 font-mono text-xs px-3 py-1 rounded-full"
-                  style={{ backgroundColor: "rgba(0,255,136,0.1)", color: "var(--accent)", border: "1px solid rgba(0,255,136,0.25)" }}
-                >
-                  {AVAILABILITY_LABEL[hero.availabilityStatus] ?? hero.availabilityStatus}
-                </span>
-              )}
-            </div>
-
-            {hero.ctaEnabled && primaryDownload && (
-              <a href={primaryDownload.url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 px-6 py-3 rounded-full font-mono text-sm font-semibold border-2 no-underline whitespace-nowrap" aria-label={`${hero.ctaLabel || "Download CV"}, download file`} onClick={() => { if (!isPreview) trackPortfolioEvent("download"); }} style={{ minHeight: 48, borderColor: "var(--text-primary)", color: "var(--text-primary)", backgroundColor: "transparent" }}>
-                  {(hero.ctaLabel || "Download CV").toUpperCase()}
-                  <DownloadIcon fontSize="small" />
-              </a>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="section-container py-8">
-        <div className="flex flex-col md:flex-row gap-12 min-h-[400px]">
+      <section className="section-container py-16">
+        <div className="flex flex-col md:flex-row gap-12 min-h-[500px]">
           <aside aria-label="Resume sections" className="flex flex-col gap-3 md:w-72 flex-shrink-0">
             {TABS.map((tab) => {
               const active = activeTab === tab;
@@ -223,6 +181,14 @@ export default function Resume() {
           </aside>
 
           <div className="flex-1 min-w-0">
+            <h1 className="font-mono text-3xl md:text-4xl font-bold mb-3" style={{ color: "var(--accent)" }}>
+              {panelHeading}
+            </h1>
+            {panelSummary && (
+              <p className="font-mono text-sm leading-relaxed mb-8 max-w-2xl" style={{ color: "var(--text-secondary)" }}>
+                {excerptFromHtml(panelSummary)}
+              </p>
+            )}
             {isLoading && <SkeletonGrid count={4} cardLines={3} />}
 
             {!isLoading && activeTab === "Experience" && (
@@ -261,7 +227,7 @@ export default function Resume() {
               )
             )}
 
-            {!isLoading && activeTab === "Certifications" && (
+            {!isLoading && activeTab === "Certification" && (
               certifications.length === 0 ? (
                 <PublicEmpty icon="📜" title="No certifications listed yet" />
               ) : (
@@ -386,16 +352,9 @@ export default function Resume() {
                   <PublicEmpty icon="📝" title="No summary added yet" />
                 )}
 
-                {profile && (
+                {aboutInfo.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 max-w-2xl">
-                    {[
-                      ["Name", profile.name],
-                      ["Email", profile.email],
-                      ["Phone", profile.phone],
-                      ["Location", profile.location],
-                    ]
-                      .filter(([, value]) => value)
-                      .map(([label, value]) => (
+                    {aboutInfo.map(([label, value]) => (
                         <div key={label} className="flex items-baseline gap-3">
                           <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
                             {label}
