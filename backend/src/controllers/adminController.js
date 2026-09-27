@@ -38,6 +38,7 @@ export const loginAdmin = asyncHandler(async (req, res) => {
    GET /api/admin/verify
 --------------------------------------------------------------- */
 export const verifyAdmin = (req, res) => {
+  if (!req.admin) return sendSuccess(res, null, "Not authenticated");
   return sendSuccess(res, getVerifiedPayload(req.admin), "Authenticated");
 };
 

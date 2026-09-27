@@ -4,14 +4,14 @@ import {
   verifyAdmin,
   logoutAdmin,
 } from "../../controllers/adminController.js";
-import { protect } from "../../middleware/authMiddleware.js";
+import { optionalProtect, protect } from "../../middleware/authMiddleware.js";
 import { loginLimiter } from "../../middleware/rateLimiters.js";
 
 const router = express.Router();
 
 router.post("/login", loginLimiter, loginAdmin);
 
-router.get("/verify", protect, verifyAdmin);
+router.get("/verify", optionalProtect, verifyAdmin);
 
 router.post("/logout", protect, logoutAdmin);
 

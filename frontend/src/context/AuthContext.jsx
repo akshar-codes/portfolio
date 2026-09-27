@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get(API_ENDPOINTS.adminVerify);
       setAdmin(data ?? null);
-      setAuthState("authenticated");
+      setAuthState(data ? "authenticated" : "unauthenticated");
     } catch (err) {
       setAdmin(null);
       setAuthState(err.statusCode === 401 ? "unauthenticated" : "error");

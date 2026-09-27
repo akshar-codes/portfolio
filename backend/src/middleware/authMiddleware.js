@@ -19,6 +19,38 @@ function extractToken(req) {
   return null;
 }
 
+export const optionalProtect = asyncHandler(async (req, _res, next) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured.");
+  }
+
+  const token = extractToken(req);
+  if (!token) {
+    req.admin = null;
+    return next();
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      req.admin = null;
+      return next();
+    }
+    throw error;
+  }
+
+  if (!decoded?.id) {
+    req.admin = null;
+    return next();
+  }
+
+  const admin = await findByIdSafe(decoded.id);
+  req.admin = admin && (decoded.tokenVersion ?? 0) === (admin.tokenVersion ?? 0) ? admin : null;
+  return next();
+});
+
 export const protect = asyncHandler(async (req, res, next) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured.");
