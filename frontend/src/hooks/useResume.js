@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { resumeApi } from "../api/resumeApi";
+import { portfolioSnapshotApi } from "../api/portfolioSnapshotApi";
 
 export const RESUME_QUERY_KEY = ["resume"];
 export const ADMIN_RESUME_QUERY_KEY = ["resume", "admin"];
@@ -12,8 +13,8 @@ export function useResume({ preview = false } = {}) {
   return useQuery({
     queryKey: [...RESUME_QUERY_KEY, { preview }],
     queryFn: async () => {
-      const endpoint = preview ? API_ENDPOINTS.adminResume : API_ENDPOINTS.resume;
-      const { data } = await api.get(endpoint);
+      if (!preview) return portfolioSnapshotApi.load().then((snapshot) => snapshot.resume);
+      const { data } = await api.get(API_ENDPOINTS.adminResume);
       return data;
     },
     staleTime: preview ? 0 : 5 * 60 * 1000,

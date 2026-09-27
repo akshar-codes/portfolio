@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { profileApi } from "../api/profileApi";
+import { portfolioSnapshotApi } from "../api/portfolioSnapshotApi";
 
 export const PROFILE_QUERY_KEY = ["profile"];
 export const ADMIN_PROFILE_QUERY_KEY = ["profile", "admin"];
@@ -12,8 +13,8 @@ export function useProfile({ preview = false } = {}) {
   return useQuery({
     queryKey: [...PROFILE_QUERY_KEY, { preview }],
     queryFn: async () => {
-      const endpoint = preview ? API_ENDPOINTS.adminProfile : API_ENDPOINTS.profile;
-      const { data } = await api.get(endpoint);
+      if (!preview) return portfolioSnapshotApi.load().then((snapshot) => snapshot.profile);
+      const { data } = await api.get(API_ENDPOINTS.adminProfile);
       return data;
     },
     staleTime: preview ? 0 : 5 * 60 * 1000,

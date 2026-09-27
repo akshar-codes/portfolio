@@ -7,12 +7,19 @@ import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import PublishIcon from "@mui/icons-material/Publish";
+import { toast } from "sonner";
 
 import { ROUTES } from "../../constants/routes";
 import { useMessageSummaryQuery } from "../../hooks/useMessages";
 import { getInitials, truncate } from "../../utils/strings";
 import { relativeTime } from "../../utils/date";
 import PortfolioAnalyticsDashboard from "../../components/analytics/PortfolioAnalyticsDashboard";
+import api from "../../services/api";
+import { API_ENDPOINTS } from "../../constants/apiEndpoints";
+import { useState } from "react";
 
 const ACTIONS = [
   {
@@ -148,11 +155,27 @@ function RecentMessagesWidget() {
 
 export default function Dashboard() {
   const { data: summary } = useMessageSummaryQuery();
+  const [publishing, setPublishing] = useState(false);
+
+  const publishChanges = async () => {
+    setPublishing(true);
+    try {
+      await api.post(API_ENDPOINTS.adminPublish);
+      toast.success("Deployment started. Published changes will be live when the build finishes.");
+    } catch (error) {
+      toast.error(error.message || "Could not start portfolio deployment.");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   return (
     <div className="admin-page">
       <div className="admin-page__header">
         <h2 className="admin-page__title">Dashboard</h2>
+        <Button variant="contained" startIcon={publishing ? <CircularProgress size={16} color="inherit" /> : <PublishIcon />} onClick={publishChanges} disabled={publishing}>
+          {publishing ? "Starting deployment…" : "Publish Changes"}
+        </Button>
       </div>
 
       <p style={{ fontSize: 14, color: "var(--light-gray)", marginTop: -8 }}>

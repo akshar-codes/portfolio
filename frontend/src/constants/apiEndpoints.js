@@ -129,4 +129,5 @@ export const API_ENDPOINTS = {
   adminLogin: "/admin/login",
   adminLogout: "/admin/logout",
   adminVerify: "/admin/verify",
+  adminPublish: "/admin/publish",
 };
