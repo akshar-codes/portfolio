@@ -5,7 +5,7 @@ for managing all content: profile, about page, resume, projects, categories,
 and contact messages.
 
 **Stack:** MongoDB/Mongoose · Express 5 · React 19 · Node.js · Cloudinary ·
-JWT (cookie-based auth) · React Router v6 · TanStack Query · `sonner`
+JWT (cookie-based auth) · React Router v7 · TanStack Query · `sonner`
 
 **Hosting:** Vercel (frontend) · Render (backend) · MongoDB Atlas · Cloudinary
 
@@ -54,9 +54,9 @@ npm run dev              # http://localhost:5173
 **First-time data setup** (run once against your database):
 
 ```
-node backend/scripts/seedProfile.js
-node backend/scripts/seedAbout.js
-node backend/scripts/seedResume.js
+node backend/src/scripts/seedProfile.js
+node backend/src/scripts/seedAbout.js
+node backend/src/scripts/seedResume.js
 ```
 
 An Admin document must also exist before you can log in — this project has
@@ -96,7 +96,7 @@ Architecture, patterns, and scaling constraints: **[docs/architecture.md](docs/a
 - `.github/dependabot.yml` — weekly automated dependency update PRs for
   both `npm` workspaces, both Dockerfiles, and GitHub Actions.
 
-## Operational scripts (`backend/scripts/`)
+## Operational scripts (`backend/src/scripts/`)
 
 | Script                                              | Purpose                                                             | Idempotent                      |
 | --------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------- |

@@ -33,20 +33,20 @@ you want to run the containerized build on your own machine.
 4. Run the content seed scripts once against production (idempotent,
    safe to re-run):
    ```
-   node backend/scripts/seedProfile.js
-   node backend/scripts/seedAbout.js
-   node backend/scripts/seedResume.js
+   node backend/src/scripts/seedProfile.js
+   node backend/src/scripts/seedAbout.js
+   node backend/src/scripts/seedResume.js
    ```
 5. If migrating from a pre-grouped-technologies dataset, run:
    ```
-   node backend/scripts/migrateGroupedTechnologies.js
-   node backend/scripts/migrateOrder.js
-   node backend/scripts/migrateCategories.js
+   node backend/src/scripts/migrateGroupedTechnologies.js
+   node backend/src/scripts/migrateOrder.js
+   node backend/src/scripts/migrateCategories.js
    ```
    All migration scripts are idempotent (`$exists`/shape checks) and safe
    to re-run.
 
-See `docs/ENVIRONMENT.md` for the full variable reference.
+See `docs/environment.md` for the full variable reference.
 
 ---
 
@@ -68,7 +68,7 @@ See `docs/ENVIRONMENT.md` for the full variable reference.
 5. `healthCheckPath: /health` is already wired in `render.yaml` — confirm
    it goes green after the first deploy.
 6. `numInstances` is pinned to `1` in `render.yaml` deliberately — see
-   the scaling note in `docs/ARCHITECTURE.md` before ever changing this.
+   the scaling note in `docs/architecture.md` before ever changing this.
 
 ---
 

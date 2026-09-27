@@ -811,19 +811,6 @@ export default function ManageSiteSettings() {
     }
   };
 
-  const handleTogglePublish = async () => {
-    try {
-      if (settings.status === "draft") {
-        await publish();
-        toast.success("Site settings published.");
-      } else {
-        await unpublish();
-        toast.success("Site settings unpublished.");
-      }
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
 
   if (isLoading) {
     return (

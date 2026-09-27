@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
@@ -34,7 +34,7 @@ export default function ImagePicker({
   const [dragActive, setDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  const inputId = useMemo(() => `image-picker-${Math.random().toString(36).slice(2, 9)}`, []);
+  const inputId = `image-picker-${useId()}`;
 
   useEffect(() => {
     if (value instanceof File) {

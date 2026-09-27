@@ -18,17 +18,21 @@ import { useMessageSummaryQuery } from "../../hooks/useMessages";
 
 function isNodeActive(node, pathname) {
   if (!node.path) return false;
-  return node.path === "/admin/dashboard" ? pathname === node.path : pathname.startsWith(node.path);
+  return node.path === "/admin/dashboard"
+    ? pathname === node.path
+    : pathname.startsWith(node.path);
 }
 
 function NavNode({ node, depth, pathname, can, onNavigate, badges }) {
-  if (node.hidden || (node.permission && !can(node.permission))) return null;
-
   const visibleChildren = (node.children ?? []).filter(
     (child) => !child.hidden && (!child.permission || can(child.permission)),
   );
-  const active = isNodeActive(node, pathname) || visibleChildren.some((c) => isNodeActive(c, pathname));
-  const [open, setOpen] = useState(active);
+  const isActive =
+    isNodeActive(node, pathname) ||
+    visibleChildren.some((child) => isNodeActive(child, pathname));
+  const [open, setOpen] = useState(isActive);
+
+  if (node.hidden || (node.permission && !can(node.permission))) return null;
   const Icon = node.icon;
   const badgeCount = badges?.[node.id];
 
@@ -37,7 +41,7 @@ function NavNode({ node, depth, pathname, can, onNavigate, badges }) {
       <ListItemButton
         component={NavLink}
         to={node.path}
-        selected={active}
+        selected={isActive}
         onClick={onNavigate}
         sx={{ mx: 1, ml: 1 + depth, borderRadius: 2, mb: 0.5 }}
       >
@@ -46,7 +50,12 @@ function NavNode({ node, depth, pathname, can, onNavigate, badges }) {
             <Icon fontSize="small" />
           </ListItemIcon>
         )}
-        <ListItemText primaryTypographyProps={{ fontSize: 14, fontWeight: active ? 600 : 500 }}>
+        <ListItemText
+          primaryTypographyProps={{
+            fontSize: 14,
+            fontWeight: isActive ? 600 : 500,
+          }}
+        >
           {node.label}
         </ListItemText>
         {typeof badgeCount === "number" && badgeCount > 0 && (
@@ -63,14 +72,25 @@ function NavNode({ node, depth, pathname, can, onNavigate, badges }) {
 
   return (
     <>
-      <ListItemButton onClick={() => setOpen((p) => !p)} sx={{ mx: 1, borderRadius: 2, mb: 0.5 }}>
+      <ListItemButton
+        onClick={() => setOpen((p) => !p)}
+        sx={{ mx: 1, borderRadius: 2, mb: 0.5 }}
+      >
         {Icon && (
           <ListItemIcon sx={{ minWidth: 36 }}>
             <Icon fontSize="small" />
           </ListItemIcon>
         )}
-        <ListItemText primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }}>{node.label}</ListItemText>
-        {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        <ListItemText
+          primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }}
+        >
+          {node.label}
+        </ListItemText>
+        {open ? (
+          <ExpandLessIcon fontSize="small" />
+        ) : (
+          <ExpandMoreIcon fontSize="small" />
+        )}
       </ListItemButton>
       <Collapse in={open} timeout="auto" unmountOnExit>
         {visibleChildren.map((child) => (

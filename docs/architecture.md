@@ -5,7 +5,7 @@
 MERN stack, split into two independently deployed apps:
 
 ```
-frontend/   React 19 + Vite + React Router v6 + TanStack Query  → Vercel
+frontend/   React 19 + Vite + React Router v7 + TanStack Query  → Vercel
 backend/    Node/Express 5 + Mongoose + Cloudinary + JWT         → Render
 ```
 

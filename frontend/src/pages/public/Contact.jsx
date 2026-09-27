@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Phone as PhoneIcon, Email as EmailIcon, LocationOn as LocationOnIcon } from "@mui/icons-material";
 
 import { useProfile } from "../../hooks/useProfile";
@@ -299,10 +299,10 @@ export default function Contact() {
             )}
 
             {!profileLoading &&
-              contactInfo.map(({ icon: Icon, label, value, href }) => (
+              contactInfo.map(({ icon, label, value, href }) => (
                 <div key={label} className="flex items-center gap-6">
                   <div className="flex items-center justify-center w-14 h-14 rounded-lg flex-shrink-0" style={{ backgroundColor: "var(--bg-secondary)" }}>
-                    <Icon sx={{ color: "var(--accent)", fontSize: 24 }} />
+                    {createElement(icon, { sx: { color: "var(--accent)", fontSize: 24 } })}
                   </div>
                   <div>
                     <p className="font-mono text-sm mb-1" style={{ color: "var(--text-muted)" }}>
