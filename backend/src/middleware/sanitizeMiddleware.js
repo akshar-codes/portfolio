@@ -1,7 +1,15 @@
 import logger from "../utils/logger.js";
 
 const DANGEROUS_KEY = /^\$|\./;
+const PROTOTYPE_KEY = /^(?:__proto__|constructor|prototype)$/;
 const REPLACE_WITH = "_";
+
+function sanitizeKey(key) {
+  if (DANGEROUS_KEY.test(key)) {
+    return key.replace(/^\$+/, REPLACE_WITH).replace(/\./g, REPLACE_WITH);
+  }
+  return PROTOTYPE_KEY.test(key) ? `${REPLACE_WITH}${key}` : key;
+}
 
 function sanitize(value) {
   if (Array.isArray(value)) {
@@ -11,9 +19,7 @@ function sanitize(value) {
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, val]) => {
-        const safeKey = DANGEROUS_KEY.test(key)
-          ? key.replace(/^\$+/, REPLACE_WITH).replace(/\./g, REPLACE_WITH)
-          : key;
+        const safeKey = sanitizeKey(key);
 
         if (safeKey !== key) {
           logger.warn("[mongoSanitize] Replaced dangerous key", {
@@ -37,9 +43,7 @@ function sanitize(value) {
  */
 function sanitizeInPlace(obj) {
   for (const key of Object.keys(obj)) {
-    const safeKey = DANGEROUS_KEY.test(key)
-      ? key.replace(/^\$+/, REPLACE_WITH).replace(/\./g, REPLACE_WITH)
-      : key;
+    const safeKey = sanitizeKey(key);
 
     const safeVal = sanitize(obj[key]);
 
