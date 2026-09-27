@@ -11,8 +11,7 @@ import { downloadMediaBatch } from "../../utils/downloadFiles";
 import { getWebpUrl } from "../../utils/cloudinaryTransform";
 
 export default function MediaPreviewDialog({ open, media, mediaItems = [], onNavigate, onClose }) {
-  const [webp, setWebp] = useState(false);
-  useEffect(() => setWebp(false), [media?._id]);
+  const [webpMediaId, setWebpMediaId] = useState(null);
   const handleKeys = useCallback((event) => {
     if (!open || !media || !onNavigate || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
@@ -27,6 +26,7 @@ export default function MediaPreviewDialog({ open, media, mediaItems = [], onNav
   }, [handleKeys]);
   if (!media) return null;
 
+  const webp = Boolean(media && webpMediaId === media._id);
   const displayUrl = webp ? getWebpUrl(media.url) : media.url;
 
   const handleDownload = async () => {
@@ -55,7 +55,7 @@ export default function MediaPreviewDialog({ open, media, mediaItems = [], onNav
       }}
     >
       <Box sx={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 1, zIndex: 10 }}>
-        <Button size="small" variant="contained" onClick={() => setWebp((value) => !value)}>{webp ? "Original" : "WebP"}</Button>
+        <Button size="small" variant="contained" onClick={() => setWebpMediaId(webp ? null : media._id)}>{webp ? "Original" : "WebP"}</Button>
         <IconButton
           component="a"
           href={media.url}
