@@ -2,6 +2,15 @@
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "headers": [
     {
+      "source": "/generated/portfolio.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=300, stale-while-revalidate=60"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {
