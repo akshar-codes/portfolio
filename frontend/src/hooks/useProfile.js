@@ -13,7 +13,15 @@ export function useProfile({ preview = false } = {}) {
   return useQuery({
     queryKey: [...PROFILE_QUERY_KEY, { preview }],
     queryFn: async () => {
-      if (!preview) return portfolioSnapshotApi.load().then((snapshot) => snapshot.profile);
+      if (!preview) {
+        try {
+          return await profileApi.getPublic();
+        } catch {
+          return portfolioSnapshotApi
+            .load()
+            .then((snapshot) => snapshot.profile);
+        }
+      }
       const { data } = await api.get(API_ENDPOINTS.adminProfile);
       return data;
     },
@@ -21,7 +29,8 @@ export function useProfile({ preview = false } = {}) {
     // A missing or unpublished profile is a stable 404; retrying it only
     // adds duplicate requests and noisy server logs. Keep retries for
     // transient network/server failures.
-    retry: (failureCount, error) => error.statusCode !== 404 && failureCount < 2,
+    retry: (failureCount, error) =>
+      error.statusCode !== 404 && failureCount < 2,
   });
 }
 
@@ -45,13 +54,24 @@ function useProfileMutation(mutationFn) {
     mutationFn,
     onSuccess: (updated) => {
       queryClient.setQueryData(ADMIN_PROFILE_QUERY_KEY, updated);
-      queryClient.setQueryData(PROFILE_QUERY_KEY, updated);
+      queryClient.setQueriesData({ queryKey: PROFILE_QUERY_KEY }, updated);
     },
   });
 }
 
 export function useUpdateProfile() {
   return useProfileMutation((payload) => profileApi.update(payload));
+}
+
+export function useRefreshProfileStatistic() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => profileApi.refreshStatistic(id),
+    onSuccess: ({ profile }) => {
+      queryClient.setQueryData(ADMIN_PROFILE_QUERY_KEY, profile);
+      queryClient.setQueriesData({ queryKey: PROFILE_QUERY_KEY }, profile);
+    },
+  });
 }
 
 export function usePublishProfile() {

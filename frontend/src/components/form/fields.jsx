@@ -23,7 +23,15 @@ function getError(errors, name) {
   return name.split(".").reduce((acc, key) => acc?.[key], errors);
 }
 
-export function TextField({ name, label, required, multiline, rows, maxLength, ...props }) {
+export function TextField({
+  name,
+  label,
+  required,
+  multiline,
+  rows,
+  maxLength,
+  ...props
+}) {
   const {
     register,
     formState: { errors },
@@ -47,7 +55,14 @@ export function TextField({ name, label, required, multiline, rows, maxLength, .
   );
 }
 
-export function SelectField({ name, label, options, required, ...props }) {
+export function SelectField({
+  name,
+  label,
+  options,
+  required,
+  defaultValue,
+  ...props
+}) {
   const {
     control,
     formState: { errors },
@@ -58,6 +73,7 @@ export function SelectField({ name, label, options, required, ...props }) {
     <Controller
       name={name}
       control={control}
+      defaultValue={defaultValue}
       render={({ field }) => (
         <FormControl fullWidth size="small" required={required} error={!!error}>
           <InputLabel>{label}</InputLabel>
@@ -83,7 +99,12 @@ export function SwitchField({ name, label }) {
       control={control}
       render={({ field }) => (
         <FormControlLabel
-          control={<Switch checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />}
+          control={
+            <Switch
+              checked={!!field.value}
+              onChange={(e) => field.onChange(e.target.checked)}
+            />
+          }
           label={label}
         />
       )}
@@ -99,7 +120,12 @@ export function CheckboxField({ name, label }) {
       control={control}
       render={({ field }) => (
         <FormControlLabel
-          control={<Checkbox checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />}
+          control={
+            <Checkbox
+              checked={!!field.value}
+              onChange={(e) => field.onChange(e.target.checked)}
+            />
+          }
           label={label}
         />
       )}
@@ -107,7 +133,14 @@ export function CheckboxField({ name, label }) {
   );
 }
 
-export function ImageField({ name, label, required, hint, shape, aspectRatio }) {
+export function ImageField({
+  name,
+  label,
+  required,
+  hint,
+  shape,
+  aspectRatio,
+}) {
   const {
     control,
     formState: { errors },
@@ -142,7 +175,12 @@ export function RichTextField({ name, label, maxLength }) {
       name={name}
       control={control}
       render={({ field }) => (
-        <RichTextEditor label={label} value={field.value ?? ""} onChange={field.onChange} maxLength={maxLength} />
+        <RichTextEditor
+          label={label}
+          value={field.value ?? ""}
+          onChange={field.onChange}
+          maxLength={maxLength}
+        />
       )}
     />
   );

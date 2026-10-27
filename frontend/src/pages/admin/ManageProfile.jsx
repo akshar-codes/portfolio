@@ -19,13 +19,18 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import SyncIcon from "@mui/icons-material/Sync";
 
 import PageHeader from "../../components/common/PageHeader";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import DragReorderList from "../../components/cms/DragReorderList";
 import LibraryImageField from "../../components/LibraryImageField";
 import PreviewDrawer from "../../components/cms/PreviewDrawer";
-import { TextField as RHFTextField, RichTextField } from "../../components/form/fields";
+import {
+  TextField as RHFTextField,
+  SelectField,
+  RichTextField,
+} from "../../components/form/fields";
 import { resolveIcon } from "../../utils/iconMap";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import {
@@ -33,6 +38,7 @@ import {
   useUpdateProfile,
   usePublishProfile,
   useUnpublishProfile,
+  useRefreshProfileStatistic,
 } from "../../hooks/useProfile";
 import {
   profileBasicInfoSchema,
@@ -104,10 +110,20 @@ function BasicInfoSection({ profile, onSave, saving }) {
           <Stack spacing={2.5}>
             <Box className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <RHFTextField name="name" label="Name" required maxLength={100} />
-              <RHFTextField name="title" label="Title / role" required maxLength={100} />
+              <RHFTextField
+                name="title"
+                label="Title / role"
+                required
+                maxLength={100}
+              />
             </Box>
             <Box className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <RHFTextField name="email" label="Email" required maxLength={254} />
+              <RHFTextField
+                name="email"
+                label="Email"
+                required
+                maxLength={254}
+              />
               <RHFTextField name="phone" label="Phone" maxLength={30} />
             </Box>
             <RHFTextField name="location" label="Location" maxLength={120} />
@@ -127,7 +143,11 @@ function BasicInfoSection({ profile, onSave, saving }) {
               )}
             />
 
-            <RichTextField name="introduction" label="Short introduction" maxLength={2000} />
+            <RichTextField
+              name="introduction"
+              label="Short introduction"
+              maxLength={2000}
+            />
 
             <Box>
               <Button type="submit" variant="contained" disabled={saving}>
@@ -169,7 +189,12 @@ function SocialLinkDialog({ open, initialValues, onClose, onSave }) {
           <DialogTitle fontWeight={700}>Social link</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
-              <RHFTextField name="label" label="Label" required maxLength={50} />
+              <RHFTextField
+                name="label"
+                label="Label"
+                required
+                maxLength={50}
+              />
               <RHFTextField
                 name="url"
                 label="URL"
@@ -228,7 +253,12 @@ function CtaButtonDialog({ open, initialValues, onClose, onSave }) {
           <DialogTitle fontWeight={700}>CTA button</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
-              <RHFTextField name="label" label="Label" required maxLength={40} />
+              <RHFTextField
+                name="label"
+                label="Label"
+                required
+                maxLength={40}
+              />
               <RHFTextField
                 name="url"
                 label="URL"
@@ -246,8 +276,12 @@ function CtaButtonDialog({ open, initialValues, onClose, onSave }) {
                       <Chip
                         label={opt.label}
                         onClick={() => field.onChange(opt.value)}
-                        color={field.value === opt.value ? "primary" : "default"}
-                        variant={field.value === opt.value ? "filled" : "outlined"}
+                        color={
+                          field.value === opt.value ? "primary" : "default"
+                        }
+                        variant={
+                          field.value === opt.value ? "filled" : "outlined"
+                        }
                       />
                     )}
                   />
@@ -257,7 +291,10 @@ function CtaButtonDialog({ open, initialValues, onClose, onSave }) {
                 name="openInNewTab"
                 control={form.control}
                 render={({ field }) => (
-                  <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+                  <label
+                    className="flex items-center gap-2"
+                    style={{ cursor: "pointer" }}
+                  >
                     <input
                       type="checkbox"
                       checked={field.value}
@@ -293,7 +330,51 @@ function StatisticDialog({ open, initialValues, onClose, onSave }) {
   });
 
   useEffect(() => {
-    if (open) form.reset(initialValues ?? statisticFormDefaults);
+    if (open) {
+      const initial = initialValues ?? statisticFormDefaults;
+      const sources = initial.sources?.length
+        ? initial.sources
+        : initial.source &&
+            initial.source !== "manual" &&
+            initial.source !== "aggregate"
+          ? [
+              {
+                platform: initial.source,
+                username: initial.sourceUsername ?? "",
+                mode: "auto",
+                value: 0,
+              },
+            ]
+          : [];
+      const sourceResults = initial.sourceResults ?? [];
+      form.reset({
+        ...statisticFormDefaults,
+        ...initial,
+        sources,
+        sourceResults,
+        sourcePlatforms: sources.map((source) => source.platform),
+        sourceUsernames: Object.fromEntries(
+          sources.map((source) => [source.platform, source.username]),
+        ),
+        sourceModes: Object.fromEntries(
+          sources.map((source) => [source.platform, source.mode ?? "auto"]),
+        ),
+        sourceValues: Object.fromEntries(
+          sources.map((source) => [
+            source.platform,
+            source.mode === "manual"
+              ? (source.value ?? 0)
+              : (sourceResults.find(
+                  (result) =>
+                    result.platform === source.platform &&
+                    result.username === source.username,
+                )?.value ??
+                source.value ??
+                0),
+          ]),
+        ),
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 
@@ -303,7 +384,47 @@ function StatisticDialog({ open, initialValues, onClose, onSave }) {
         <Box
           component="form"
           onSubmit={form.handleSubmit((v) => {
-            onSave(v);
+            const {
+              sourcePlatforms,
+              sourceUsernames,
+              sourceModes,
+              sourceValues,
+              sourceResults: oldSourceResults,
+              ...fields
+            } = v;
+            const sources = sourcePlatforms.map((platform) => ({
+              platform,
+              mode:
+                sourceModes[platform] ??
+                (platform === "codechef" ? "manual" : "auto"),
+              username: sourceUsernames[platform]?.trim() ?? "",
+              value: Number(sourceValues[platform] ?? 0),
+            }));
+            const sourceResults = sources.map((source) => {
+              const previous = oldSourceResults?.find(
+                (result) =>
+                  result.platform === source.platform &&
+                  result.username === source.username,
+              );
+              return {
+                platform: source.platform,
+                username: source.username,
+                value:
+                  source.mode === "manual"
+                    ? source.value
+                    : (previous?.value ?? 0),
+              };
+            });
+            onSave({
+              ...fields,
+              source: sources.length ? "aggregate" : "manual",
+              sourceUsername: "",
+              sources,
+              sourceResults,
+              value: sources.length
+                ? sourceResults.reduce((sum, result) => sum + result.value, 0)
+                : fields.value,
+            });
             onClose();
           })}
           noValidate
@@ -312,9 +433,86 @@ function StatisticDialog({ open, initialValues, onClose, onSave }) {
           <DialogContent dividers>
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
               <Box className="grid grid-cols-2 gap-3">
-                <RHFTextField name="value" label="Value" type="number" required />
-                <RHFTextField name="suffix" label="Suffix" maxLength={10} placeholder="+" />
+                <RHFTextField
+                  name="value"
+                  label="Value"
+                  type="number"
+                  required
+                  disabled={form.watch("sourcePlatforms").length > 0}
+                />
+                <RHFTextField
+                  name="suffix"
+                  label="Suffix"
+                  maxLength={10}
+                  placeholder="+"
+                />
               </Box>
+              <SelectField
+                name="sourcePlatforms"
+                label="Platforms to include in the aggregate"
+                multiple
+                renderValue={(selected) =>
+                  selected
+                    .map((platform) =>
+                      platform === "leetcode"
+                        ? "LeetCode"
+                        : platform === "codeforces"
+                          ? "Codeforces"
+                          : platform,
+                    )
+                    .join(" + ")
+                }
+                options={[
+                  { value: "leetcode", label: "LeetCode" },
+                  { value: "codeforces", label: "Codeforces" },
+                  { value: "codechef", label: "CodeChef" },
+                ]}
+              />
+              {form.watch("sourcePlatforms").map((platform) => (
+                <Stack key={platform} spacing={1.5}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    {platform === "leetcode"
+                      ? "LeetCode"
+                      : platform === "codeforces"
+                        ? "Codeforces"
+                        : "CodeChef"}
+                  </Typography>
+                  <SelectField
+                    name={`sourceModes.${platform}`}
+                    label="Value method"
+                    defaultValue={platform === "codechef" ? "manual" : "auto"}
+                    options={[
+                      { value: "manual", label: "Enter manually" },
+                      ...(platform === "codechef"
+                        ? []
+                        : [{ value: "auto", label: "Fetch automatically" }]),
+                    ]}
+                  />
+                  {/* eslint-disable-next-line react-hooks/incompatible-library */}
+                  {form.watch(`sourceModes.${platform}`) === "manual" ||
+                  platform === "codechef" ? (
+                    <RHFTextField
+                      name={`sourceValues.${platform}`}
+                      label="Solved count"
+                      type="number"
+                      required
+                    />
+                  ) : (
+                    <RHFTextField
+                      name={`sourceUsernames.${platform}`}
+                      label={`${platform === "leetcode" ? "LeetCode" : "Codeforces"} username`}
+                      maxLength={100}
+                      required
+                    />
+                  )}
+                </Stack>
+              ))}
+              <Typography variant="caption" color="text.secondary">
+                The displayed total adds manual values and fetched totals. A
+                problem solved on multiple sites counts once for each site.
+                CodeChef is manual-only because it has no stable public stats
+                API.
+              </Typography>
               <RHFTextField
                 name="label"
                 label="Label"
@@ -322,7 +520,11 @@ function StatisticDialog({ open, initialValues, onClose, onSave }) {
                 maxLength={60}
                 placeholder="Years of experience"
               />
-              <RHFTextField name="icon" label="Icon key (optional)" maxLength={60} />
+              <RHFTextField
+                name="icon"
+                label="Icon key (optional)"
+                maxLength={60}
+              />
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -344,7 +546,10 @@ function StatisticDialog({ open, initialValues, onClose, onSave }) {
  * ================================================================== */
 function HeroPreview({ profile, socialLinks, ctaButtons, statistics }) {
   return (
-    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}
+    >
       <Typography variant="subtitle1" fontWeight={700} className="mb-3">
         Hero preview
       </Typography>
@@ -361,7 +566,11 @@ function HeroPreview({ profile, socialLinks, ctaButtons, statistics }) {
           }}
         >
           {profile.avatar && (
-            <img src={profile.avatar} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img
+              src={profile.avatar}
+              alt={profile.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           )}
         </Box>
         <Box>
@@ -398,7 +607,10 @@ function HeroPreview({ profile, socialLinks, ctaButtons, statistics }) {
       )}
 
       {statistics.length > 0 && (
-        <Box className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 pt-3" sx={{ borderTop: "1px solid", borderColor: "divider" }}>
+        <Box
+          className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 pt-3"
+          sx={{ borderTop: "1px solid", borderColor: "divider" }}
+        >
           {statistics.map((s) => (
             <Box key={s._tempId}>
               <Typography variant="h6" fontWeight={800}>
@@ -446,9 +658,12 @@ function HeroPreview({ profile, socialLinks, ctaButtons, statistics }) {
  * ================================================================== */
 export default function ManageProfile() {
   const { data, isLoading, isError, error, refetch } = useAdminProfileQuery();
-  const { mutateAsync: updateProfile, isPending: savingBasic } = useUpdateProfile();
+  const { mutateAsync: updateProfile, isPending: savingBasic } =
+    useUpdateProfile();
   const { mutateAsync: publish, isPending: publishing } = usePublishProfile();
-  const { mutateAsync: unpublish, isPending: unpublishing } = useUnpublishProfile();
+  const { mutateAsync: unpublish, isPending: unpublishing } =
+    useUnpublishProfile();
+  const { mutateAsync: refreshStatistic } = useRefreshProfileStatistic();
   const confirm = useConfirmDialog();
 
   const [localLinks, setLocalLinks] = useState(null);
@@ -465,6 +680,7 @@ export default function ManageProfile() {
   const [savingLinks, setSavingLinks] = useState(false);
   const [savingCtas, setSavingCtas] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
+  const [refreshingStatId, setRefreshingStatId] = useState(null);
 
   useEffect(() => {
     if (!data) return;
@@ -499,16 +715,42 @@ export default function ManageProfile() {
   const ctasDirty = useMemo(() => {
     if (!localCtas || !serverCtas) return false;
     return (
-      JSON.stringify(stripForCompare(localCtas, ["label", "url", "style", "openInNewTab"])) !==
-      JSON.stringify(stripForCompare(serverCtas, ["label", "url", "style", "openInNewTab"]))
+      JSON.stringify(
+        stripForCompare(localCtas, ["label", "url", "style", "openInNewTab"]),
+      ) !==
+      JSON.stringify(
+        stripForCompare(serverCtas, ["label", "url", "style", "openInNewTab"]),
+      )
     );
   }, [localCtas, serverCtas]);
 
   const statsDirty = useMemo(() => {
     if (!localStats || !serverStats) return false;
     return (
-      JSON.stringify(stripForCompare(localStats, ["value", "suffix", "label", "icon"])) !==
-      JSON.stringify(stripForCompare(serverStats, ["value", "suffix", "label", "icon"]))
+      JSON.stringify(
+        stripForCompare(localStats, [
+          "value",
+          "suffix",
+          "label",
+          "icon",
+          "source",
+          "sourceUsername",
+          "sources",
+          "sourceResults",
+        ]),
+      ) !==
+      JSON.stringify(
+        stripForCompare(serverStats, [
+          "value",
+          "suffix",
+          "label",
+          "icon",
+          "source",
+          "sourceUsername",
+          "sources",
+          "sourceResults",
+        ]),
+      )
     );
   }, [localStats, serverStats]);
 
@@ -540,7 +782,9 @@ export default function ManageProfile() {
       if (linkDialog.mode === "add") {
         return [...prev, { _tempId: crypto.randomUUID(), ...values }];
       }
-      return prev.map((l) => (l._tempId === linkDialog.tempId ? { ...l, ...values } : l));
+      return prev.map((l) =>
+        l._tempId === linkDialog.tempId ? { ...l, ...values } : l,
+      );
     });
   };
 
@@ -557,7 +801,9 @@ export default function ManageProfile() {
   const handleSaveLinksOrder = async () => {
     setSavingLinks(true);
     try {
-      const updated = await updateProfile({ socialLinks: stripForSubmit(localLinks, ["label", "url", "icon"]) });
+      const updated = await updateProfile({
+        socialLinks: stripForSubmit(localLinks, ["label", "url", "icon"]),
+      });
       const seeded = withTempIds(updated.socialLinks);
       setLocalLinks(seeded);
       setServerLinks(seeded);
@@ -575,7 +821,9 @@ export default function ManageProfile() {
       if (ctaDialog.mode === "add") {
         return [...prev, { _tempId: crypto.randomUUID(), ...values }];
       }
-      return prev.map((c) => (c._tempId === ctaDialog.tempId ? { ...c, ...values } : c));
+      return prev.map((c) =>
+        c._tempId === ctaDialog.tempId ? { ...c, ...values } : c,
+      );
     });
   };
 
@@ -593,7 +841,12 @@ export default function ManageProfile() {
     setSavingCtas(true);
     try {
       const updated = await updateProfile({
-        ctaButtons: stripForSubmit(localCtas, ["label", "url", "style", "openInNewTab"]),
+        ctaButtons: stripForSubmit(localCtas, [
+          "label",
+          "url",
+          "style",
+          "openInNewTab",
+        ]),
       });
       const seeded = withTempIds(updated.ctaButtons);
       setLocalCtas(seeded);
@@ -612,7 +865,9 @@ export default function ManageProfile() {
       if (statDialog.mode === "add") {
         return [...prev, { _tempId: crypto.randomUUID(), ...values }];
       }
-      return prev.map((s) => (s._tempId === statDialog.tempId ? { ...s, ...values } : s));
+      return prev.map((s) =>
+        s._tempId === statDialog.tempId ? { ...s, ...values } : s,
+      );
     });
   };
 
@@ -626,11 +881,37 @@ export default function ManageProfile() {
     setLocalStats((prev) => prev.filter((s) => s._tempId !== stat._tempId));
   };
 
+  const handleRefreshStatistic = async (stat) => {
+    setRefreshingStatId(stat._id);
+    try {
+      const { profile } = await refreshStatistic(stat._id);
+      const seeded = withTempIds(profile.statistics);
+      setLocalStats(seeded);
+      setServerStats(seeded);
+      toast.success(
+        `${stat.label} updated to ${profile.statistics.find((entry) => entry._id === stat._id)?.value}.`,
+      );
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setRefreshingStatId(null);
+    }
+  };
+
   const handleSaveStatsOrder = async () => {
     setSavingStats(true);
     try {
       const updated = await updateProfile({
-        statistics: stripForSubmit(localStats, ["value", "suffix", "label", "icon"]),
+        statistics: stripForSubmit(localStats, [
+          "value",
+          "suffix",
+          "label",
+          "icon",
+          "source",
+          "sourceUsername",
+          "sources",
+          "sourceResults",
+        ]),
       });
       const seeded = withTempIds(updated.statistics);
       setLocalStats(seeded);
@@ -658,10 +939,18 @@ export default function ManageProfile() {
     }
   };
 
-  if (isLoading || localLinks === null || localCtas === null || localStats === null) {
+  if (
+    isLoading ||
+    localLinks === null ||
+    localCtas === null ||
+    localStats === null
+  ) {
     return (
       <>
-        <PageHeader title="Profile" subtitle="Hero identity, CTA buttons, statistics, and social links." />
+        <PageHeader
+          title="Profile"
+          subtitle="Hero identity, CTA buttons, statistics, and social links."
+        />
         <LoadingSkeleton rows={6} />
       </>
     );
@@ -705,20 +994,34 @@ export default function ManageProfile() {
             >
               Preview
             </Button>
-            <Button variant="outlined" size="small" onClick={handleTogglePublish} disabled={publishing || unpublishing}>
-              {publishing || unpublishing ? "…" : isDraft ? "Publish" : "Unpublish"}
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleTogglePublish}
+              disabled={publishing || unpublishing}
+            >
+              {publishing || unpublishing
+                ? "…"
+                : isDraft
+                  ? "Publish"
+                  : "Unpublish"}
             </Button>
           </Stack>
         }
       />
 
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        The downloadable CV link is managed under <strong>Site Settings → Resume</strong>, not here — this
-        avoids maintaining two copies of the same download URL.
+        The downloadable CV link is managed under{" "}
+        <strong>Site Settings → Resume</strong>, not here — this avoids
+        maintaining two copies of the same download URL.
       </Alert>
 
       <Stack spacing={3}>
-        <BasicInfoSection profile={data} onSave={handleSaveBasic} saving={savingBasic} />
+        <BasicInfoSection
+          profile={data}
+          onSave={handleSaveBasic}
+          saving={savingBasic}
+        />
 
         {/* ── Social links ─────────────────────────────────────── */}
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
@@ -728,7 +1031,12 @@ export default function ManageProfile() {
             </Typography>
             <Stack direction="row" spacing={1}>
               {linksDirty && (
-                <Button size="small" variant="contained" onClick={handleSaveLinksOrder} disabled={savingLinks}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleSaveLinksOrder}
+                  disabled={savingLinks}
+                >
                   {savingLinks ? "Saving…" : "Save changes"}
                 </Button>
               )}
@@ -744,7 +1052,11 @@ export default function ManageProfile() {
           </Box>
 
           {localLinks.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" className="py-6 text-center">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              className="py-6 text-center"
+            >
               No social links yet.
             </Typography>
           ) : (
@@ -755,26 +1067,44 @@ export default function ManageProfile() {
               renderItem={({ item }) => {
                 const Icon = resolveIcon(item.icon);
                 return (
-                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+                  <Paper
+                    variant="outlined"
+                    sx={{ p: 1.5, borderRadius: 2, width: "100%" }}
+                  >
                     <Box className="flex items-center justify-between gap-2">
                       <Box className="flex items-center gap-2 min-w-0">
                         <Icon size={18} />
                         <Typography fontWeight={600} noWrap>
                           {item.label}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                        >
                           {item.url}
                         </Typography>
                       </Box>
                       <Stack direction="row" spacing={0.5}>
                         <IconButton
                           size="small"
-                          onClick={() => setLinkDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                          onClick={() =>
+                            setLinkDialog({
+                              mode: "edit",
+                              tempId: item._tempId,
+                              initialValues: item,
+                            })
+                          }
                           aria-label={`Edit ${item.label}`}
                         >
                           <EditOutlinedIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteLink(item)} aria-label={`Delete ${item.label}`}>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteLink(item)}
+                          aria-label={`Delete ${item.label}`}
+                        >
                           <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                       </Stack>
@@ -794,7 +1124,12 @@ export default function ManageProfile() {
             </Typography>
             <Stack direction="row" spacing={1}>
               {ctasDirty && (
-                <Button size="small" variant="contained" onClick={handleSaveCtasOrder} disabled={savingCtas}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleSaveCtasOrder}
+                  disabled={savingCtas}
+                >
                   {savingCtas ? "Saving…" : "Save changes"}
                 </Button>
               )}
@@ -810,7 +1145,11 @@ export default function ManageProfile() {
           </Box>
 
           {localCtas.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" className="py-6 text-center">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              className="py-6 text-center"
+            >
               No CTA buttons yet — up to {MAX_CTA_BUTTONS}.
             </Typography>
           ) : (
@@ -819,27 +1158,49 @@ export default function ManageProfile() {
               getId={(item) => item._tempId}
               onReorder={setLocalCtas}
               renderItem={({ item }) => (
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, width: "100%" }}
+                >
                   <Box className="flex items-center justify-between gap-2">
                     <Box className="flex items-center gap-2 min-w-0">
                       <Chip size="small" label={item.style} />
                       <Typography fontWeight={600} noWrap>
                         {item.label}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
                         {item.url}
                       </Typography>
-                      {item.openInNewTab && <OpenInNewIcon sx={{ fontSize: 14, color: "text.disabled" }} />}
+                      {item.openInNewTab && (
+                        <OpenInNewIcon
+                          sx={{ fontSize: 14, color: "text.disabled" }}
+                        />
+                      )}
                     </Box>
                     <Stack direction="row" spacing={0.5}>
                       <IconButton
                         size="small"
-                        onClick={() => setCtaDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                        onClick={() =>
+                          setCtaDialog({
+                            mode: "edit",
+                            tempId: item._tempId,
+                            initialValues: item,
+                          })
+                        }
                         aria-label={`Edit ${item.label}`}
                       >
                         <EditOutlinedIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteCta(item)} aria-label={`Delete ${item.label}`}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteCta(item)}
+                        aria-label={`Delete ${item.label}`}
+                      >
                         <DeleteOutlineIcon fontSize="small" />
                       </IconButton>
                     </Stack>
@@ -858,7 +1219,12 @@ export default function ManageProfile() {
             </Typography>
             <Stack direction="row" spacing={1}>
               {statsDirty && (
-                <Button size="small" variant="contained" onClick={handleSaveStatsOrder} disabled={savingStats}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleSaveStatsOrder}
+                  disabled={savingStats}
+                >
                   {savingStats ? "Saving…" : "Save changes"}
                 </Button>
               )}
@@ -874,7 +1240,11 @@ export default function ManageProfile() {
           </Box>
 
           {localStats.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" className="py-6 text-center">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              className="py-6 text-center"
+            >
               No statistics yet.
             </Typography>
           ) : (
@@ -883,7 +1253,10 @@ export default function ManageProfile() {
               getId={(item) => item._tempId}
               onReorder={setLocalStats}
               renderItem={({ item }) => (
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, width: "100%" }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, width: "100%" }}
+                >
                   <Box className="flex items-center justify-between gap-2">
                     <Box className="flex items-center gap-2 min-w-0">
                       <Typography fontWeight={700}>
@@ -893,16 +1266,80 @@ export default function ManageProfile() {
                       <Typography color="text.secondary" noWrap>
                         {item.label}
                       </Typography>
+                      {item.sources?.length > 0 && (
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={item.sources
+                            .map((source) => source.platform)
+                            .join(" + ")}
+                        />
+                      )}
+                      {item.sourceResults?.length > 0 && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                        >
+                          {item.sourceResults
+                            .map(
+                              (result) => `${result.platform}: ${result.value}`,
+                            )
+                            .join(" · ")}
+                        </Typography>
+                      )}
                     </Box>
                     <Stack direction="row" spacing={0.5}>
+                      {(item.sources?.some(
+                        (source) => source.mode === "auto",
+                      ) ||
+                        (item.source &&
+                          item.source !== "manual" &&
+                          item.source !== "aggregate")) && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRefreshStatistic(item)}
+                          aria-label={`Refresh ${item.label} from ${item.source}`}
+                          title={
+                            statsDirty
+                              ? "Save statistic changes before refreshing"
+                              : "Refresh and aggregate selected platforms"
+                          }
+                          disabled={
+                            !item._id ||
+                            statsDirty ||
+                            refreshingStatId === item._id
+                          }
+                        >
+                          <SyncIcon
+                            fontSize="small"
+                            className={
+                              refreshingStatId === item._id
+                                ? "animate-spin"
+                                : ""
+                            }
+                          />
+                        </IconButton>
+                      )}
                       <IconButton
                         size="small"
-                        onClick={() => setStatDialog({ mode: "edit", tempId: item._tempId, initialValues: item })}
+                        onClick={() =>
+                          setStatDialog({
+                            mode: "edit",
+                            tempId: item._tempId,
+                            initialValues: item,
+                          })
+                        }
                         aria-label={`Edit ${item.label}`}
                       >
                         <EditOutlinedIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteStat(item)} aria-label={`Delete ${item.label}`}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteStat(item)}
+                        aria-label={`Delete ${item.label}`}
+                      >
                         <DeleteOutlineIcon fontSize="small" />
                       </IconButton>
                     </Stack>
@@ -913,7 +1350,12 @@ export default function ManageProfile() {
           )}
         </Paper>
 
-        <HeroPreview profile={data} socialLinks={localLinks} ctaButtons={localCtas} statistics={localStats} />
+        <HeroPreview
+          profile={data}
+          socialLinks={localLinks}
+          ctaButtons={localCtas}
+          statistics={localStats}
+        />
       </Stack>
 
       <SocialLinkDialog

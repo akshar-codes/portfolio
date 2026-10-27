@@ -12,6 +12,8 @@ export const API_ENDPOINTS = {
   // Profile
   profile: "/profile",
   adminProfile: "/admin/profile",
+  adminProfileStatisticRefresh: (id) =>
+    `/admin/profile/statistics/${id}/refresh`,
   adminProfilePublish: "/admin/profile/publish",
   adminProfileUnpublish: "/admin/profile/unpublish",
   adminProfileArchive: "/admin/profile/archive",

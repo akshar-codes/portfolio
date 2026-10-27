@@ -114,9 +114,14 @@ li {
 
 img,
 a,
-button,
-span {
+button {
   display: block;
+}
+
+/* Ensure MUI form asterisks stay inline with their label */
+.MuiFormLabel-asterisk,
+.MuiInputLabel-asterisk {
+  display: inline !important;
 }
 
 button {
@@ -147,7 +152,6 @@ body {
 /*-----------------------------------*\
   #REUSED STYLE
 \*-----------------------------------*/
-
 
 article {
   background: var(--eerie-black-2);
@@ -405,7 +409,6 @@ textarea.form-input::-webkit-resizer {
    * #REUSED STYLE
    */
 
-  
   article {
     width: 520px;
     margin-inline: auto;
@@ -480,7 +483,6 @@ textarea.form-input::-webkit-resizer {
    * REUSED STYLE
    */
 
-  
   article {
     width: 700px;
   }
@@ -538,7 +540,6 @@ textarea.form-input::-webkit-resizer {
    * REUSED STYLE
    */
 
-  
   article {
     width: 950px;
     box-shadow: var(--shadow-5);
@@ -613,7 +614,6 @@ textarea.form-input::-webkit-resizer {
    * REUSED STYLE
    */
 
-  
   article {
     width: auto;
   }

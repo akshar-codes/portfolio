@@ -320,3 +320,9 @@ textarea::placeholder {
   white-space: nowrap;
   border: 0;
 }
+
+/* Ensure MUI required asterisks stay inline with the label */
+.MuiFormLabel-asterisk,
+.MuiInputLabel-asterisk {
+  display: inline !important;
+}

@@ -55,7 +55,10 @@ export const socialLinkFormSchema = z.object({
     .trim()
     .min(1, "URL is required")
     .max(2048, "URL must not exceed 2048 characters")
-    .refine((val) => /^https?:\/\/.+/.test(val), "Must be a valid HTTP/HTTPS URL"),
+    .refine(
+      (val) => /^https?:\/\/.+/.test(val),
+      "Must be a valid HTTP/HTTPS URL",
+    ),
   icon: z
     .string()
     .trim()
@@ -103,20 +106,89 @@ export const CTA_BUTTON_STYLE_OPTIONS = [
 ];
 
 /* ── Statistic dialog ─────────────────────────────────────────────── */
-export const statisticFormSchema = z.object({
-  value: z.coerce.number().min(0, "Value cannot be negative"),
-  suffix: z.string().trim().max(10, "Suffix must not exceed 10 characters"),
-  label: z
-    .string()
-    .trim()
-    .min(1, "Label is required")
-    .max(60, "Label must not exceed 60 characters"),
-  icon: z.string().trim().max(60, "Icon key must not exceed 60 characters"),
-});
+export const statisticFormSchema = z
+  .object({
+    value: z.coerce.number().min(0, "Value cannot be negative"),
+    suffix: z.string().trim().max(10, "Suffix must not exceed 10 characters"),
+    label: z
+      .string()
+      .trim()
+      .min(1, "Label is required")
+      .max(60, "Label must not exceed 60 characters"),
+    icon: z.string().trim().max(60, "Icon key must not exceed 60 characters"),
+    source: z.enum([
+      "manual",
+      "aggregate",
+      "github",
+      "leetcode",
+      "codeforces",
+      "codechef",
+    ]),
+    sourceUsername: z
+      .string()
+      .trim()
+      .max(100, "Username must not exceed 100 characters"),
+    sources: z
+      .array(
+        z.object({
+          platform: z.enum(["github", "leetcode", "codeforces", "codechef"]),
+          username: z.string().trim().max(100),
+          mode: z.enum(["manual", "auto"]),
+          value: z.coerce.number().min(0, "Value cannot be negative"),
+        }),
+      )
+      .max(4),
+    sourceResults: z.array(
+      z.object({
+        platform: z.string(),
+        username: z.string().optional(),
+        value: z.number().min(0),
+      }),
+    ),
+    sourcePlatforms: z
+      .array(z.enum(["leetcode", "codeforces", "codechef"]))
+      .max(3),
+    sourceModes: z.record(z.string(), z.enum(["manual", "auto"])),
+    sourceUsernames: z.record(z.string(), z.string()),
+    sourceValues: z.record(z.string(), z.coerce.number()),
+  })
+  .superRefine((values, context) => {
+    for (const platform of values.sourcePlatforms) {
+      if (
+        values.sourceModes[platform] === "auto" &&
+        !values.sourceUsernames[platform]?.trim()
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["sourceUsernames", platform],
+          message: "Username is required",
+        });
+      }
+      if (
+        values.sourceModes[platform] === "manual" &&
+        (!Number.isFinite(Number(values.sourceValues[platform])) ||
+          Number(values.sourceValues[platform]) < 0)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["sourceValues", platform],
+          message: "Enter a non-negative number",
+        });
+      }
+    }
+  });
 
 export const statisticFormDefaults = {
   value: 0,
   suffix: "",
   label: "",
   icon: "",
+  source: "manual",
+  sourceUsername: "",
+  sources: [],
+  sourceResults: [],
+  sourcePlatforms: [],
+  sourceModes: {},
+  sourceUsernames: {},
+  sourceValues: {},
 };

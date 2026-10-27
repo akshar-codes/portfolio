@@ -29,6 +29,20 @@ const muiTheme = createTheme({
     fontFamily: "Inter, system-ui, sans-serif",
   },
   components: {
+    MuiFormLabel: {
+      styleOverrides: {
+        asterisk: {
+          display: "inline !important",
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        asterisk: {
+          display: "inline !important",
+        },
+      },
+    },
     MuiTextField: {
       styleOverrides: {
         root: {

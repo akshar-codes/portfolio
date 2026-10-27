@@ -8,10 +8,17 @@ import { API_ENDPOINTS } from "../constants/apiEndpoints";
  * React-Query-free data access instead.
  */
 export const profileApi = {
+  getPublic: () => api.get(API_ENDPOINTS.profile).then((res) => res.data),
+
   get: () => api.get(API_ENDPOINTS.adminProfile).then((res) => res.data),
 
   update: (payload) =>
     api.patch(API_ENDPOINTS.adminProfile, payload).then((res) => res.data),
+
+  refreshStatistic: (id) =>
+    api
+      .post(API_ENDPOINTS.adminProfileStatisticRefresh(id))
+      .then((res) => res.data),
 
   publish: () =>
     api.patch(API_ENDPOINTS.adminProfilePublish).then((res) => res.data),
