@@ -6,6 +6,7 @@ import {
   updateStatus,
 } from "../repositories/messageRepository.js";
 import { ServiceError } from "./ServiceError.js";
+import { notifyNewMessage } from "./newMessageNotificationService.js";
 import { buildSearchFilter, parseSort } from "../utils/queryHelpers.js";
 import {
   MESSAGE_CAP,
@@ -26,6 +27,7 @@ export const createMessage = async ({ fullname, email, message }) => {
   }
 
   const newMessage = await create({ fullname, email, message });
+  notifyNewMessage(newMessage);
   return newMessage;
 };
 
