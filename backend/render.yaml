@@ -42,6 +42,12 @@ services:
       - key: RESEND_FROM_EMAIL
         sync: false
 
+      - key: MESSAGE_NOTIFICATION_EMAIL
+        sync: false
+
+      - key: GITHUB_TOKEN
+        sync: false
+
       - key: PORTFOLIO_SNAPSHOT_TOKEN
         sync: false
 
