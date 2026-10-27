@@ -144,6 +144,7 @@ export default function ManageSeo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const values = watch();
 
   const onSubmit = async (formValues) => {

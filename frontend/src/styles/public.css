@@ -200,26 +200,28 @@ body {
   line-height: 1;
 }
 
-/* Profile image frame — animated rotating dashed ring */
+/* Profile photo and the animated accent outline in the home hero. */
 .profile-frame {
   position: relative;
 }
 
 .profile-ring {
-  animation: profileSpin 12s linear infinite;
+  animation: profileSpin 24s linear infinite;
 }
 
-@keyframes drawCircle {
-  0% {
-    stroke-dashoffset: 918;
-  }
+.profile-portrait {
+  mix-blend-mode: lighten;
+  animation: portraitFloat 5s ease-in-out infinite;
+}
+
+@keyframes portraitFloat {
+  0%,
   100% {
-    stroke-dashoffset: 0;
+    transform: translateY(0);
   }
-}
-
-.animate-draw-circle {
-  animation: drawCircle 2s ease-in-out forwards;
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes profileSpin {
@@ -299,8 +301,12 @@ textarea::placeholder {
 }
 
 @media (max-width: 767px) {
-  .section-container { padding-inline: 1rem; }
-  .bottom-nav a { min-height: 48px; }
+  .section-container {
+    padding-inline: 1rem;
+  }
+  .bottom-nav a {
+    min-height: 48px;
+  }
 }
 
 .contact-field-label {

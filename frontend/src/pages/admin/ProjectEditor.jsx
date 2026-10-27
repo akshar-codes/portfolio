@@ -405,6 +405,7 @@ export default function ProjectEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, isEditMode]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = form.watch();
   const hasUnsavedChanges = isEditMode && lastSavedSnapshotRef.current !== null &&
     (JSON.stringify(watchedValues) !== lastSavedSnapshotRef.current || Boolean(thumbnail || bannerImage || newGalleryFiles.length || deletedGalleryIds.length));

@@ -197,6 +197,7 @@ function ExperienceDialog({ open, initialValues, onClose, onSave }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const current = form.watch("current");
 
   return (

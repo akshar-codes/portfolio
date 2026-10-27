@@ -404,64 +404,34 @@ export default function Home() {
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <defs>
-                      <mask id="ring-mask">
-                        <circle
-                          cx="150"
-                          cy="150"
-                          r="146"
-                          stroke="white"
-                          strokeWidth="10"
-                          strokeDasharray="918"
-                          strokeDashoffset="918"
-                          strokeLinecap="round"
-                          transform="rotate(-90 150 150)"
-                          className="animate-draw-circle"
-                        />
-                      </mask>
-                    </defs>
                     <circle
                       cx="150"
                       cy="150"
                       r="146"
                       stroke="var(--accent)"
-                      strokeWidth="3"
-                      strokeDasharray="12 8 24 8"
+                      strokeWidth="2.5"
+                      strokeDasharray="24 10"
                       strokeLinecap="round"
-                      opacity="0.7"
-                      mask="url(#ring-mask)"
+                      opacity="0.9"
                     />
                   </svg>
 
-                  <div
-                    className="absolute inset-3 rounded-full overflow-hidden"
-                    style={{ border: "2px solid var(--border)" }}
-                  >
-                    <div
-                      className="w-full h-full flex items-end justify-center relative"
-                      style={{
-                        background:
-                          "linear-gradient(160deg, #2a2a2d 0%, #1c1c1e 60%, #252527 100%)",
-                      }}
+                  {profile?.avatar ? (
+                    <img
+                      src={getThumbnailUrl(profile.avatar, 512)}
+                      alt={profile.name}
+                      fetchPriority="high"
+                      decoding="async"
+                      className="profile-portrait absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain"
+                    />
+                  ) : (
+                    <span
+                      className="absolute inset-0 flex items-center justify-center font-mono text-5xl font-bold"
+                      style={{ color: "var(--accent)", opacity: 0.35 }}
                     >
-                      {profile?.avatar ? (
-                        <img
-                          src={getThumbnailUrl(profile.avatar, 512)}
-                          alt={profile.name}
-                          fetchPriority="high"
-                          decoding="async"
-                          className="w-full h-full object-cover object-top"
-                        />
-                      ) : (
-                        <span
-                          className="absolute inset-0 flex items-center justify-center font-mono text-5xl font-bold"
-                          style={{ color: "var(--accent)", opacity: 0.25 }}
-                        >
-                          {getInitials(profile?.name ?? "")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                      {getInitials(profile?.name ?? "")}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
