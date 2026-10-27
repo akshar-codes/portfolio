@@ -8,6 +8,7 @@ import {
   archiveProfile,
   restoreProfile,
   scheduleProfile,
+  refreshProfileStatistic,
 } from "../../controllers/profileController.js";
 import { updateProfileValidator } from "../../validators/profileValidators.js";
 import { publishAtValidator } from "../../validators/common.js";
@@ -25,6 +26,7 @@ router.get("/", getAdminProfile);
  * PATCH /api/admin/profile
  * ------------------------------------------------------------------ */
 router.patch("/", updateProfileValidator, updateProfile);
+router.post("/statistics/:statId/refresh", refreshProfileStatistic);
 
 /* ------------------------------------------------------------------ *
  * PATCH /api/admin/profile/publish | /unpublish | /archive | /restore

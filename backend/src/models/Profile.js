@@ -116,6 +116,35 @@ const statisticSchema = new mongoose.Schema(
       default: "",
       maxlength: [60, "Icon key must not exceed 60 characters"],
     },
+    source: {
+      type: String,
+      enum: ["manual", "aggregate", "github", "leetcode", "codeforces", "codechef"],
+      default: "manual",
+    },
+    sourceUsername: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [100, "Source username must not exceed 100 characters"],
+    },
+    sources: {
+      type: [{
+        platform: { type: String, enum: ["github", "leetcode", "codeforces", "codechef"], required: true },
+        username: { type: String, trim: true, default: "", maxlength: 100 },
+        mode: { type: String, enum: ["manual", "auto"], default: "auto" },
+        value: { type: Number, min: 0, default: 0 },
+      }],
+      default: [],
+    },
+    sourceResults: {
+      type: [{
+        platform: { type: String, enum: ["github", "leetcode", "codeforces", "codechef"], required: true },
+        username: { type: String, trim: true },
+        value: { type: Number, min: 0, required: true },
+      }],
+      default: [],
+    },
+    sourceLastFetchedAt: { type: Date, default: null },
     order: {
       type: Number,
       required: true,

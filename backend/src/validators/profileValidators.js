@@ -170,6 +170,48 @@ export const updateProfileValidator = [
     .isLength({ max: 60 })
     .withMessage("Icon key must not exceed 60 characters"),
 
+  body("statistics.*.source")
+    .optional()
+    .isIn(["manual", "aggregate", "github", "leetcode", "codeforces", "codechef"])
+    .withMessage("Statistic source is not supported"),
+
+  body("statistics.*.sources")
+    .optional()
+    .isArray({ max: 4 })
+    .withMessage("A statistic may use at most four platform sources")
+    .bail()
+    .custom((sources) => sources.every((source) => source.mode === "manual" || Boolean(source.username?.trim())))
+    .withMessage("Each automatic platform requires a username"),
+
+  body("statistics.*.sources.*.platform")
+    .optional()
+    .isIn(["github", "leetcode", "codeforces", "codechef"])
+    .withMessage("Statistic platform is not supported"),
+
+  body("statistics.*.sources.*.mode")
+    .optional()
+    .isIn(["manual", "auto"])
+    .withMessage("Platform value method must be manual or auto"),
+
+  body("statistics.*.sources.*.value")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Platform value must be a non-negative number")
+    .toFloat(),
+
+  body("statistics.*.sources.*.username")
+    .optional({ checkFalsy: true })
+    .trim()
+    .notEmpty()
+    .isLength({ max: 100 })
+    .withMessage("Each selected platform requires a username (up to 100 characters)"),
+
+  body("statistics.*.sourceUsername")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Source username must not exceed 100 characters"),
+
   body("statistics.*.order")
     .optional()
     .isInt({ min: 0 })

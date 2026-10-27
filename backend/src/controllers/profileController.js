@@ -7,7 +7,9 @@ import {
   archiveProfile,
   restoreProfile,
   scheduleProfile,
+  refreshStatistic,
 } from "../services/profileService.js";
+import asyncHandler from "../utils/asyncHandler.js";
 import { createSingletonController } from "./singletonController.js";
 
 const service = {
@@ -32,6 +34,11 @@ const {
   scheduleResource: scheduleProfileHandler,
 } = createSingletonController({ service, resourceName: "Profile" });
 
+const refreshProfileStatistic = asyncHandler(async (req, res) => {
+  const result = await refreshStatistic(req.params.statId);
+  res.status(200).json(result);
+});
+
 export {
   getPublicProfile,
   getAdminProfile,
@@ -41,4 +48,5 @@ export {
   archiveProfileHandler as archiveProfile,
   restoreProfileHandler as restoreProfile,
   scheduleProfileHandler as scheduleProfile,
+  refreshProfileStatistic,
 };
