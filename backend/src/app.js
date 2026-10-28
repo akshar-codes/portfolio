@@ -97,9 +97,10 @@ app.use(
 // search terms or accidentally supplied credentials.
 morgan.token("request-id", (req) => req.id);
 morgan.token("route-path", (req) => req.path);
-const morganFormat = NODE_ENV === "production"
-  ? ":request-id :remote-addr :method :route-path :status :res[content-length] - :response-time ms"
-  : "dev";
+const morganFormat =
+  NODE_ENV === "production"
+    ? ":request-id :remote-addr :method :route-path :status :res[content-length] - :response-time ms"
+    : "dev";
 app.use(morgan(morganFormat, { stream: morganStream }));
 // Compress JSON, HTML, CSS, and JavaScript responses over the wire.
 app.use(compression({ threshold: 1024 }));
@@ -130,10 +131,18 @@ app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 app.use(cookieParser());
 app.use("/api", (req, res, next) => {
   if (req.method !== "GET") return next();
-  if (req.path.startsWith("/admin") || req.path.startsWith("/messages") || req.path.startsWith("/analytics") || req.query.preview) {
+  if (
+    req.path.startsWith("/admin") ||
+    req.path.startsWith("/messages") ||
+    req.path.startsWith("/analytics") ||
+    req.query.preview
+  ) {
     res.setHeader("Cache-Control", "private, no-store");
   } else {
-    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=30, stale-while-revalidate=60",
+    );
   }
   return next();
 });
@@ -148,6 +157,7 @@ app.use(activityLogger);
  * 9. Health check — mounted BEFORE the global rate limiter so
  * ------------------------------------------------------------------ */
 app.use("/health", healthRoutes);
+app.use("/api/health", healthRoutes);
 
 /* ------------------------------------------------------------------ *
  * 10. Global rate limiter
