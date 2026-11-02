@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "../../services/api";
+import { API_BASE_URL } from "../../config/env.js";
 import { useAuth } from "../../hooks/useAuth";
 import { useAdminStyles } from "../../hooks/useAdminStyles";
 import { ROUTES } from "../../constants/routes";
@@ -12,41 +13,62 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const dest = location.state?.from?.pathname ?? ROUTES.adminDashboard;
-
   const { authState, login } = useAuth();
-
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (authState === "authenticated") {
-      navigate(dest, { replace: true });
-    }
+    if (authState === "authenticated") navigate(dest, { replace: true });
   }, [authState, navigate, dest]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!form.username || !form.password) {
-      toast.error("Username and password are required.");
-      return;
+  useEffect(() => {
+    const status = new URLSearchParams(location.search).get("auth");
+    if (status === "google-denied")
+      toast.error("Google sign-in was not authorized for the admin account.");
+    if (status === "google-unavailable")
+      toast.error("Google sign-in is not configured on the server.");
+    if (status === "google-success") {
+      window.history.replaceState({}, "", location.pathname);
     }
+  }, [location.pathname, location.search]);
+
+  const requestCode = async (event) => {
+    event.preventDefault();
+    if (!email.trim()) return toast.error("Enter your admin email address.");
     setLoading(true);
     try {
-      await api.post(API_ENDPOINTS.adminLogin, form);
-      login();
-      navigate(dest, { replace: true });
-    } catch (err) {
-      toast.error(err.message);
+      const { envelope } = await api.post(API_ENDPOINTS.adminOtpRequest, {
+        email,
+      });
+      setCodeSent(true);
+      toast.success(
+        envelope?.message ?? "Check your email for a sign-in code.",
+      );
+    } catch (error) {
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Don't flash the form while an auth check is still pending
+  const verifyCode = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code))
+      return toast.error("Enter the 6-digit code from your email.");
+    setLoading(true);
+    try {
+      await api.post(API_ENDPOINTS.adminOtpVerify, { email, code });
+      login();
+      navigate(dest, { replace: true });
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authState === "pending" || authState === "authenticated") {
     return (
       <div className="admin-login-wrap">
@@ -66,55 +88,91 @@ export default function AdminLogin() {
           </div>
           <h1 className="admin-login-card__title">Admin Login</h1>
           <p className="admin-login-card__sub">
-            Sign in to manage your portfolio
+            Only the configured admin email can sign in. Registration is disabled.
           </p>
         </div>
-
         <div className="admin-divider" />
 
-        <form className="admin-form" onSubmit={handleLogin} noValidate>
+        <a
+          className="btn btn--primary btn--block"
+          href={`${API_BASE_URL.replace(/\/$/, "")}/admin/login/google`}
+          style={{
+            padding: "13px 20px",
+            fontSize: 14,
+            textAlign: "center",
+            textDecoration: "none",
+          }}
+        >
+          Continue with Google
+        </a>
+
+        <div className="admin-divider" />
+        <form
+          className="admin-form"
+          onSubmit={codeSent ? verifyCode : requestCode}
+        >
           <div className="admin-form__field">
-            <label className="admin-form__label" htmlFor="username">
-              Username
+            <label className="admin-form__label" htmlFor="admin-email">
+              Admin email
             </label>
             <input
-              id="username"
-              type="text"
-              name="username"
+              id="admin-email"
+              type="email"
               className="form-input"
-              placeholder="Enter your username"
-              value={form.username}
-              onChange={handleChange}
-              autoComplete="username"
+              placeholder="Enter your admin email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
+              disabled={loading || codeSent}
             />
           </div>
-
-          <div className="admin-form__field">
-            <label className="admin-form__label" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              className="form-input"
-              placeholder="Enter your password"
-              value={form.password}
-              onChange={handleChange}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
+          {codeSent && (
+            <div className="admin-form__field">
+              <label className="admin-form__label" htmlFor="admin-code">
+                Email verification code
+              </label>
+              <input
+                id="admin-code"
+                type="text"
+                className="form-input"
+                placeholder="6-digit code"
+                value={code}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+              />
+            </div>
+          )}
           <button
             type="submit"
             className="btn btn--primary btn--block"
             style={{ padding: "13px 20px", fontSize: 14 }}
             disabled={loading}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading
+              ? "Please wait…"
+              : codeSent
+                ? "Verify code and sign in"
+                : "Send sign-in code"}
           </button>
+          {codeSent && (
+            <button
+              type="button"
+              className="btn btn--block"
+              style={{ marginTop: 8 }}
+              disabled={loading}
+              onClick={() => {
+                setCodeSent(false);
+                setCode("");
+              }}
+            >
+              Use another email
+            </button>
+          )}
         </form>
       </div>
     </div>
