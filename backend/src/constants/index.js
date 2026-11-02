@@ -2,6 +2,7 @@
 export const COOKIE_NAME = "admin_token";
 export const JWT_EXPIRES_IN = "1d";
 export const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 1 day
+export const ADMIN_OTP_TTL_MS = 10 * 60 * 1000;
 
 /* ── Pagination defaults ─────────────────────────────────────────── */
 export const DEFAULT_PROJECTS_PAGE_SIZE = 9;
@@ -98,7 +99,12 @@ export const DEFAULT_CONTENT_STATUS = CONTENT_STATUS_DRAFT;
 export const SCHEDULE_SWEEP_INTERVAL_MS = 30_000;
 
 /* ── Category listing (admin) ─────────────────────────────────────── */
-export const CATEGORY_SORT_FIELDS = ["name", "createdAt", "projectCount", "order"];
+export const CATEGORY_SORT_FIELDS = [
+  "name",
+  "createdAt",
+  "projectCount",
+  "order",
+];
 export const DEFAULT_CATEGORY_SORT_FIELD = "name";
 
 /* ── Contact messages ─────────────────────────────────────────────── */
@@ -179,7 +185,21 @@ export const PROJECT_ADMIN_SORT_FIELDS = ["order", "title", "createdAt"];
 export const DEFAULT_PROJECT_ADMIN_SORT_FIELD = "order";
 
 /* ── Rich Text ───────────────────────────────────────────────────── */
-export const RICH_TEXT_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "s", "h2", "h3", "ul", "ol", "li", "blockquote", "a"];
+export const RICH_TEXT_ALLOWED_TAGS = [
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "h2",
+  "h3",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "a",
+];
 
 /* ── Profile CMS ─────────────────────────────────────────────────── */
 export const PROFILE_LIMITS = {
