@@ -2,32 +2,53 @@
 
 ## Backend (`backend/.env` locally — Render dashboard in production)
 
-| Variable           | Required                                    | Description                                                                                                                                                                                             |
-| ------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`         | Yes                                         | `development` \| `production` \| `test`. Controls cookie `Secure` flag, error verbosity, log format, and Cloudinary folder prefix (`dev/`/`prod/`/`test/`). Render sets this via `backend/render.yaml`. |
-| `PORT`             | No — **do not set manually on Render**      | Render injects `PORT` automatically at runtime; `server.js` already reads `process.env.PORT`. Only set this yourself for local (non-Docker) runs where you want a port other than `5000`.               |
-| `MONGO_URI`        | Yes                                         | MongoDB connection string (Atlas or self-hosted). Validated at startup — process exits if missing. Set as a `sync: false` secret in Render.                                                             |
-| `ATLAS_URI` | Optional, clone script only | Atlas source or destination URI for `backend/clone-db.js`. |
-| `LOCAL_MONGO_URI` | Optional, clone script only | MongoDB source or destination URI for `backend/clone-db.js`. |
-| `DB_CLONE_DIRECTION` | Optional, clone script only | `atlas-to-mongo` or `mongo-to-atlas`. |
-| `DB_CLONE_CONFIRM` | Required to run clone | Must exactly equal `DROP_DESTINATION_DATABASE`; the selected destination database is dropped before copying. |
-| `JWT_SECRET`       | Yes                                         | Signing secret for admin session JWTs. Use a long, random value (32+ bytes). Rotating this invalidates all active admin sessions.                                                                       |
-| `ALLOWED_ORIGIN`   | Yes                                         | Exact origin (scheme + host, no path/trailing slash) of the deployed **Vercel** frontend, e.g. `https://your-portfolio.vercel.app`. Enforced by CORS on every request.                                  |
-| `CLOUD_NAME`       | Yes                                         | Cloudinary cloud name.                                                                                                                                                                                  |
-| `CLOUD_API_KEY`    | Yes                                         | Cloudinary API key.                                                                                                                                                                                     |
-| `CLOUD_API_SECRET` | Yes                                         | Cloudinary API secret. Never expose client-side.                                                                                                                                                        |
-| `LOG_LEVEL`        | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
+| Variable               | Required                                    | Description                                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`             | Yes                                         | `development` \| `production` \| `test`. Controls cookie `Secure` flag, error verbosity, log format, and Cloudinary folder prefix (`dev/`/`prod/`/`test/`). Render sets this via `backend/render.yaml`. |
+| `PORT`                 | No — **do not set manually on Render**      | Render injects `PORT` automatically at runtime; `server.js` already reads `process.env.PORT`. Only set this yourself for local (non-Docker) runs where you want a port other than `5000`.               |
+| `MONGO_URI`            | Yes                                         | MongoDB connection string (Atlas or self-hosted). Validated at startup — process exits if missing. Set as a `sync: false` secret in Render.                                                             |
+| `ATLAS_URI`            | Optional, clone script only                 | Atlas source or destination URI for `backend/clone-db.js`.                                                                                                                                              |
+| `LOCAL_MONGO_URI`      | Optional, clone script only                 | MongoDB source or destination URI for `backend/clone-db.js`.                                                                                                                                            |
+| `DB_CLONE_DIRECTION`   | Optional, clone script only                 | `atlas-to-mongo` or `mongo-to-atlas`.                                                                                                                                                                   |
+| `DB_CLONE_CONFIRM`     | Required to run clone                       | Must exactly equal `DROP_DESTINATION_DATABASE`; the selected destination database is dropped before copying.                                                                                            |
+| `JWT_SECRET`           | Yes                                         | Signing secret for admin session JWTs. Use a long, random value (32+ bytes). Rotating this invalidates all active admin sessions.                                                                       |
+| `ALLOWED_ORIGIN`       | Yes                                         | Exact origin (scheme + host, no path/trailing slash) of the deployed **Vercel** frontend, e.g. `https://your-portfolio.vercel.app`. Enforced by CORS on every request.                                  |
+| `CLOUD_NAME`           | Yes                                         | Cloudinary cloud name.                                                                                                                                                                                  |
+| `CLOUD_API_KEY`        | Yes                                         | Cloudinary API key.                                                                                                                                                                                     |
+| `CLOUD_API_SECRET`     | Yes                                         | Cloudinary API secret. Never expose client-side.                                                                                                                                                        |
+| `ADMIN_EMAIL`          | Required for the new sign-in methods        | The single admin's email address. Both Google and email code sign-in reject every other address.                                                                                                        |
+| `GOOGLE_CLIENT_ID`     | Optional                                    | OAuth 2.0 web client ID from Google Cloud; configure together with the secret and callback URL to enable Google sign-in.                                                                                |
+| `GOOGLE_CLIENT_SECRET` | Optional                                    | Backend-only OAuth client secret.                                                                                                                                                                       |
+| `GOOGLE_CALLBACK_URL`  | Optional                                    | Exact API callback URL registered in Google Cloud, e.g. `https://portfolio-backend.onrender.com/api/admin/login/google/callback`.                                                                       |
+| `OAUTH_SESSION_SECRET` | Optional                                    | Secret used to protect the temporary Passport OAuth state session. Defaults to `JWT_SECRET`; use a separate random value in production.                                                                 |
+| `GMAIL_USER`           | Optional                                    | Separate Gmail account used only to send admin verification codes.                                                                                                                                      |
+| `GMAIL_APP_PASSWORD`   | Optional                                    | App password for `GMAIL_USER` (use a Gmail app password, not the account password).                                                                                                                     |
+| `LOG_LEVEL`            | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
+
+### Enable admin sign-in
+
+Create or retain the one existing Admin document; these sign-in methods never
+create accounts. Username/password login has been replaced by these two
+methods. Set `ADMIN_EMAIL` to the one allowed address. For Google,
+create a Google Cloud OAuth web client, add the deployed frontend to authorized
+JavaScript origins, and register the exact `GOOGLE_CALLBACK_URL` as an
+authorized redirect URI. For email codes, enable 2-Step Verification on a
+separate Gmail sender account, create an app password, and set `GMAIL_USER` and
+`GMAIL_APP_PASSWORD`. Codes expire after 10 minutes and are limited to five
+verification attempts. Configure the values in `backend/.env` locally and the
+Render service environment in production. The Google and Gmail credentials stay
+on the backend.
 
 Website replies from the admin inbox use these optional variables:
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `RESEND_API_KEY` | Required for website replies | Backend-only Resend API key. |
-| `RESEND_FROM_EMAIL` | Required for website replies | Sender identity on a domain verified with Resend, e.g. `Akshar Gupta <replies@example.com>`. |
-| `MESSAGE_NOTIFICATION_EMAIL` | Optional | Inbox for new-contact-message alerts. Defaults to the email address in the public profile. |
-| `GITHUB_TOKEN` | Optional | Raises the GitHub API rate limit for automatic repository commit counts. |
-| `PORTFOLIO_SNAPSHOT_TOKEN` | Required in production | Shared secret for the authenticated Vercel build snapshot request. At least 32 bytes. |
-| `VERCEL_DEPLOY_HOOK_URL` | Required in production | Vercel Deploy Hook called by **Admin → Dashboard → Publish Changes**. |
+| Variable                     | Required                     | Description                                                                                  |
+| ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`             | Required for website replies | Backend-only Resend API key.                                                                 |
+| `RESEND_FROM_EMAIL`          | Required for website replies | Sender identity on a domain verified with Resend, e.g. `Akshar Gupta <replies@example.com>`. |
+| `MESSAGE_NOTIFICATION_EMAIL` | Optional                     | Inbox for new-contact-message alerts. Defaults to the email address in the public profile.   |
+| `GITHUB_TOKEN`               | Optional                     | Raises the GitHub API rate limit for automatic repository commit counts.                     |
+| `PORTFOLIO_SNAPSHOT_TOKEN`   | Required in production       | Shared secret for the authenticated Vercel build snapshot request. At least 32 bytes.        |
+| `VERCEL_DEPLOY_HOOK_URL`     | Required in production       | Vercel Deploy Hook called by **Admin → Dashboard → Publish Changes**.                        |
 
 Set both variables to enable **Reply from website**. The recipient comes
 from the stored message and the backend sends plain-text email through
@@ -58,11 +79,11 @@ but should normally remain unset.
 
 ## Frontend (`frontend/.env` locally — Vercel project settings in production)
 
-| Variable            | Required | Description                                                                                                                                                                                                                             |
-| ------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL` | Yes      | Base URL the frontend's axios instance targets — the deployed **Render** API's base URL (e.g. `https://portfolio-backend.onrender.com/api`). **Inlined at build time** — changing it requires a redeploy on Vercel, not just a restart. |
-| `PORTFOLIO_SNAPSHOT_URL` | Recommended on Vercel | Full Render `/api/public/build-snapshot` endpoint. If omitted, the build script derives it from `VITE_API_BASE_URL`. |
-| `PORTFOLIO_SNAPSHOT_TOKEN` | Required on Vercel | Same secret as the backend variable; used only by the build script and never exposed as a `VITE_` variable. |
+| Variable                   | Required              | Description                                                                                                                                                                                                                             |
+| -------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`        | Yes                   | Base URL the frontend's axios instance targets — the deployed **Render** API's base URL (e.g. `https://portfolio-backend.onrender.com/api`). **Inlined at build time** — changing it requires a redeploy on Vercel, not just a restart. |
+| `PORTFOLIO_SNAPSHOT_URL`   | Recommended on Vercel | Full Render `/api/public/build-snapshot` endpoint. If omitted, the build script derives it from `VITE_API_BASE_URL`.                                                                                                                    |
+| `PORTFOLIO_SNAPSHOT_TOKEN` | Required on Vercel    | Same secret as the backend variable; used only by the build script and never exposed as a `VITE_` variable.                                                                                                                             |
 
 ---
 

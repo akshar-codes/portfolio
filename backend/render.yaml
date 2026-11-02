@@ -22,6 +22,27 @@ services:
         sync: false
         generateValue: false
 
+      - key: ADMIN_EMAIL
+        sync: false
+
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+
+      - key: OAUTH_SESSION_SECRET
+        sync: false
+
+      - key: GMAIL_USER
+        sync: false
+
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+
       - key: ALLOWED_ORIGIN
         sync: false
         # Must exactly match the deployed Vercel production domain,
