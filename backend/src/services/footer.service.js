@@ -2,7 +2,7 @@ import {
   getSingleton,
   findDefault,
   create,
-} from "../repositories/footerRepository.js";
+} from "../repositories/FooterRepository.js";
 import { createSingletonService } from "./SingletonService.js";
 
 const repository = { getSingleton, findDefault, create };

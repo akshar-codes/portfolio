@@ -2,7 +2,7 @@ import {
   getSingleton,
   findDefault,
   create,
-} from "../repositories/siteSettingsRepository.js";
+} from "../repositories/SiteSettingsRepository.js";
 import { createSingletonService } from "./SingletonService.js";
 import { ServiceError } from "./ServiceError.js";
 import {
@@ -161,7 +161,12 @@ async function removeImageAsset({ field, label }) {
 }
 
 export const uploadSiteLogo = (file) =>
-  replaceImageAsset({ field: "logo", file, folderSuffix: "logo", label: "Logo" });
+  replaceImageAsset({
+    field: "logo",
+    file,
+    folderSuffix: "logo",
+    label: "Logo",
+  });
 
 export const removeSiteLogo = () =>
   removeImageAsset({ field: "logo", label: "Logo" });

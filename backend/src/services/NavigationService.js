@@ -2,7 +2,7 @@ import {
   getSingleton,
   findDefault,
   create,
-} from "../repositories/navigationRepository.js";
+} from "../repositories/NavigationRepository.js";
 import { createSingletonService } from "./SingletonService.js";
 
 const repository = { getSingleton, findDefault, create };

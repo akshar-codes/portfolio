@@ -2,7 +2,7 @@ import {
   getSingleton,
   findDefault,
   create,
-} from "../repositories/seoRepository.js";
+} from "../repositories/SEORepository.js";
 import { createSingletonService } from "./SingletonService.js";
 
 const repository = { getSingleton, findDefault, create };

@@ -1,4 +1,7 @@
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import {
+  CONTENT_STATUSES,
+  DEFAULT_CONTENT_STATUS,
+} from "../../constants/index.js";
 
 /**
  * Mongoose schema plugin that turns a schema into a singleton-per-owner

@@ -2,7 +2,7 @@ import {
   getSingleton,
   findDefault,
   create,
-} from "../repositories/navigationRepository.js";
+} from "../repositories/NavigationRepository.js";
 import { createSingletonService } from "./SingletonService.js";
 import { sanitizeNestedItems } from "../utils/ordering.js";
 
@@ -48,8 +48,10 @@ function sortNestedItems(doc) {
   };
 }
 
-const fetchNavigationAdmin = async () => sortNestedItems(await fetchNavigationAdminRaw());
-const fetchNavigationPublic = async () => sortNestedItems(await fetchNavigationPublicRaw());
+const fetchNavigationAdmin = async () =>
+  sortNestedItems(await fetchNavigationAdminRaw());
+const fetchNavigationPublic = async () =>
+  sortNestedItems(await fetchNavigationPublicRaw());
 
 const patchNavigation = async (updates) => {
   const sanitized = { ...updates };
@@ -62,10 +64,14 @@ const patchNavigation = async (updates) => {
 // The publishing-workflow methods never touch `items`, so they need no
 // nested-sanitization wrapping — only the sort-for-display pass, same
 // as the reads above.
-const publishNavigation = async () => sortNestedItems(await publishNavigationRaw());
-const unpublishNavigation = async () => sortNestedItems(await unpublishNavigationRaw());
-const archiveNavigation = async () => sortNestedItems(await archiveNavigationRaw());
-const restoreNavigation = async () => sortNestedItems(await restoreNavigationRaw());
+const publishNavigation = async () =>
+  sortNestedItems(await publishNavigationRaw());
+const unpublishNavigation = async () =>
+  sortNestedItems(await unpublishNavigationRaw());
+const archiveNavigation = async () =>
+  sortNestedItems(await archiveNavigationRaw());
+const restoreNavigation = async () =>
+  sortNestedItems(await restoreNavigationRaw());
 const scheduleNavigation = async (publishAt) =>
   sortNestedItems(await scheduleNavigationRaw(publishAt));
 
