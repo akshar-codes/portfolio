@@ -1,17 +1,27 @@
 import express from "express";
 import {
-  loginAdmin,
   verifyAdmin,
   logoutAdmin,
   changeAdminPasswordHandler,
+  requestAdminOtpHandler,
+  verifyAdminOtpHandler,
+  startGoogleLogin,
+  finishGoogleLogin,
 } from "../../controllers/adminController.js";
 import { optionalProtect, protect } from "../../middleware/authMiddleware.js";
-import { loginLimiter, passwordChangeLimiter } from "../../middleware/rateLimiters.js";
+import {
+  passwordChangeLimiter,
+  otpRequestLimiter,
+  otpVerifyLimiter,
+} from "../../middleware/rateLimiters.js";
 import { changePasswordValidator } from "../../validators/authValidators.js";
 
 const router = express.Router();
 
-router.post("/login", loginLimiter, loginAdmin);
+router.post("/login/otp/request", otpRequestLimiter, requestAdminOtpHandler);
+router.post("/login/otp/verify", otpVerifyLimiter, verifyAdminOtpHandler);
+router.get("/login/google", startGoogleLogin);
+router.get("/login/google/callback", finishGoogleLogin);
 
 router.get("/verify", optionalProtect, verifyAdmin);
 

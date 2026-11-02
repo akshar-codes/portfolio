@@ -4,6 +4,8 @@ import express from "express";
 import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import MongoStore from "connect-mongo";
 import helmet from "helmet";
 import morgan from "morgan";
 
@@ -14,6 +16,7 @@ import logger, { morganStream } from "./utils/logger.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import { JSON_BODY_LIMIT } from "./constants/index.js";
 import AppError from "./utils/AppError.js";
+import passport from "./config/passport.js";
 
 // ── Admin (protected) routes ────────────────────────────────────────
 import adminAuthRoutes from "./routes/admin/authRoutes.js";
@@ -129,6 +132,25 @@ app.use(
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 app.use(cookieParser());
+app.use(
+  session({
+    name: "admin_oauth_session",
+    secret: process.env.OAUTH_SESSION_SECRET || process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: "admin_oauth_sessions",
+    }),
+    cookie: {
+      httpOnly: true,
+      secure: NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 10 * 60 * 1000,
+    },
+  }),
+);
+app.use(passport.initialize());
 app.use("/api", (req, res, next) => {
   if (req.method !== "GET") return next();
   if (

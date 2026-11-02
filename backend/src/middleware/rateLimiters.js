@@ -59,6 +59,30 @@ export const passwordChangeLimiter = rateLimit({
   },
 });
 
+export const otpRequestLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    data: null,
+    message: "Too many code requests. Try again later.",
+  },
+});
+
+export const otpVerifyLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    data: null,
+    message: "Too many verification attempts. Try again later.",
+  },
+});
+
 export const emailReplyLimiter = rateLimit({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: 20,

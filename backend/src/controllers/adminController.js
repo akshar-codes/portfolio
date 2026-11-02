@@ -1,41 +1,96 @@
 import {
-  attemptLogin,
   getVerifiedPayload,
   getCookieOptions,
   getClearCookieOptions,
   COOKIE_NAME,
   changeAdminPassword,
+  createAdminToken,
 } from "../services/authService.js";
 import { validationResult } from "express-validator";
-import { findByUsername, incrementTokenVersion } from "../repositories/adminRepository.js";
+import { incrementTokenVersion } from "../repositories/adminRepository.js";
 import { sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { recordActivity } from "../services/activityLogService.js";
 import logger from "../utils/logger.js";
 import AppError from "../utils/AppError.js";
+import passport from "../config/passport.js";
+import {
+  requestAdminOtp,
+  verifyAdminOtp,
+} from "../services/adminOtpService.js";
+import { sendAdminOtpEmail } from "../services/adminLoginEmailService.js";
 
-/* ---------------------------------------------------------------
-   POST /api/admin/login
---------------------------------------------------------------- */
-export const loginAdmin = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+export const requestAdminOtpHandler = asyncHandler(async (req, res) => {
+  await requestAdminOtp(req.body?.email, sendAdminOtpEmail);
+  return sendSuccess(
+    res,
+    null,
+    "If this address is authorized, a sign-in code has been sent.",
+  );
+});
 
-  let token;
-  try {
-    token = await attemptLogin(username, password);
-  } catch (error) {
-    void recordActivity({ actor: { username: String(username || "Unknown admin") }, action: "login", resource: "admin", description: `${String(username || "Unknown admin").slice(0, 80)} failed login`, ip: req.ip, method: req.method, path: req.originalUrl })
-      .catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
-    throw error;
-  }
-
-  const admin = await findByUsername(username);
-  void recordActivity({ actor: admin, action: "login", resource: "admin", description: `${admin?.username ?? username} logged in`, ip: req.ip, method: req.method, path: req.originalUrl })
-    .catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
-
-  res.cookie(COOKIE_NAME, token, getCookieOptions());
+export const verifyAdminOtpHandler = asyncHandler(async (req, res) => {
+  const admin = await verifyAdminOtp(req.body?.email, req.body?.code);
+  res.cookie(COOKIE_NAME, createAdminToken(admin), getCookieOptions());
+  void recordActivity({
+    actor: admin,
+    action: "login",
+    resource: "admin",
+    description: `${admin.username} logged in with email code`,
+    ip: req.ip,
+    method: req.method,
+    path: req.originalUrl,
+  }).catch((err) =>
+    logger.error("Failed to persist activity log", { message: err.message }),
+  );
   return sendSuccess(res, null, "Login successful");
 });
+
+export const startGoogleLogin = (req, res, next) => {
+  if (
+    !process.env.GOOGLE_CLIENT_ID ||
+    !process.env.GOOGLE_CLIENT_SECRET ||
+    !process.env.GOOGLE_CALLBACK_URL ||
+    !process.env.ADMIN_EMAIL
+  ) {
+    return res.redirect(
+      `${process.env.ALLOWED_ORIGIN}/admin/login?auth=google-unavailable`,
+    );
+  }
+  return passport.authenticate("google", { session: false, state: true })(
+    req,
+    res,
+    next,
+  );
+};
+
+export const finishGoogleLogin = (req, res, next) => {
+  passport.authenticate("google", { session: false }, (error, admin) => {
+    const loginUrl = new URL("/admin/login", process.env.ALLOWED_ORIGIN);
+    if (error || !admin) {
+      loginUrl.searchParams.set("auth", "google-denied");
+      if (error)
+        logger.warn("Google admin authentication failed", {
+          message: error.message,
+        });
+      return res.redirect(loginUrl.toString());
+    }
+    res.cookie(COOKIE_NAME, createAdminToken(admin), getCookieOptions());
+    void recordActivity({
+      actor: admin,
+      action: "login",
+      resource: "admin",
+      description: `${admin.username} logged in with Google`,
+      ip: req.ip,
+      method: req.method,
+      path: req.originalUrl,
+    }).catch((err) =>
+      logger.error("Failed to persist activity log", { message: err.message }),
+    );
+    loginUrl.searchParams.set("auth", "google-success");
+    return res.redirect(loginUrl.toString());
+  })(req, res, next);
+};
 
 /* ---------------------------------------------------------------
    GET /api/admin/verify
@@ -79,7 +134,9 @@ export const changeAdminPasswordHandler = asyncHandler(async (req, res) => {
     ip: req.ip,
     method: req.method,
     path: req.originalUrl,
-  }).catch((err) => logger.error("Failed to persist activity log", { message: err.message }));
+  }).catch((err) =>
+    logger.error("Failed to persist activity log", { message: err.message }),
+  );
 
   res.cookie(COOKIE_NAME, token, getCookieOptions());
   return sendSuccess(res, null, "Password changed successfully.");
