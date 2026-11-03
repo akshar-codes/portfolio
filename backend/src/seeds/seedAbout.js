@@ -46,11 +46,51 @@ const SEED_DATA = {
     },
   ],
 
-  // Left empty intentionally — genuinely new content types with no
-  // prior data to backfill. Fill in via the admin CMS.
-  timeline: [],
-  highlights: [],
-  personalInfo: [],
+  // Starter content, editable in the admin CMS.
+  timeline: [
+    {
+      title: "B.Tech Computer Science and Engineering",
+      subtitle: "Lovely Professional University",
+      dateRange: "2025 — 2029",
+      description:
+        "Studying computer science with a focus on software development, databases, and problem solving.",
+      icon: "graduation-cap",
+      order: 0,
+    },
+    {
+      title: "Machine Learning Internship",
+      subtitle: "IRDE Lab, DRDO · Dehradun",
+      dateRange: "Jul 2024 — Aug 2024",
+      description:
+        "Applied machine learning techniques in a defense research environment.",
+      icon: "briefcase",
+      order: 1,
+    },
+    {
+      title: "External Relations Officer",
+      subtitle: "GEU ACM · Dehradun",
+      dateRange: "Apr 2024 — Aug 2024",
+      description:
+        "Coordinated external partnerships and event outreach for the student ACM chapter.",
+      icon: "users",
+      order: 2,
+    },
+  ],
+  highlights: [
+    { value: "MERN", label: "Full-Stack Development", icon: "code", order: 0 },
+    { value: "REST", label: "Backend API Design", icon: "server", order: 1 },
+    { value: "ML", label: "Machine Learning", icon: "brain", order: 2 },
+  ],
+  personalInfo: [
+    { label: "Location", value: "Meerut, Uttar Pradesh, India", order: 0 },
+    {
+      label: "Education",
+      value: "B.Tech, Computer Science and Engineering",
+      order: 1,
+    },
+    { label: "Focus", value: "Full-Stack MERN Development", order: 2 },
+    { label: "Availability", value: "Open to opportunities", order: 3 },
+  ],
   images: [],
 };
 

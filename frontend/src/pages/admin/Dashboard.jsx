@@ -17,7 +17,7 @@ import { useMessageSummaryQuery } from "../../hooks/useMessages";
 import { getInitials, truncate } from "../../utils/strings";
 import { relativeTime } from "../../utils/date";
 import PortfolioAnalyticsDashboard from "../../components/analytics/PortfolioAnalyticsDashboard";
-import api from "../../services/api";
+import api from "../../api/client";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 import { useState } from "react";
 

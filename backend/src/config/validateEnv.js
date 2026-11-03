@@ -77,6 +77,13 @@ export default function validateEnv() {
       "GMAIL_USER must be a separate sender account from ADMIN_EMAIL",
     );
   if (
+    process.env.ADMIN_EMAIL?.trim() &&
+    (!process.env.GMAIL_USER?.trim() || !process.env.GMAIL_APP_PASSWORD?.trim())
+  )
+    problems.push(
+      "GMAIL_USER and GMAIL_APP_PASSWORD are required because admin sign-in always requires an email code",
+    );
+  if (
     (googleValues.every(Boolean) ||
       process.env.GMAIL_USER?.trim() ||
       process.env.ADMIN_EMAIL?.trim()) &&

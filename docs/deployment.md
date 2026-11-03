@@ -33,9 +33,9 @@ you want to run the containerized build on your own machine.
 4. Run the content seed scripts once against production (idempotent,
    safe to re-run):
    ```
-   node backend/src/scripts/seedProfile.js
-   node backend/src/scripts/seedAbout.js
-   node backend/src/scripts/seedResume.js
+   node backend/src/seeds/seedProfile.js
+   node backend/src/seeds/seedAbout.js
+   node backend/src/seeds/seedResume.js
    ```
 5. If migrating from a pre-grouped-technologies dataset, run:
    ```

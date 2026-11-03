@@ -1,7 +1,10 @@
 import mongoose from "mongoose";
 import versionHistoryPlugin from "./plugins/versionHistoryPlugin.js";
 import { generateSlug } from "../utils/slug.js";
-import { CONTENT_STATUSES, DEFAULT_CONTENT_STATUS } from "../constants/index.js";
+import {
+  CONTENT_STATUSES,
+  DEFAULT_CONTENT_STATUS,
+} from "../constants/index.js";
 
 const categorySchema = new mongoose.Schema(
   {
@@ -51,7 +54,6 @@ const categorySchema = new mongoose.Schema(
 );
 
 // Compound indexes
-categorySchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 categorySchema.index({ name: 1 });
 categorySchema.index({ status: 1 });
 categorySchema.plugin(versionHistoryPlugin);

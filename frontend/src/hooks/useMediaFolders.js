@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { mediaFoldersApi } from "../services/api/mediaFoldersApi";
+import { mediaFoldersApi } from "../api/mediaFoldersApi";
 
 export const MEDIA_FOLDERS_QUERY_KEY = ["mediaFolders"];
 

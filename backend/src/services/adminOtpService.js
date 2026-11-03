@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import AdminLoginChallenge from "../models/AdminLoginChallenge.js";
 import { findSoleAdmin } from "../repositories/adminRepository.js";
 import { ServiceError } from "./ServiceError.js";
@@ -11,51 +11,84 @@ function configuredAdminEmail() {
   return process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? "";
 }
 
-export async function requestAdminOtp(email, sendEmail) {
-  const normalized = String(email ?? "")
-    .trim()
-    .toLowerCase();
+async function issueAdminOtp(sendEmail) {
   const adminEmail = configuredAdminEmail();
-  if (
-    !adminEmail ||
-    !process.env.GMAIL_USER ||
-    !process.env.GMAIL_APP_PASSWORD
-  ) {
+  const admin = await findSoleAdmin();
+  if (!adminEmail || !admin) {
+    throw new ServiceError(
+      "Admin sign-in is unavailable.",
+      503,
+      "AUTH_LOGIN_UNAVAILABLE",
+    );
+  }
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     throw new ServiceError(
       "Email login is not configured.",
       503,
       "AUTH_EMAIL_NOT_CONFIGURED",
     );
   }
-
-  // Return the same response for unknown email addresses; never disclose the
-  // configured admin address or whether an account exists.
-  if (normalized !== adminEmail || !(await findSoleAdmin())) return;
-
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const challengeToken = randomBytes(32).toString("base64url");
+  const challengeTokenHash = createHash("sha256")
+    .update(challengeToken)
+    .digest("hex");
   const codeHash = await bcrypt.hash(code, 12);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
   await AdminLoginChallenge.deleteMany({ email: adminEmail });
-  await AdminLoginChallenge.create({ email: adminEmail, codeHash, expiresAt });
+  await AdminLoginChallenge.create({
+    email: adminEmail,
+    challengeTokenHash,
+    codeHash,
+    expiresAt,
+  });
   try {
     await sendEmail({ to: adminEmail, code, expiresAt });
   } catch (error) {
-    await AdminLoginChallenge.deleteMany({ email: adminEmail });
+    await AdminLoginChallenge.deleteOne({ challengeTokenHash });
     throw error;
   }
+  return challengeToken;
 }
 
-export async function verifyAdminOtp(email, submittedCode) {
+export async function startAdminPasswordLogin(email, password, sendEmail) {
+  const adminEmail = configuredAdminEmail();
   const normalized = String(email ?? "")
     .trim()
     .toLowerCase();
-  const adminEmail = configuredAdminEmail();
-  const challenge =
-    normalized === adminEmail && adminEmail
-      ? await AdminLoginChallenge.findOne({ email: adminEmail }).sort({
-          createdAt: -1,
-        })
-      : null;
+  const admin = await findSoleAdmin();
+  if (
+    !admin ||
+    !adminEmail ||
+    normalized !== adminEmail ||
+    !(await bcrypt.compare(String(password ?? ""), admin.password))
+  ) {
+    throw new ServiceError(
+      "Invalid email or password.",
+      401,
+      "AUTH_INVALID_CREDENTIALS",
+    );
+  }
+  return issueAdminOtp(sendEmail);
+}
+
+export async function startAdminGoogleLogin(admin, sendEmail) {
+  if (!admin)
+    throw new ServiceError(
+      "Admin account not found.",
+      404,
+      "AUTH_ADMIN_NOT_FOUND",
+    );
+  return issueAdminOtp(sendEmail);
+}
+
+export async function verifyAdminOtp(challengeToken, submittedCode) {
+  const challengeTokenHash = challengeToken
+    ? createHash("sha256").update(String(challengeToken)).digest("hex")
+    : "";
+  const challenge = challengeTokenHash
+    ? await AdminLoginChallenge.findOne({ challengeTokenHash })
+    : null;
   const code = String(submittedCode ?? "").trim();
 
   if (
@@ -87,6 +120,7 @@ export async function verifyAdminOtp(email, submittedCode) {
   // Delete atomically so a challenge cannot issue more than one session.
   const consumed = await AdminLoginChallenge.findOneAndDelete({
     _id: challenge._id,
+    challengeTokenHash,
     attempts: { $lt: MAX_ATTEMPTS },
     expiresAt: { $gt: new Date() },
   });

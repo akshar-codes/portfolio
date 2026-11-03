@@ -3,7 +3,7 @@ import {
   verifyAdmin,
   logoutAdmin,
   changeAdminPasswordHandler,
-  requestAdminOtpHandler,
+  loginWithPasswordHandler,
   verifyAdminOtpHandler,
   startGoogleLogin,
   finishGoogleLogin,
@@ -13,14 +13,24 @@ import {
   passwordChangeLimiter,
   otpRequestLimiter,
   otpVerifyLimiter,
+  loginLimiter,
 } from "../../middleware/rateLimiters.js";
-import { changePasswordValidator } from "../../validators/authValidators.js";
+import {
+  changePasswordValidator,
+  passwordLoginValidator,
+} from "../../validators/authValidators.js";
 
 const router = express.Router();
 
-router.post("/login/otp/request", otpRequestLimiter, requestAdminOtpHandler);
+router.post(
+  "/login/password",
+  loginLimiter,
+  otpRequestLimiter,
+  passwordLoginValidator,
+  loginWithPasswordHandler,
+);
 router.post("/login/otp/verify", otpVerifyLimiter, verifyAdminOtpHandler);
-router.get("/login/google", startGoogleLogin);
+router.get("/login/google", otpRequestLimiter, startGoogleLogin);
 router.get("/login/google/callback", finishGoogleLogin);
 
 router.get("/verify", optionalProtect, verifyAdmin);

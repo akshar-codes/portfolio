@@ -24,7 +24,7 @@ import PasswordIcon from "@mui/icons-material/Password";
 import { toast } from "sonner";
 
 import Breadcrumbs from "./Breadcrumbs";
-import api from "../../services/api";
+import api from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 import { ROUTES } from "../../constants/routes";

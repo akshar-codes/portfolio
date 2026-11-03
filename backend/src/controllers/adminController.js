@@ -15,28 +15,59 @@ import logger from "../utils/logger.js";
 import AppError from "../utils/AppError.js";
 import passport from "../config/passport.js";
 import {
-  requestAdminOtp,
+  startAdminPasswordLogin,
+  startAdminGoogleLogin,
   verifyAdminOtp,
 } from "../services/adminOtpService.js";
 import { sendAdminOtpEmail } from "../services/adminLoginEmailService.js";
 
-export const requestAdminOtpHandler = asyncHandler(async (req, res) => {
-  await requestAdminOtp(req.body?.email, sendAdminOtpEmail);
+const OTP_PENDING_COOKIE = "admin_otp_pending";
+const OTP_PENDING_COOKIE_MAX_AGE = 10 * 60 * 1000;
+
+function setOtpPendingCookie(res, token) {
+  res.cookie(OTP_PENDING_COOKIE, token, {
+    ...getCookieOptions(),
+    maxAge: OTP_PENDING_COOKIE_MAX_AGE,
+    path: "/api/admin/login",
+  });
+}
+
+function clearOtpPendingCookie(res) {
+  res.clearCookie(OTP_PENDING_COOKIE, {
+    ...getClearCookieOptions(),
+    path: "/api/admin/login",
+  });
+}
+
+export const loginWithPasswordHandler = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) throw new AppError(errors.array()[0].msg, 400);
+
+  const challengeToken = await startAdminPasswordLogin(
+    req.body?.email,
+    req.body?.password,
+    sendAdminOtpEmail,
+  );
+  setOtpPendingCookie(res, challengeToken);
   return sendSuccess(
     res,
     null,
-    "If this address is authorized, a sign-in code has been sent.",
+    "A verification code has been sent to your admin email.",
   );
 });
 
 export const verifyAdminOtpHandler = asyncHandler(async (req, res) => {
-  const admin = await verifyAdminOtp(req.body?.email, req.body?.code);
+  const admin = await verifyAdminOtp(
+    req.cookies?.[OTP_PENDING_COOKIE],
+    req.body?.code,
+  );
+  clearOtpPendingCookie(res);
   res.cookie(COOKIE_NAME, createAdminToken(admin), getCookieOptions());
   void recordActivity({
     actor: admin,
     action: "login",
     resource: "admin",
-    description: `${admin.username} logged in with email code`,
+    description: `${admin.username} completed sign-in verification`,
     ip: req.ip,
     method: req.method,
     path: req.originalUrl,
@@ -65,7 +96,7 @@ export const startGoogleLogin = (req, res, next) => {
 };
 
 export const finishGoogleLogin = (req, res, next) => {
-  passport.authenticate("google", { session: false }, (error, admin) => {
+  passport.authenticate("google", { session: false }, async (error, admin) => {
     const loginUrl = new URL("/admin/login", process.env.ALLOWED_ORIGIN);
     if (error || !admin) {
       loginUrl.searchParams.set("auth", "google-denied");
@@ -75,20 +106,21 @@ export const finishGoogleLogin = (req, res, next) => {
         });
       return res.redirect(loginUrl.toString());
     }
-    res.cookie(COOKIE_NAME, createAdminToken(admin), getCookieOptions());
-    void recordActivity({
-      actor: admin,
-      action: "login",
-      resource: "admin",
-      description: `${admin.username} logged in with Google`,
-      ip: req.ip,
-      method: req.method,
-      path: req.originalUrl,
-    }).catch((err) =>
-      logger.error("Failed to persist activity log", { message: err.message }),
-    );
-    loginUrl.searchParams.set("auth", "google-success");
-    return res.redirect(loginUrl.toString());
+    try {
+      const challengeToken = await startAdminGoogleLogin(
+        admin,
+        sendAdminOtpEmail,
+      );
+      setOtpPendingCookie(res, challengeToken);
+      loginUrl.searchParams.set("auth", "otp-required");
+      return res.redirect(loginUrl.toString());
+    } catch (otpError) {
+      logger.error("Could not start Google sign-in verification", {
+        message: otpError.message,
+      });
+      loginUrl.searchParams.set("auth", "otp-failed");
+      return res.redirect(loginUrl.toString());
+    }
   })(req, res, next);
 };
 

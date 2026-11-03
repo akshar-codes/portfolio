@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useEffect, useCallback } from "react";
-import api from "../services/api";
+import api from "../api/client";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
 export const AuthContext = createContext(null);
@@ -42,8 +42,8 @@ export function AuthProvider({ children }) {
 
   // Accepts optional admin data (e.g. the username just typed into the
   // login form) so the UI has something accurate to show immediately —
-  // POST /api/admin/login itself returns no admin payload. The next
-  // `verify()` (on reload) overwrites this with the server-confirmed value.
+  // OTP completion returns no admin payload. The next `verify()` (on reload)
+  // overwrites this with the server-confirmed value.
   const login = useCallback((adminData) => {
     setAdmin(adminData ?? null);
     setAuthState("authenticated");

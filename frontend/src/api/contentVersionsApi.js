@@ -1,4 +1,4 @@
-import api from "../services/api";
+import api from "../api/client";
 
 export const contentVersionsApi = {
   list: (resource, id) => api.get(`/admin/content/${resource}/${id}/versions`).then((r) => r.data),

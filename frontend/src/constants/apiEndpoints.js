@@ -129,7 +129,7 @@ export const API_ENDPOINTS = {
   adminMediaFolderById: (id) => `/admin/media-folders/${id}`,
 
   // Admin auth
-  adminOtpRequest: "/admin/login/otp/request",
+  adminPasswordLogin: "/admin/login/password",
   adminOtpVerify: "/admin/login/otp/verify",
   adminLogout: "/admin/logout",
   adminVerify: "/admin/verify",

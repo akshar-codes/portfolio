@@ -54,9 +54,9 @@ npm run dev              # http://localhost:5173
 **First-time data setup** (run once against your database):
 
 ```
-node backend/src/scripts/seedProfile.js
-node backend/src/scripts/seedAbout.js
-node backend/src/scripts/seedResume.js
+node backend/src/seeds/seedProfile.js
+node backend/src/seeds/seedAbout.js
+node backend/src/seeds/seedResume.js
 ```
 
 An Admin document must also exist before you can log in — this project has

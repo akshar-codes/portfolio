@@ -32,8 +32,6 @@ const adminSchema = new mongoose.Schema(
   },
 );
 
-adminSchema.index({ username: 1 }, { unique: true, name: "username_unique" });
-
 const Admin = mongoose.model("Admin", adminSchema);
 
 export default Admin;

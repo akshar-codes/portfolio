@@ -12,7 +12,7 @@ import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import SearchIcon from "@mui/icons-material/Search";
-import api from "../../services/api";
+import api from "../../api/client";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 import PageHeader from "../../components/common/PageHeader";
 

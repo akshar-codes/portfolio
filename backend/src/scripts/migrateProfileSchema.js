@@ -45,7 +45,7 @@ const migrate = async () => {
       console.log(
         "A new document matching the full schema will be created " +
           "automatically on first read/write via getSingleton(), or by " +
-          "running scripts/seedProfile.js.",
+          "running seeds/seedProfile.js.",
       );
       await mongoose.connection.close();
       process.exit(0);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import api from "../services/api";
+import api from "../api/client";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { portfolioSnapshotApi } from "../api/portfolioSnapshotApi";
 

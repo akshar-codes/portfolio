@@ -54,7 +54,6 @@ const mediaFolderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-mediaFolderSchema.index({ slug: 1 }, { unique: true, name: "slug_unique" });
 mediaFolderSchema.index({ name: 1 });
 mediaFolderSchema.index({ order: 1 });
 

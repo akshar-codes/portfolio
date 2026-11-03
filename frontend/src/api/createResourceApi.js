@@ -1,4 +1,4 @@
-import api from "../services/api";
+import api from "../api/client";
 
 /**
  * Builds the standard list/getById/create/update/remove request

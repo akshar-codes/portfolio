@@ -31,10 +31,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
  */
 
 function escapeHtml(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function paragraphsToBiography(paragraphs = []) {
@@ -56,19 +53,19 @@ const migrate = async () => {
     const col = mongoose.connection.db.collection("about");
 
     console.log("=".repeat(60));
-    console.log("Migration: About CMS schema redesign (paragraphs → biography)");
+    console.log(
+      "Migration: About CMS schema redesign (paragraphs → biography)",
+    );
     console.log("=".repeat(60));
 
     const doc = await col.findOne({ owner: "default" });
 
     if (!doc) {
-      console.log(
-        "\nNo existing About singleton found — nothing to migrate.",
-      );
+      console.log("\nNo existing About singleton found — nothing to migrate.");
       console.log(
         "A new document matching the full schema will be created " +
           "automatically on first read/write via getSingleton(), or by " +
-          "running scripts/seedAbout.js.",
+          "running seeds/seedAbout.js.",
       );
       await mongoose.connection.close();
       process.exit(0);

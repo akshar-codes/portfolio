@@ -10,7 +10,8 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const SEED_DATA = {
   name: "Akshar Gupta",
   title: "Web Developer",
-  introduction: "",
+  introduction:
+    "I build full-stack web applications with React, Node.js, Express, and MongoDB, with a focus on secure APIs and maintainable backend architecture.",
   email: "akshargupta2006@gmail.com",
   phone: "+91 9258887187",
   location: "Meerut, Uttar Pradesh, India",
@@ -32,13 +33,41 @@ const SEED_DATA = {
     },
   ],
 
-  // Left empty intentionally — genuinely new content types with no
-  // prior data to backfill. Explicitly set (rather than relying on
-  // Mongoose applying schema defaults on an upsert-insert, which is
-  // not guaranteed without `setDefaultsOnInsert`). Fill in via the
-  // admin CMS.
-  ctaButtons: [],
-  statistics: [],
+  // Starter content, editable in the admin CMS.
+  ctaButtons: [
+    {
+      label: "View Projects",
+      url: "/projects",
+      style: "primary",
+      openInNewTab: false,
+      order: 0,
+    },
+    {
+      label: "Contact Me",
+      url: "/contact",
+      style: "outline",
+      openInNewTab: false,
+      order: 1,
+    },
+  ],
+  statistics: [
+    {
+      value: 3,
+      suffix: "+",
+      label: "Core Stack Projects",
+      icon: "code",
+      source: "manual",
+      order: 0,
+    },
+    {
+      value: 6,
+      suffix: "",
+      label: "Technologies in Focus",
+      icon: "layers",
+      source: "manual",
+      order: 1,
+    },
+  ],
 };
 
 const seed = async () => {

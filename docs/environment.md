@@ -16,25 +16,26 @@
 | `CLOUD_NAME`           | Yes                                         | Cloudinary cloud name.                                                                                                                                                                                  |
 | `CLOUD_API_KEY`        | Yes                                         | Cloudinary API key.                                                                                                                                                                                     |
 | `CLOUD_API_SECRET`     | Yes                                         | Cloudinary API secret. Never expose client-side.                                                                                                                                                        |
-| `ADMIN_EMAIL`          | Required for the new sign-in methods        | The single admin's email address. Both Google and email code sign-in reject every other address.                                                                                                        |
+| `ADMIN_EMAIL`          | Required                                    | The single admin's email address. Password and Google sign-in both require a code sent to this address.                                                                                                 |
 | `GOOGLE_CLIENT_ID`     | Optional                                    | OAuth 2.0 web client ID from Google Cloud; configure together with the secret and callback URL to enable Google sign-in.                                                                                |
 | `GOOGLE_CLIENT_SECRET` | Optional                                    | Backend-only OAuth client secret.                                                                                                                                                                       |
 | `GOOGLE_CALLBACK_URL`  | Optional                                    | Exact API callback URL registered in Google Cloud, e.g. `https://portfolio-backend.onrender.com/api/admin/login/google/callback`.                                                                       |
 | `OAUTH_SESSION_SECRET` | Optional                                    | Secret used to protect the temporary Passport OAuth state session. Defaults to `JWT_SECRET`; use a separate random value in production.                                                                 |
-| `GMAIL_USER`           | Optional                                    | Separate Gmail account used only to send admin verification codes.                                                                                                                                      |
-| `GMAIL_APP_PASSWORD`   | Optional                                    | App password for `GMAIL_USER` (use a Gmail app password, not the account password).                                                                                                                     |
+| `GMAIL_USER`           | Required                                    | Separate Gmail account used to send mandatory admin verification codes.                                                                                                                                 |
+| `GMAIL_APP_PASSWORD`   | Required                                    | App password for `GMAIL_USER` (use a Gmail app password, not the account password).                                                                                                                     |
 | `LOG_LEVEL`            | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
 
 ### Enable admin sign-in
 
-Create or retain the one existing Admin document; these sign-in methods never
-create accounts. Username/password login has been replaced by these two
-methods. Set `ADMIN_EMAIL` to the one allowed address. For Google,
+Create or retain the one existing Admin document; sign-in never creates
+accounts. Set `ADMIN_EMAIL` to the one allowed address and configure a separate
+Gmail sender. Admins may sign in with their email and password followed by the
+emailed code, or with Google followed by the same emailed code. OTP verification
+is mandatory for both methods. For Google,
 create a Google Cloud OAuth web client, add the deployed frontend to authorized
 JavaScript origins, and register the exact `GOOGLE_CALLBACK_URL` as an
-authorized redirect URI. For email codes, enable 2-Step Verification on a
-separate Gmail sender account, create an app password, and set `GMAIL_USER` and
-`GMAIL_APP_PASSWORD`. Codes expire after 10 minutes and are limited to five
+authorized redirect URI. Enable 2-Step Verification on the Gmail sender,
+create an app password, and set `GMAIL_USER` and `GMAIL_APP_PASSWORD`. Codes expire after 10 minutes and are limited to five
 verification attempts. Configure the values in `backend/.env` locally and the
 Render service environment in production. The Google and Gmail credentials stay
 on the backend.

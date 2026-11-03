@@ -1,5 +1,14 @@
 import { body } from "express-validator";
 
+export const passwordLoginValidator = [
+  body("email")
+    .isEmail()
+    .withMessage("Enter a valid admin email address")
+    .bail()
+    .customSanitizer((email) => email.trim().toLowerCase()),
+  body("password").isString().notEmpty().withMessage("Password is required"),
+];
+
 export const changePasswordValidator = [
   body("currentPassword")
     .isString()

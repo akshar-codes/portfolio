@@ -71,7 +71,7 @@ controllers, no response-shaping in services.
   document" logic.
 - **Typed error codes**: services throw `ServiceError(message, status,
 errorCode)`. The error middleware preserves `errorCode` through to the
-  JSON response; the frontend's axios interceptor (`services/api.js`)
+  JSON response; the frontend's axios interceptor (`api/client.js`)
   extracts it onto `error.errorCode` so components can branch on specific
   failures (e.g. `CATEGORY_IN_USE`) without string-matching messages.
 - **Snapshot-based dirty checks for manual reordering**: admin reorder UIs

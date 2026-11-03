@@ -44,7 +44,8 @@ const SEED_DATA = {
       startDate: "Jul 2024",
       endDate: "Aug 2024",
       current: false,
-      description: "Applied machine learning techniques within a defense research environment.",
+      description:
+        "Applied machine learning techniques within a defense research environment.",
       order: 1,
     },
     {
@@ -54,7 +55,8 @@ const SEED_DATA = {
       startDate: "Apr 2024",
       endDate: "Aug 2024",
       current: false,
-      description: "Coordinated external partnerships and event outreach for the student ACM chapter.",
+      description:
+        "Coordinated external partnerships and event outreach for the student ACM chapter.",
       order: 2,
     },
   ],
@@ -153,7 +155,11 @@ const SEED_DATA = {
     { name: "Hindi", proficiency: "native", order: 1 },
   ],
 
-  interests: [],
+  interests: [
+    { name: "Building web applications", icon: "code", order: 0 },
+    { name: "Machine learning", icon: "brain", order: 1 },
+    { name: "Problem solving", icon: "puzzle", order: 2 },
+  ],
 
   // Left empty intentionally — no hosted CV file URL exists yet.
   // Add via the admin CMS once a Cloudinary/external URL is available.

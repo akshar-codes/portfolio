@@ -10,7 +10,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
-import api from "../../services/api";
+import api from "../../api/client";
 import { API_ENDPOINTS } from "../../constants/apiEndpoints";
 
 const METRICS = [
