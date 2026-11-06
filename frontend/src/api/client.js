@@ -4,7 +4,9 @@ import { API_BASE_URL } from "../config/env.js";
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 10_000,
+  // Allow backend mail providers to return a bounded SMTP failure instead
+  // of showing a client timeout while the OTP request is still in flight.
+  timeout: 20_000,
 });
 
 function normalizeError(error) {

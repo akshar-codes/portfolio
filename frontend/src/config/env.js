@@ -1,8 +1,12 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
-if (!API_BASE_URL) {
+if (!configuredApiBaseUrl) {
   throw new Error("VITE_API_BASE_URL is required. Configure it before building the frontend.");
 }
+
+// Keep URL joining predictable: Axios treats a base URL ending in `/api/`
+// combined with endpoint paths starting in `/` as a double slash path.
+export const API_BASE_URL = configuredApiBaseUrl.replace(/\/+$/, "");
 
 try {
   const apiUrl = new URL(API_BASE_URL);

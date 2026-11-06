@@ -67,21 +67,15 @@ export default function validateEnv() {
     problems.push(
       "GMAIL_USER and GMAIL_APP_PASSWORD must either both be set or both be empty",
     );
-  if (
-    process.env.GMAIL_USER?.trim() &&
-    process.env.ADMIN_EMAIL?.trim() &&
-    process.env.GMAIL_USER.trim().toLowerCase() ===
-      process.env.ADMIN_EMAIL.trim().toLowerCase()
-  )
+  const hasGmailSender = Boolean(
+    process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim(),
+  );
+  const hasResendSender = Boolean(
+    process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim(),
+  );
+  if (process.env.ADMIN_EMAIL?.trim() && !hasGmailSender && !hasResendSender)
     problems.push(
-      "GMAIL_USER must be a separate sender account from ADMIN_EMAIL",
-    );
-  if (
-    process.env.ADMIN_EMAIL?.trim() &&
-    (!process.env.GMAIL_USER?.trim() || !process.env.GMAIL_APP_PASSWORD?.trim())
-  )
-    problems.push(
-      "GMAIL_USER and GMAIL_APP_PASSWORD are required because admin sign-in always requires an email code",
+      "Configure either GMAIL_USER/GMAIL_APP_PASSWORD or RESEND_API_KEY/RESEND_FROM_EMAIL because admin sign-in always requires an email code",
     );
   if (
     (googleValues.every(Boolean) ||

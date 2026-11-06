@@ -82,7 +82,7 @@ export const startGoogleLogin = (req, res, next) => {
     !process.env.GOOGLE_CLIENT_ID ||
     !process.env.GOOGLE_CLIENT_SECRET ||
     !process.env.GOOGLE_CALLBACK_URL ||
-    !process.env.ADMIN_EMAIL
+    (!process.env.ADMIN_EMAIL && process.env.NODE_ENV !== "development")
   ) {
     return res.redirect(
       `${process.env.ALLOWED_ORIGIN}/admin/login?auth=google-unavailable`,

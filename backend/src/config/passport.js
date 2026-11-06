@@ -23,9 +23,13 @@ if (
             ?.value?.trim()
             .toLowerCase();
           const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-          if (!email || !adminEmail || email !== adminEmail)
+          if (!email)
             return done(null, false);
           const admin = await findSoleAdmin();
+          if (!admin)
+            return done(null, false);
+          const allowedEmail = adminEmail || admin.email?.trim().toLowerCase();
+          if (!allowedEmail || email !== allowedEmail) return done(null, false);
           return done(null, admin || false);
         } catch (error) {
           return done(error);

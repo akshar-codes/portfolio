@@ -7,13 +7,12 @@ import { ServiceError } from "./ServiceError.js";
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
-function configuredAdminEmail() {
-  return process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? "";
-}
-
 async function issueAdminOtp(sendEmail) {
-  const adminEmail = configuredAdminEmail();
   const admin = await findSoleAdmin();
+  const adminEmail =
+    process.env.ADMIN_EMAIL?.trim().toLowerCase() ||
+    admin?.email?.trim().toLowerCase() ||
+    "";
   if (!adminEmail || !admin) {
     throw new ServiceError(
       "Admin sign-in is unavailable.",
@@ -21,7 +20,9 @@ async function issueAdminOtp(sendEmail) {
       "AUTH_LOGIN_UNAVAILABLE",
     );
   }
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  const hasGmail = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+  const hasResend = process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL;
+  if (!hasGmail && !hasResend) {
     throw new ServiceError(
       "Email login is not configured.",
       503,
@@ -52,11 +53,14 @@ async function issueAdminOtp(sendEmail) {
 }
 
 export async function startAdminPasswordLogin(email, password, sendEmail) {
-  const adminEmail = configuredAdminEmail();
+  const admin = await findSoleAdmin();
+  const adminEmail =
+    process.env.ADMIN_EMAIL?.trim().toLowerCase() ||
+    admin?.email?.trim().toLowerCase() ||
+    "";
   const normalized = String(email ?? "")
     .trim()
     .toLowerCase();
-  const admin = await findSoleAdmin();
   if (
     !admin ||
     !adminEmail ||
