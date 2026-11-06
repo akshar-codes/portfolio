@@ -21,45 +21,45 @@
 | `GOOGLE_CLIENT_SECRET` | Optional                                    | Backend-only OAuth client secret.                                                                                                                                                                       |
 | `GOOGLE_CALLBACK_URL`  | Optional                                    | Exact API callback URL registered in Google Cloud, e.g. `https://portfolio-backend.onrender.com/api/admin/login/google/callback`.                                                                       |
 | `OAUTH_SESSION_SECRET` | Optional                                    | Secret used to protect the temporary Passport OAuth state session. Defaults to `JWT_SECRET`; use a separate random value in production.                                                                 |
-| `GMAIL_USER`           | Required                                    | Separate Gmail account used to send mandatory admin verification codes.                                                                                                                                 |
-| `GMAIL_APP_PASSWORD`   | Required                                    | App password for `GMAIL_USER` (use a Gmail app password, not the account password).                                                                                                                     |
+| `BREVO_API_KEY`        | Required                                    | Backend-only Brevo API key used for admin OTPs, website replies, and message notifications.                                                                                                             |
+| `BREVO_FROM_EMAIL`     | Required                                    | Verified sender address configured in Brevo.                                                                                                                                                           |
+| `BREVO_FROM_NAME`      | Optional                                    | Sender display name. Defaults to `Portfolio Admin`.                                                                                                                                                    |
 | `LOG_LEVEL`            | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
 
 ### Enable admin sign-in
 
 Create or retain the one existing Admin document; sign-in never creates
-accounts. Set `ADMIN_EMAIL` to the one allowed address and configure a separate
-Gmail sender. Admins may sign in with their email and password followed by the
+accounts. Set `ADMIN_EMAIL` to the one allowed address and configure a verified
+Brevo sender. Admins may sign in with their email and password followed by the
 emailed code, or with Google followed by the same emailed code. OTP verification
 is mandatory for both methods. For Google,
 create a Google Cloud OAuth web client, add the deployed frontend to authorized
 JavaScript origins, and register the exact `GOOGLE_CALLBACK_URL` as an
-authorized redirect URI. Enable 2-Step Verification on the Gmail sender,
-create an app password, and set `GMAIL_USER` and `GMAIL_APP_PASSWORD`. Codes expire after 10 minutes and are limited to five
-verification attempts. Configure the values in `backend/.env` locally and the
-Render service environment in production. The Google and Gmail credentials stay
-on the backend.
+authorized redirect URI. Create a Brevo API key and set `BREVO_API_KEY`,
+`BREVO_FROM_EMAIL`, and optionally `BREVO_FROM_NAME` in `backend/.env` and the
+Render service environment. The sender must be verified in Brevo. Free email
+senders such as Gmail may be rewritten by Brevo and can have reduced delivery;
+a sender on a domain you control is recommended. Codes expire after 10 minutes
+and are limited to five verification attempts. Keep the Brevo API key on the
+backend.
 
-Website replies from the admin inbox use these optional variables:
+Website replies and contact notifications use the same Brevo sender:
 
 | Variable                     | Required                     | Description                                                                                  |
 | ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
-| `RESEND_API_KEY`             | Required for website replies | Backend-only Resend API key.                                                                 |
-| `RESEND_FROM_EMAIL`          | Required for website replies | Sender identity on a domain verified with Resend, e.g. `Akshar Gupta <replies@example.com>`. |
 | `MESSAGE_NOTIFICATION_EMAIL` | Optional                     | Inbox for new-contact-message alerts. Defaults to the email address in the public profile.   |
 | `GITHUB_TOKEN`               | Optional                     | Raises the GitHub API rate limit for automatic repository commit counts.                     |
 | `PORTFOLIO_SNAPSHOT_TOKEN`   | Required in production       | Shared secret for the authenticated Vercel build snapshot request. At least 32 bytes.        |
 | `VERCEL_DEPLOY_HOOK_URL`     | Required in production       | Vercel Deploy Hook called by **Admin → Dashboard → Publish Changes**.                        |
 
-Set both variables to enable **Reply from website**. The recipient comes
-from the stored message and the backend sends plain-text email through
-Resend. **Reply via email** continues to open your local mail app and does
-not depend on these settings.
+With Brevo configured, **Reply from website** sends plain-text email to the
+address on the stored message. **Reply via email** continues to open your local
+mail app.
 
 When a new contact message is saved, the backend sends a separate notification
 email to `MESSAGE_NOTIFICATION_EMAIL` (or the public profile email if unset),
-using the configured Resend sender. Add `MESSAGE_NOTIFICATION_EMAIL` in the
-Render dashboard to choose a different notification inbox. If Resend is not
+using the configured Brevo sender. Add `MESSAGE_NOTIFICATION_EMAIL` in the
+Render dashboard to choose a different notification inbox. If Brevo is not
 configured, the message is still saved and the skipped notification is logged.
 
 ### One-off migration script only (`scripts/migrateCloudinary.js`)

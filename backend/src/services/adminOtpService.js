@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 import AdminLoginChallenge from "../models/AdminLoginChallenge.js";
 import { findSoleAdmin } from "../repositories/adminRepository.js";
 import { ServiceError } from "./ServiceError.js";
+import { hasBrevoEmailConfig } from "./brevoEmailService.js";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -20,9 +21,7 @@ async function issueAdminOtp(sendEmail) {
       "AUTH_LOGIN_UNAVAILABLE",
     );
   }
-  const hasGmail = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
-  const hasResend = process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL;
-  if (!hasGmail && !hasResend) {
+  if (!hasBrevoEmailConfig()) {
     throw new ServiceError(
       "Email login is not configured.",
       503,

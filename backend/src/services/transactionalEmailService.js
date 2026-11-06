@@ -1,34 +1,22 @@
-import axios from "axios";
 import { ServiceError } from "./ServiceError.js";
+import {
+  hasBrevoEmailConfig,
+  sendBrevoEmail,
+} from "./brevoEmailService.js";
 
-const RESEND_EMAILS_URL = "https://api.resend.com/emails";
-
-/** Send plain-text mail from the site's verified Resend sender. */
+/** Send plain-text mail through the configured Brevo sender. */
 export async function sendTransactionalEmail({ to, subject, text }) {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
-
-  if (!apiKey || !from) {
+  if (!hasBrevoEmailConfig()) {
     throw new ServiceError(
-      "Website email replies are not configured. Set RESEND_API_KEY and RESEND_FROM_EMAIL.",
+      "Website email is not configured. Set BREVO_API_KEY and BREVO_FROM_EMAIL.",
       503,
       "EMAIL_SENDING_NOT_CONFIGURED",
     );
   }
 
   try {
-    const { data } = await axios.post(
-      RESEND_EMAILS_URL,
-      { from, to: [to], subject, text },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 10_000,
-      },
-    );
-    return { id: data.id };
+    const result = await sendBrevoEmail({ to, subject, text });
+    return { id: result.messageId };
   } catch {
     throw new ServiceError(
       "The email provider could not send the reply. Please try again.",

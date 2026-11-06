@@ -37,10 +37,13 @@ services:
       - key: OAUTH_SESSION_SECRET
         sync: false
 
-      - key: GMAIL_USER
+      - key: BREVO_API_KEY
         sync: false
 
-      - key: GMAIL_APP_PASSWORD
+      - key: BREVO_FROM_EMAIL
+        sync: false
+
+      - key: BREVO_FROM_NAME
         sync: false
 
       - key: ALLOWED_ORIGIN
@@ -55,12 +58,6 @@ services:
         sync: false
 
       - key: CLOUD_API_SECRET
-        sync: false
-
-      - key: RESEND_API_KEY
-        sync: false
-
-      - key: RESEND_FROM_EMAIL
         sync: false
 
       - key: MESSAGE_NOTIFICATION_EMAIL

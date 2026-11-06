@@ -1,6 +1,6 @@
-import nodemailer from "nodemailer";
 import { ServiceError } from "./ServiceError.js";
 import logger from "../utils/logger.js";
+import { sendBrevoEmail } from "./brevoEmailService.js";
 
 function otpEmailContent(code) {
   const text = [
@@ -41,95 +41,33 @@ function otpEmailContent(code) {
   return { text, html };
 }
 
-async function sendWithResend({ apiKey, from, to, code }) {
-  const content = otpEmailContent(code);
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: "Your portfolio admin sign-in code",
-      ...content,
-    }),
-    signal: AbortSignal.timeout(8_000),
-  });
-  if (!response.ok) {
-    const details = await response.json().catch(() => ({}));
-    const error = new Error(details.message || `Resend returned HTTP ${response.status}`);
-    error.code = "RESEND_API_ERROR";
-    error.responseCode = response.status;
-    throw error;
-  }
-}
-
 export async function sendAdminOtpEmail({ to, code }) {
-  const user = process.env.GMAIL_USER?.trim();
-  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "");
-  if (user && pass) {
-    const content = otpEmailContent(code);
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      connectionTimeout: 8_000,
-      greetingTimeout: 5_000,
-      socketTimeout: 8_000,
-      auth: { user, pass },
+  const { text, html } = otpEmailContent(code);
+  try {
+    await sendBrevoEmail({
+      to,
+      subject: "Your portfolio admin sign-in code",
+      text,
+      html,
     });
-    try {
-      await transporter.sendMail({
-        from: `Portfolio Admin <${user}>`,
-        to,
-        subject: "Your portfolio admin sign-in code",
-        ...content,
-      });
-      return;
-    } catch (error) {
-      logger.error("Admin OTP email delivery failed", {
-        provider: "gmail",
-        code: error?.code,
-        command: error?.command,
-        responseCode: error?.responseCode,
-        response: typeof error?.response === "string"
-          ? error.response.slice(0, 300)
-          : undefined,
-      });
+  } catch (error) {
+    logger.error("Admin OTP email delivery failed", {
+      provider: "brevo",
+      code: error?.code,
+      responseCode: error?.responseCode,
+      message: error?.message?.slice(0, 300),
+    });
+    if (error?.code === "BREVO_NOT_CONFIGURED") {
       throw new ServiceError(
-        "Could not send the verification code. Please try again.",
-        502,
-        "AUTH_OTP_SEND_FAILED",
+        "Email login is not configured.",
+        503,
+        "AUTH_EMAIL_NOT_CONFIGURED",
       );
     }
+    throw new ServiceError(
+      "Could not send the verification code. Please try again.",
+      502,
+      "AUTH_OTP_SEND_FAILED",
+    );
   }
-
-  const resendKey = process.env.RESEND_API_KEY?.trim();
-  const resendFrom = process.env.RESEND_FROM_EMAIL?.trim();
-  if (resendKey && resendFrom) {
-    try {
-      await sendWithResend({ apiKey: resendKey, from: resendFrom, to, code });
-      return;
-    } catch (error) {
-      logger.error("Admin OTP email delivery failed", {
-        provider: "resend",
-        code: error?.code,
-        responseCode: error?.responseCode,
-        message: error?.message?.slice(0, 300),
-      });
-      throw new ServiceError(
-        "Could not send the verification code. Please try again.",
-        502,
-        "AUTH_OTP_SEND_FAILED",
-      );
-    }
-  }
-
-  throw new ServiceError(
-    "Email login is not configured.",
-    503,
-    "AUTH_EMAIL_NOT_CONFIGURED",
-  );
 }

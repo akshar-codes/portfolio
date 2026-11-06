@@ -44,11 +44,11 @@ export default function validateEnv() {
   )
     problems.push("LOG_LEVEL is not a supported Winston level");
   if (
-    Boolean(process.env.RESEND_API_KEY?.trim()) !==
-    Boolean(process.env.RESEND_FROM_EMAIL?.trim())
+    Boolean(process.env.BREVO_API_KEY?.trim()) !==
+    Boolean(process.env.BREVO_FROM_EMAIL?.trim())
   ) {
     problems.push(
-      "RESEND_API_KEY and RESEND_FROM_EMAIL must either both be set or both be empty",
+      "BREVO_API_KEY and BREVO_FROM_EMAIL must either both be set or both be empty",
     );
   }
   const googleValues = [
@@ -60,26 +60,15 @@ export default function validateEnv() {
     problems.push(
       "GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL must either all be set or all be empty",
     );
-  if (
-    Boolean(process.env.GMAIL_USER?.trim()) !==
-    Boolean(process.env.GMAIL_APP_PASSWORD?.trim())
-  )
-    problems.push(
-      "GMAIL_USER and GMAIL_APP_PASSWORD must either both be set or both be empty",
-    );
-  const hasGmailSender = Boolean(
-    process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim(),
+  const hasBrevoSender = Boolean(
+    process.env.BREVO_API_KEY?.trim() && process.env.BREVO_FROM_EMAIL?.trim(),
   );
-  const hasResendSender = Boolean(
-    process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim(),
-  );
-  if (process.env.ADMIN_EMAIL?.trim() && !hasGmailSender && !hasResendSender)
+  if (process.env.ADMIN_EMAIL?.trim() && !hasBrevoSender)
     problems.push(
-      "Configure either GMAIL_USER/GMAIL_APP_PASSWORD or RESEND_API_KEY/RESEND_FROM_EMAIL because admin sign-in always requires an email code",
+      "Configure BREVO_API_KEY and BREVO_FROM_EMAIL because admin sign-in always requires an email code",
     );
   if (
     (googleValues.every(Boolean) ||
-      process.env.GMAIL_USER?.trim() ||
       process.env.ADMIN_EMAIL?.trim()) &&
     !process.env.ADMIN_EMAIL?.trim()
   )

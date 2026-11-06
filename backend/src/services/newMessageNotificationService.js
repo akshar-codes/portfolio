@@ -1,6 +1,7 @@
 import Profile from "../models/Profile.js";
 import logger from "../utils/logger.js";
 import { sendTransactionalEmail } from "./transactionalEmailService.js";
+import { hasBrevoEmailConfig } from "./brevoEmailService.js";
 
 const getNotificationEmail = async () => {
   const configured = process.env.MESSAGE_NOTIFICATION_EMAIL?.trim();
@@ -15,8 +16,8 @@ async function notifyByEmail(message) {
     logger.warn("New-message email notification skipped: set MESSAGE_NOTIFICATION_EMAIL or a profile email.");
     return;
   }
-  if (!process.env.RESEND_API_KEY?.trim() || !process.env.RESEND_FROM_EMAIL?.trim()) {
-    logger.warn("New-message email notification skipped: Resend is not configured.");
+  if (!hasBrevoEmailConfig()) {
+    logger.warn("New-message email notification skipped: Brevo is not configured.");
     return;
   }
 
