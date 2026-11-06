@@ -22,8 +22,8 @@
 | `GOOGLE_CALLBACK_URL`  | Optional                                    | Exact API callback URL registered in Google Cloud, e.g. `https://portfolio-backend.onrender.com/api/admin/login/google/callback`.                                                                       |
 | `OAUTH_SESSION_SECRET` | Optional                                    | Secret used to protect the temporary Passport OAuth state session. Defaults to `JWT_SECRET`; use a separate random value in production.                                                                 |
 | `BREVO_API_KEY`        | Required                                    | Backend-only Brevo API key used for admin OTPs, website replies, and message notifications.                                                                                                             |
-| `BREVO_FROM_EMAIL`     | Required                                    | Verified sender address configured in Brevo.                                                                                                                                                           |
-| `BREVO_FROM_NAME`      | Optional                                    | Sender display name. Defaults to `Portfolio Admin`.                                                                                                                                                    |
+| `BREVO_FROM_EMAIL`     | Required                                    | Verified sender address configured in Brevo.                                                                                                                                                            |
+| `BREVO_FROM_NAME`      | Optional                                    | Sender display name. Defaults to `Portfolio Admin`.                                                                                                                                                     |
 | `LOG_LEVEL`            | No (default `debug` in dev, `info` in prod) | Winston log level.                                                                                                                                                                                      |
 
 ### Enable admin sign-in
@@ -45,12 +45,12 @@ backend.
 
 Website replies and contact notifications use the same Brevo sender:
 
-| Variable                     | Required                     | Description                                                                                  |
-| ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
-| `MESSAGE_NOTIFICATION_EMAIL` | Optional                     | Inbox for new-contact-message alerts. Defaults to the email address in the public profile.   |
-| `GITHUB_TOKEN`               | Optional                     | Raises the GitHub API rate limit for automatic repository commit counts.                     |
-| `PORTFOLIO_SNAPSHOT_TOKEN`   | Required in production       | Shared secret for the authenticated Vercel build snapshot request. At least 32 bytes.        |
-| `VERCEL_DEPLOY_HOOK_URL`     | Required in production       | Vercel Deploy Hook called by **Admin → Dashboard → Publish Changes**.                        |
+| Variable                     | Required               | Description                                                                                |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| `MESSAGE_NOTIFICATION_EMAIL` | Optional               | Inbox for new-contact-message alerts. Defaults to the email address in the public profile. |
+| `GITHUB_TOKEN`               | Optional               | Raises the GitHub API rate limit for automatic repository commit counts.                   |
+| `PORTFOLIO_SNAPSHOT_TOKEN`   | Required in production | Shared secret for the authenticated Vercel build snapshot request. At least 32 bytes.      |
+| `VERCEL_DEPLOY_HOOK_URL`     | Required in production | Vercel Deploy Hook called by **Admin → Dashboard → Publish Changes**.                      |
 
 With Brevo configured, **Reply from website** sends plain-text email to the
 address on the stored message. **Reply via email** continues to open your local
@@ -80,11 +80,12 @@ but should normally remain unset.
 
 ## Frontend (`frontend/.env` locally — Vercel project settings in production)
 
-| Variable                   | Required              | Description                                                                                                                                                                                                                             |
-| -------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL`        | Yes                   | Base URL the frontend's axios instance targets — the deployed **Render** API's base URL (e.g. `https://portfolio-backend.onrender.com/api`). **Inlined at build time** — changing it requires a redeploy on Vercel, not just a restart. |
-| `PORTFOLIO_SNAPSHOT_URL`   | Recommended on Vercel | Full Render `/api/public/build-snapshot` endpoint. If omitted, the build script derives it from `VITE_API_BASE_URL`.                                                                                                                    |
-| `PORTFOLIO_SNAPSHOT_TOKEN` | Required on Vercel    | Same secret as the backend variable; used only by the build script and never exposed as a `VITE_` variable.                                                                                                                             |
+| Variable                    | Required               | Description                                                                                                                                                                                                     |
+| --------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`         | Yes                    | API base URL. For local Vite development, set `/api` and use the proxy below. In Vercel, set the full Render URL (e.g. `https://portfolio-backend.onrender.com/api`). **Inlined at build time** for production. |
+| `VITE_DEV_API_PROXY_TARGET` | Local development only | Render backend origin for Vite's same-origin `/api` proxy (e.g. `https://portfolio-backend-jxap.onrender.com`). This avoids CORS and cross-site cookie issues locally.                                          |
+| `PORTFOLIO_SNAPSHOT_URL`    | Recommended on Vercel  | Full Render `/api/public/build-snapshot` endpoint. If omitted, the build script derives it from `VITE_API_BASE_URL`.                                                                                            |
+| `PORTFOLIO_SNAPSHOT_TOKEN`  | Required on Vercel     | Same secret as the backend variable; used only by the build script and never exposed as a `VITE_` variable.                                                                                                     |
 
 ---
 

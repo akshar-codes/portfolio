@@ -85,6 +85,11 @@ function restoreLink(rel, prev) {
  *   verification: seo.googleSiteVerification, seo.bingSiteVerification
  */
 export function buildPageSeo(seo = {}, overrides = {}) {
+  // A missing SEO singleton is returned as null by the public snapshot API.
+  // Default parameters only handle undefined, so normalize null explicitly.
+  seo ??= {};
+  overrides ??= {};
+
   const {
     pageTitle,
     pageDescription,
@@ -94,30 +99,26 @@ export function buildPageSeo(seo = {}, overrides = {}) {
     pageOgType,
   } = overrides;
 
-  const image =
-    pageImage ||
-    seo.openGraph?.image ||
-    seo.defaultOgImage ||
-    "";
+  const image = pageImage || seo.openGraph?.image || seo.defaultOgImage || "";
 
   const keywords = pageKeywords.length
     ? pageKeywords
-    : seo.defaultKeywords ?? [];
+    : (seo.defaultKeywords ?? []);
 
   const ogTitle =
     seo.openGraph?.title || pageTitle || seo.defaultMetaTitle || "";
 
   const ogDescription =
-    seo.openGraph?.description || pageDescription || seo.defaultMetaDescription || "";
+    seo.openGraph?.description ||
+    pageDescription ||
+    seo.defaultMetaDescription ||
+    "";
 
-  const twitterTitle =
-    seo.twitterCard?.title || ogTitle;
+  const twitterTitle = seo.twitterCard?.title || ogTitle;
 
-  const twitterDescription =
-    seo.twitterCard?.description || ogDescription;
+  const twitterDescription = seo.twitterCard?.description || ogDescription;
 
-  const twitterImage =
-    seo.twitterCard?.image || image;
+  const twitterImage = seo.twitterCard?.image || image;
 
   let siteName = "";
   try {
@@ -128,35 +129,35 @@ export function buildPageSeo(seo = {}, overrides = {}) {
     // invalid URL — leave siteName empty
   }
 
-  const robotsIndex  = seo.robotsIndex  ?? true;
+  const robotsIndex = seo.robotsIndex ?? true;
   const robotsFollow = seo.robotsFollow ?? true;
   const robots = [
-    robotsIndex  ? "index"   : "noindex",
-    robotsFollow ? "follow"  : "nofollow",
+    robotsIndex ? "index" : "noindex",
+    robotsFollow ? "follow" : "nofollow",
   ].join(", ");
 
   return {
-    title       : pageTitle || seo.defaultMetaTitle || "",
-    description : pageDescription || seo.defaultMetaDescription || "",
-    keywords    : keywords.join(", "),
-    canonical   : pageCanonical || "",
+    title: pageTitle || seo.defaultMetaTitle || "",
+    description: pageDescription || seo.defaultMetaDescription || "",
+    keywords: keywords.join(", "),
+    canonical: pageCanonical || "",
     robots,
     // OpenGraph
     ogTitle,
     ogDescription,
-    ogImage     : image,
-    ogType      : pageOgType || seo.openGraph?.type || "website",
-    ogUrl       : pageCanonical || seo.canonicalBaseUrl || "",
-    ogSiteName  : siteName,
+    ogImage: image,
+    ogType: pageOgType || seo.openGraph?.type || "website",
+    ogUrl: pageCanonical || seo.canonicalBaseUrl || "",
+    ogSiteName: siteName,
     // Twitter
-    twitterCard        : seo.twitterCard?.cardType || "summary_large_image",
-    twitterSite        : seo.twitterHandle || "",
+    twitterCard: seo.twitterCard?.cardType || "summary_large_image",
+    twitterSite: seo.twitterHandle || "",
     twitterTitle,
     twitterDescription,
     twitterImage,
     // Verification
-    googleSiteVerification : seo.googleSiteVerification || "",
-    bingSiteVerification   : seo.bingSiteVerification   || "",
+    googleSiteVerification: seo.googleSiteVerification || "",
+    bingSiteVerification: seo.bingSiteVerification || "",
   };
 }
 
@@ -217,59 +218,101 @@ export function useDocumentHead({
     if (title) document.title = title;
 
     // ── Primary meta ────────────────────────────────────────────────
-    const prevDescription  = upsertMeta("name", "description",  description);
-    const prevKeywords     = upsertMeta("name", "keywords",     keywords);
-    const prevRobots       = upsertMeta("name", "robots",       robots);
-    const prevCanonical    = upsertLink("canonical",            canonical);
+    const prevDescription = upsertMeta("name", "description", description);
+    const prevKeywords = upsertMeta("name", "keywords", keywords);
+    const prevRobots = upsertMeta("name", "robots", robots);
+    const prevCanonical = upsertLink("canonical", canonical);
 
     // ── OpenGraph ───────────────────────────────────────────────────
-    const prevOgTitle       = upsertMeta("property", "og:title",       ogTitle       || title);
-    const prevOgDesc        = upsertMeta("property", "og:description",  ogDescription || description);
-    const prevOgImage       = upsertMeta("property", "og:image",       ogImage);
-    const prevOgType        = upsertMeta("property", "og:type",        ogType        || "website");
-    const prevOgUrl         = upsertMeta("property", "og:url",         ogUrl         || canonical);
-    const prevOgSiteName    = upsertMeta("property", "og:site_name",   ogSiteName);
+    const prevOgTitle = upsertMeta("property", "og:title", ogTitle || title);
+    const prevOgDesc = upsertMeta(
+      "property",
+      "og:description",
+      ogDescription || description,
+    );
+    const prevOgImage = upsertMeta("property", "og:image", ogImage);
+    const prevOgType = upsertMeta("property", "og:type", ogType || "website");
+    const prevOgUrl = upsertMeta("property", "og:url", ogUrl || canonical);
+    const prevOgSiteName = upsertMeta("property", "og:site_name", ogSiteName);
 
     // ── Twitter Card ────────────────────────────────────────────────
-    const prevTwCard        = upsertMeta("name", "twitter:card",        twitterCard        || "summary_large_image");
-    const prevTwSite        = upsertMeta("name", "twitter:site",        twitterSite);
-    const prevTwTitle       = upsertMeta("name", "twitter:title",       twitterTitle       || ogTitle || title);
-    const prevTwDesc        = upsertMeta("name", "twitter:description", twitterDescription || ogDescription || description);
-    const prevTwImage       = upsertMeta("name", "twitter:image",       twitterImage       || ogImage);
+    const prevTwCard = upsertMeta(
+      "name",
+      "twitter:card",
+      twitterCard || "summary_large_image",
+    );
+    const prevTwSite = upsertMeta("name", "twitter:site", twitterSite);
+    const prevTwTitle = upsertMeta(
+      "name",
+      "twitter:title",
+      twitterTitle || ogTitle || title,
+    );
+    const prevTwDesc = upsertMeta(
+      "name",
+      "twitter:description",
+      twitterDescription || ogDescription || description,
+    );
+    const prevTwImage = upsertMeta(
+      "name",
+      "twitter:image",
+      twitterImage || ogImage,
+    );
 
     // ── Verification ─────────────────────────────────────────────────
-    const prevGoogleVerif   = upsertMeta("name", "google-site-verification", googleSiteVerification);
-    const prevBingVerif     = upsertMeta("name", "msvalidate.01",            bingSiteVerification);
+    const prevGoogleVerif = upsertMeta(
+      "name",
+      "google-site-verification",
+      googleSiteVerification,
+    );
+    const prevBingVerif = upsertMeta(
+      "name",
+      "msvalidate.01",
+      bingSiteVerification,
+    );
 
     return () => {
       document.title = previousTitle;
 
-      restoreMeta("name", "description",  prevDescription);
-      restoreMeta("name", "keywords",     prevKeywords);
-      restoreMeta("name", "robots",       prevRobots);
-      restoreLink("canonical",            prevCanonical);
+      restoreMeta("name", "description", prevDescription);
+      restoreMeta("name", "keywords", prevKeywords);
+      restoreMeta("name", "robots", prevRobots);
+      restoreLink("canonical", prevCanonical);
 
-      restoreMeta("property", "og:title",       prevOgTitle);
+      restoreMeta("property", "og:title", prevOgTitle);
       restoreMeta("property", "og:description", prevOgDesc);
-      restoreMeta("property", "og:image",       prevOgImage);
-      restoreMeta("property", "og:type",        prevOgType);
-      restoreMeta("property", "og:url",         prevOgUrl);
-      restoreMeta("property", "og:site_name",   prevOgSiteName);
+      restoreMeta("property", "og:image", prevOgImage);
+      restoreMeta("property", "og:type", prevOgType);
+      restoreMeta("property", "og:url", prevOgUrl);
+      restoreMeta("property", "og:site_name", prevOgSiteName);
 
-      restoreMeta("name", "twitter:card",        prevTwCard);
-      restoreMeta("name", "twitter:site",        prevTwSite);
-      restoreMeta("name", "twitter:title",       prevTwTitle);
+      restoreMeta("name", "twitter:card", prevTwCard);
+      restoreMeta("name", "twitter:site", prevTwSite);
+      restoreMeta("name", "twitter:title", prevTwTitle);
       restoreMeta("name", "twitter:description", prevTwDesc);
-      restoreMeta("name", "twitter:image",       prevTwImage);
+      restoreMeta("name", "twitter:image", prevTwImage);
 
       restoreMeta("name", "google-site-verification", prevGoogleVerif);
-      restoreMeta("name", "msvalidate.01",            prevBingVerif);
+      restoreMeta("name", "msvalidate.01", prevBingVerif);
     };
   }, [
-    title, description, keywords, canonical, robots,
-    ogTitle, ogDescription, ogImage, ogType, ogUrl, ogSiteName,
-    twitterCard, twitterSite, twitterTitle, twitterDescription, twitterImage,
-    googleSiteVerification, bingSiteVerification,
+    title,
+    description,
+    keywords,
+    canonical,
+    robots,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    ogType,
+    ogUrl,
+    ogSiteName,
+    twitterCard,
+    twitterSite,
+    twitterTitle,
+    twitterDescription,
+    twitterImage,
+    googleSiteVerification,
+    bingSiteVerification,
   ]);
 }
 
