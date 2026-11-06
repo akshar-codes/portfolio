@@ -8,13 +8,21 @@ if (!configuredApiBaseUrl) {
 
 // Keep URL joining predictable: Axios treats a base URL ending in `/api/`
 // combined with endpoint paths starting in `/` as a double slash path.
-export const API_BASE_URL = configuredApiBaseUrl.replace(/\/+$/, "");
+const useVercelSameOriginProxy =
+  typeof window !== "undefined" &&
+  window.location.hostname.endsWith(".vercel.app");
+const apiBaseUrl = useVercelSameOriginProxy
+  ? "/api"
+  : configuredApiBaseUrl;
+export const API_BASE_URL = apiBaseUrl.replace(/\/+$/, "");
 
 try {
   const isRelativePath =
     API_BASE_URL.startsWith("/") && !API_BASE_URL.startsWith("//");
-  if (isRelativePath && !import.meta.env.DEV) {
-    throw new Error("relative API URLs are only allowed in local development");
+  if (isRelativePath && !import.meta.env.DEV && !useVercelSameOriginProxy) {
+    throw new Error(
+      "relative API URLs are only allowed in local development or Vercel deployments",
+    );
   }
   const apiUrl = new URL(API_BASE_URL, "http://localhost");
   const localHttp =
