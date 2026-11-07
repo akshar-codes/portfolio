@@ -55,9 +55,7 @@ function validateSeoField(value) {
       throw new Error("seo.metaKeywords must not exceed 20 entries");
     }
     if (
-      !parsed.metaKeywords.every(
-        (k) => typeof k === "string" && k.length <= 60,
-      )
+      !parsed.metaKeywords.every((k) => typeof k === "string" && k.length <= 60)
     ) {
       throw new Error(
         "Each seo.metaKeywords entry must be a string of at most 60 characters",
@@ -88,8 +86,8 @@ export const projectCreateValidators = [
     .trim()
     .notEmpty()
     .withMessage("Project description is required")
-    .isLength({ max: 20000 })
-    .withMessage("Description is too long"),
+    .isLength({ max: 5000 })
+    .withMessage("Description must not exceed 5000 characters"),
 
   body("category")
     .notEmpty()
@@ -115,13 +113,13 @@ export const projectCreateValidators = [
 
   body("challenge")
     .optional({ checkFalsy: true })
-    .isLength({ max: 20000 })
-    .withMessage("Challenge is too long"),
+    .isLength({ max: 3000 })
+    .withMessage("Challenge must not exceed 3000 characters"),
 
   body("solution")
     .optional({ checkFalsy: true })
-    .isLength({ max: 20000 })
-    .withMessage("Solution is too long"),
+    .isLength({ max: 3000 })
+    .withMessage("Solution must not exceed 3000 characters"),
 
   // Initial value only — no prior status exists to transition from at
   // creation time, so this is a literal assignment, not a transition.
@@ -159,8 +157,8 @@ export const projectUpdateValidators = [
     .trim()
     .notEmpty()
     .withMessage("Project description cannot be empty")
-    .isLength({ max: 20000 })
-    .withMessage("Description is too long"),
+    .isLength({ max: 5000 })
+    .withMessage("Description must not exceed 5000 characters"),
 
   body("category")
     .optional({ checkFalsy: true })
@@ -185,13 +183,13 @@ export const projectUpdateValidators = [
 
   body("challenge")
     .optional({ checkFalsy: true })
-    .isLength({ max: 20000 })
-    .withMessage("Challenge is too long"),
+    .isLength({ max: 3000 })
+    .withMessage("Challenge must not exceed 3000 characters"),
 
   body("solution")
     .optional({ checkFalsy: true })
-    .isLength({ max: 20000 })
-    .withMessage("Solution is too long"),
+    .isLength({ max: 3000 })
+    .withMessage("Solution must not exceed 3000 characters"),
 
   body("featured")
     .optional()
@@ -212,8 +210,16 @@ export const reorderProjectsValidator = [
 ];
 
 export const projectAdminListValidators = [
-  query("page").optional().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
-  query("limit").optional().isInt({ min: 1 }).withMessage("limit must be a positive integer").toInt(),
+  query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("page must be a positive integer")
+    .toInt(),
+  query("limit")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("limit must be a positive integer")
+    .toInt(),
   query("status")
     .optional()
     .isIn(CONTENT_STATUSES)
@@ -222,12 +228,18 @@ export const projectAdminListValidators = [
     .optional()
     .isIn(["true", "false"])
     .withMessage("featured must be 'true' or 'false'"),
-  query("search").optional().trim().isLength({ max: 200 }).withMessage("search must not exceed 200 characters"),
+  query("search")
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage("search must not exceed 200 characters"),
   query("category").optional().trim(),
   query("sortBy")
     .optional()
     .isIn(PROJECT_ADMIN_SORT_FIELDS)
-    .withMessage(`sortBy must be one of: ${PROJECT_ADMIN_SORT_FIELDS.join(", ")}`),
+    .withMessage(
+      `sortBy must be one of: ${PROJECT_ADMIN_SORT_FIELDS.join(", ")}`,
+    ),
   query("sortOrder")
     .optional()
     .isIn(["asc", "desc"])

@@ -129,7 +129,12 @@ function GalleryManager({ existing, onDeleteExisting, newFiles, onNewFiles }) {
                 borderColor: "divider",
               }}
             >
-              <img src={img.url} alt="Gallery" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+              <img
+                src={img.url}
+                alt="Gallery"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                loading="lazy"
+              />
               <Box
                 component="button"
                 type="button"
@@ -174,7 +179,12 @@ function GalleryManager({ existing, onDeleteExisting, newFiles, onNewFiles }) {
                   borderColor: "warning.main",
                 }}
               >
-                <img src={url} alt="New upload" style={{ width: "100%", height: "100%", objectFit: "cover" }} onLoad={() => URL.revokeObjectURL(url)} />
+                <img
+                  src={url}
+                  alt="New upload"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  onLoad={() => URL.revokeObjectURL(url)}
+                />
                 <Box
                   component="button"
                   type="button"
@@ -206,7 +216,13 @@ function GalleryManager({ existing, onDeleteExisting, newFiles, onNewFiles }) {
       {existing.length + newFiles.length < 10 && (
         <Button component="label" size="small" variant="outlined">
           Add screenshots ({existing.length + newFiles.length}/10)
-          <input type="file" multiple accept="image/*" hidden onChange={handleAdd} />
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            hidden
+            onChange={handleAdd}
+          />
         </Button>
       )}
     </Box>
@@ -222,14 +238,29 @@ function ProjectPreview({ values, category, imagePreview }) {
   const techGroups = values.technologies ?? [];
 
   return (
-    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}
+    >
       <Typography variant="subtitle1" fontWeight={700} className="mb-3">
         Live preview
       </Typography>
 
       {imagePreview && (
-        <Box sx={{ borderRadius: 2, overflow: "hidden", mb: 2, aspectRatio: "16 / 9", bgcolor: "action.hover" }}>
-          <img src={imagePreview} alt={values.title || "Preview"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <Box
+          sx={{
+            borderRadius: 2,
+            overflow: "hidden",
+            mb: 2,
+            aspectRatio: "16 / 9",
+            bgcolor: "action.hover",
+          }}
+        >
+          <img
+            src={imagePreview}
+            alt={values.title || "Preview"}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </Box>
       )}
 
@@ -237,7 +268,9 @@ function ProjectPreview({ values, category, imagePreview }) {
         <Typography variant="h6" fontWeight={700}>
           {values.title || "Untitled project"}
         </Typography>
-        {values.featured && <Chip size="small" color="warning" label="Featured" />}
+        {values.featured && (
+          <Chip size="small" color="warning" label="Featured" />
+        )}
         <Chip
           size="small"
           variant={values.status === "draft" ? "outlined" : "filled"}
@@ -262,10 +295,19 @@ function ProjectPreview({ values, category, imagePreview }) {
         <Stack spacing={1} className="mb-3">
           {techGroups.map((g, i) => (
             <Box key={i}>
-              <Typography variant="caption" fontWeight={700} color="text.secondary">
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="text.secondary"
+              >
                 {g.group}
               </Typography>
-              <Stack direction="row" spacing={0.5} flexWrap="wrap" className="mt-0.5">
+              <Stack
+                direction="row"
+                spacing={0.5}
+                flexWrap="wrap"
+                className="mt-0.5"
+              >
                 {(g.items ?? []).map((item) => (
                   <Chip key={item} label={item} size="small" />
                 ))}
@@ -292,14 +334,36 @@ function ProjectPreview({ values, category, imagePreview }) {
         <Stack spacing={1.5} className="mb-3">
           {values.challenge && (
             <Box>
-              <Typography variant="caption" fontWeight={700} color="text.secondary">Challenge</Typography>
-              <Typography variant="body2" color="text.secondary" component="div" dangerouslySetInnerHTML={{ __html: values.challenge }} />
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="text.secondary"
+              >
+                Challenge
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                component="div"
+                dangerouslySetInnerHTML={{ __html: values.challenge }}
+              />
             </Box>
           )}
           {values.solution && (
             <Box>
-              <Typography variant="caption" fontWeight={700} color="text.secondary">Solution</Typography>
-              <Typography variant="body2" color="text.secondary" component="div" dangerouslySetInnerHTML={{ __html: values.solution }} />
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="text.secondary"
+              >
+                Solution
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                component="div"
+                dangerouslySetInnerHTML={{ __html: values.solution }}
+              />
             </Box>
           )}
         </Stack>
@@ -308,12 +372,26 @@ function ProjectPreview({ values, category, imagePreview }) {
       {(values.githubUrl || values.liveUrl) && (
         <Stack direction="row" spacing={1} className="mt-3">
           {values.liveUrl && (
-            <Button size="small" variant="contained" startIcon={<LaunchIcon fontSize="small" />} href={values.liveUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<LaunchIcon fontSize="small" />}
+              href={values.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Live
             </Button>
           )}
           {values.githubUrl && (
-            <Button size="small" variant="outlined" startIcon={<GitHubIcon fontSize="small" />} href={values.githubUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<GitHubIcon fontSize="small" />}
+              href={values.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Code
             </Button>
           )}
@@ -332,13 +410,21 @@ export default function ProjectEditor() {
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
 
-  const { data: project, isLoading, isError, error, refetch } = useAdminProjectQuery(id, {
+  const {
+    data: project,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useAdminProjectQuery(id, {
     enabled: isEditMode,
   });
   const { data: categories = [] } = useCategoriesQuery();
 
-  const { mutateAsync: createProject, isPending: creating } = useCreateProject();
-  const { mutateAsync: updateProject, isPending: updating } = useUpdateProject();
+  const { mutateAsync: createProject, isPending: creating } =
+    useCreateProject();
+  const { mutateAsync: updateProject, isPending: updating } =
+    useUpdateProject();
   const { mutateAsync: publishProject } = usePublishProject();
   const { mutateAsync: unpublishProject } = useUnpublishProject();
 
@@ -401,30 +487,48 @@ export default function ProjectEditor() {
     form.reset(seeded);
     lastSavedSnapshotRef.current = JSON.stringify(seeded);
     seededProjectIdRef.current = project._id;
-    setExistingGallery([...(project.gallery ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+    setExistingGallery(
+      [...(project.gallery ?? [])].sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0),
+      ),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, isEditMode]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = form.watch();
-  const hasUnsavedChanges = isEditMode && lastSavedSnapshotRef.current !== null &&
-    (JSON.stringify(watchedValues) !== lastSavedSnapshotRef.current || Boolean(thumbnail || bannerImage || newGalleryFiles.length || deletedGalleryIds.length));
+  const hasUnsavedChanges =
+    isEditMode &&
+    lastSavedSnapshotRef.current !== null &&
+    (JSON.stringify(watchedValues) !== lastSavedSnapshotRef.current ||
+      Boolean(
+        thumbnail ||
+        bannerImage ||
+        newGalleryFiles.length ||
+        deletedGalleryIds.length,
+      ));
   useEffect(() => {
     if (!hasUnsavedChanges) return undefined;
-    const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasUnsavedChanges]);
-  const debouncedValues = useDebouncedValue(watchedValues, AUTOSAVE_DEBOUNCE_MS);
+  const debouncedValues = useDebouncedValue(
+    watchedValues,
+    AUTOSAVE_DEBOUNCE_MS,
+  );
 
   /** Builds the multipart FormData payload the backend project routes expect. */
   const buildFormData = useCallback(
-    (values, { includeFiles }) => {
+    (values, { includeFiles, includeStatus = false }) => {
       const fd = new FormData();
       fd.append("title", values.title);
       fd.append("description", values.description);
       fd.append("category", values.category);
-      fd.append("status", values.status);
+      if (includeStatus) fd.append("status", values.status);
       fd.append("featured", String(values.featured));
       fd.append("liveUrl", values.liveUrl ?? "");
       fd.append("githubUrl", values.githubUrl ?? "");
@@ -473,8 +577,13 @@ export default function ProjectEditor() {
           lastSavedSnapshotRef.current = snapshot;
           setAutosaveStatus("saved");
         }
-      } catch {
-        if (!cancelled) setAutosaveStatus("error");
+      } catch (err) {
+        if (!cancelled) {
+          setAutosaveStatus("error");
+          toast.error(
+            err?.message || "Autosave failed. Please try saving again.",
+          );
+        }
       }
     })();
 
@@ -482,7 +591,7 @@ export default function ProjectEditor() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedValues, isEditMode, project]);
+  }, [debouncedValues, isEditMode, id, project?._id]);
 
   const handleManualSave = form.handleSubmit(async (values) => {
     if (!isEditMode && !thumbnail) {
@@ -491,7 +600,10 @@ export default function ProjectEditor() {
     }
 
     try {
-      const fd = buildFormData(values, { includeFiles: true });
+      const fd = buildFormData(values, {
+        includeFiles: true,
+        includeStatus: !isEditMode,
+      });
 
       if (isEditMode) {
         const updated = await updateProject({ id, formData: fd });
@@ -502,13 +614,17 @@ export default function ProjectEditor() {
         setThumbnail(null);
         setBannerImage(null);
         setExistingGallery(
-          [...(updated.gallery ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+          [...(updated.gallery ?? [])].sort(
+            (a, b) => (a.order ?? 0) - (b.order ?? 0),
+          ),
         );
         toast.success("Project saved.");
       } else {
         const created = await createProject(fd);
         toast.success("Project created.");
-        navigate(`${ROUTES.adminProjects}/${created._id}/edit`, { replace: true });
+        navigate(`${ROUTES.adminProjects}/${created._id}/edit`, {
+          replace: true,
+        });
       }
     } catch (err) {
       toast.error(err.message);
@@ -530,8 +646,12 @@ export default function ProjectEditor() {
     }
   };
 
-  const isDraft = isEditMode ? project?.status === "draft" : watchedValues.status === "draft";
-  const selectedCategory = categories.find((c) => c._id === watchedValues.category);
+  const isDraft = isEditMode
+    ? project?.status === "draft"
+    : watchedValues.status === "draft";
+  const selectedCategory = categories.find(
+    (c) => c._id === watchedValues.category,
+  );
 
   // Memoized so a blob URL is only (re-)created when the selected File
   // actually changes — not on every render triggered by unrelated form
@@ -587,7 +707,9 @@ export default function ProjectEditor() {
     <>
       <PageHeader
         title={isEditMode ? "Edit Project" : "Add Project"}
-        subtitle={isEditMode ? project.title : "Publish a new portfolio project."}
+        subtitle={
+          isEditMode ? project.title : "Publish a new portfolio project."
+        }
         badge={
           isEditMode ? (
             <Chip
@@ -600,13 +722,26 @@ export default function ProjectEditor() {
         }
         actions={
           <Stack direction="row" spacing={1}>
-            <Button variant="text" startIcon={<ArrowBackIcon />} onClick={() => navigate(ROUTES.adminProjects)}>
+            <Button
+              variant="text"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate(ROUTES.adminProjects)}
+            >
               Back
             </Button>
             {isEditMode && (
               <>
-                <Button variant="outlined" startIcon={<HistoryIcon />} onClick={() => setHistoryOpen(true)}>History</Button>
-                <Button variant="outlined" onClick={() => setPreviewDrawerOpen(true)}>
+                <Button
+                  variant="outlined"
+                  startIcon={<HistoryIcon />}
+                  onClick={() => setHistoryOpen(true)}
+                >
+                  History
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setPreviewDrawerOpen(true)}
+                >
                   Live Preview
                 </Button>
                 <Button variant="outlined" onClick={handleTogglePublish}>
@@ -629,43 +764,93 @@ export default function ProjectEditor() {
 
       <FormProvider {...form}>
         <Box component="form" onSubmit={handleManualSave} noValidate>
-          <Box className="grid gap-6" sx={{ gridTemplateColumns: showPreview ? { xs: "1fr", lg: "1.5fr 1fr" } : "1fr" }}>
+          <Box
+            className="grid gap-6"
+            sx={{
+              gridTemplateColumns: showPreview
+                ? { xs: "1fr", lg: "1.5fr 1fr" }
+                : "1fr",
+            }}
+          >
             <Stack spacing={3}>
               {/* Basic information */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Basic information
                 </Typography>
                 <Stack spacing={2.5}>
-                  <RHFTextField name="title" label="Project title" required maxLength={120} />
-                  <RichTextField name="description" label="Description" maxLength={5000} />
+                  <RHFTextField
+                    name="title"
+                    label="Project title"
+                    required
+                    maxLength={120}
+                  />
+                  <RichTextField
+                    name="description"
+                    label="Description"
+                    maxLength={5000}
+                  />
                   <Box className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <SelectField
                       name="category"
                       label="Category"
                       required
-                      options={categories.map((c) => ({ value: c._id, label: c.name }))}
+                      options={categories.map((c) => ({
+                        value: c._id,
+                        label: c.name,
+                      }))}
                     />
-                    <SelectField name="status" label="Status" options={CONTENT_STATUS_OPTIONS} required />
+                    <SelectField
+                      name="status"
+                      label={
+                        isEditMode ? "Status (use publish controls)" : "Status"
+                      }
+                      options={CONTENT_STATUS_OPTIONS}
+                      required
+                      disabled={isEditMode}
+                    />
                   </Box>
-                  <SwitchField name="featured" label="Feature this project ahead of the rest of the portfolio grid" />
+                  <SwitchField
+                    name="featured"
+                    label="Feature this project ahead of the rest of the portfolio grid"
+                  />
                 </Stack>
               </Paper>
 
               {/* Links */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Links
                 </Typography>
                 <Stack spacing={2.5}>
-                  <RHFTextField name="liveUrl" label="Live demo URL" placeholder="https://your-project.com" />
-                  <RHFTextField name="githubUrl" label="GitHub URL" placeholder="https://github.com/you/project" />
+                  <RHFTextField
+                    name="liveUrl"
+                    label="Live demo URL"
+                    placeholder="https://your-project.com"
+                  />
+                  <RHFTextField
+                    name="githubUrl"
+                    label="GitHub URL"
+                    placeholder="https://github.com/you/project"
+                  />
                 </Stack>
               </Paper>
 
               {/* Media */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Media
                 </Typography>
                 <Stack spacing={2.5}>
@@ -682,7 +867,11 @@ export default function ProjectEditor() {
                     }
                   />
                   {thumbnailPreview && (
-                    <img src={thumbnailPreview} alt="Thumbnail preview" style={{ width: 160, borderRadius: 8 }} />
+                    <img
+                      src={thumbnailPreview}
+                      alt="Thumbnail preview"
+                      style={{ width: 160, borderRadius: 8 }}
+                    />
                   )}
 
                   <FilePickerField
@@ -693,21 +882,31 @@ export default function ProjectEditor() {
                     hint="Optional large banner shown at the top of the detail view. Max 5 MB."
                   />
                   {bannerPreview && (
-                    <img src={bannerPreview} alt="Banner preview" style={{ width: 260, borderRadius: 8 }} />
+                    <img
+                      src={bannerPreview}
+                      alt="Banner preview"
+                      style={{ width: 260, borderRadius: 8 }}
+                    />
                   )}
                 </Stack>
               </Paper>
 
               {/* Gallery */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Gallery
                 </Typography>
                 <GalleryManager
                   existing={existingGallery}
                   onDeleteExisting={(gid) => {
                     setDeletedGalleryIds((prev) => [...prev, gid]);
-                    setExistingGallery((prev) => prev.filter((g) => g._id !== gid));
+                    setExistingGallery((prev) =>
+                      prev.filter((g) => g._id !== gid),
+                    );
                   }}
                   newFiles={newGalleryFiles}
                   onNewFiles={setNewGalleryFiles}
@@ -716,21 +915,34 @@ export default function ProjectEditor() {
 
               {/* Technologies */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Technologies
                 </Typography>
                 <Controller
                   name="technologies"
                   control={form.control}
                   render={({ field }) => (
-                    <GroupedTagInput id="proj-tech" label="Technology groups" groups={field.value} onChange={field.onChange} />
+                    <GroupedTagInput
+                      id="proj-tech"
+                      label="Technology groups"
+                      groups={field.value}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
               </Paper>
 
               {/* Features */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Key features
                 </Typography>
                 <Controller
@@ -751,22 +963,43 @@ export default function ProjectEditor() {
 
               {/* Challenge / Solution */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   Challenge &amp; solution
                 </Typography>
                 <Stack spacing={2.5}>
-                  <RichTextField name="challenge" label="Challenge" maxLength={3000} />
-                  <RichTextField name="solution" label="Solution" maxLength={3000} />
+                  <RichTextField
+                    name="challenge"
+                    label="Challenge"
+                    maxLength={3000}
+                  />
+                  <RichTextField
+                    name="solution"
+                    label="Solution"
+                    maxLength={3000}
+                  />
                 </Stack>
               </Paper>
 
               {/* SEO */}
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" fontWeight={700} className="mb-3">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  className="mb-3"
+                >
                   SEO
                 </Typography>
                 <Stack spacing={2.5}>
-                  <RHFTextField name="seo.metaTitle" label="Meta title" maxLength={70} placeholder="Falls back to the project title" />
+                  <RHFTextField
+                    name="seo.metaTitle"
+                    label="Meta title"
+                    maxLength={70}
+                    placeholder="Falls back to the project title"
+                  />
                   <RHFTextField
                     name="seo.metaDescription"
                     label="Meta description"
@@ -806,14 +1039,30 @@ export default function ProjectEditor() {
               </Paper>
 
               <Box className="flex justify-end gap-2">
-                <Button type="submit" variant="contained" size="large" startIcon={<SaveIcon />} disabled={creating || updating}>
-                  {creating || updating ? "Saving…" : isEditMode ? "Save changes" : "Create project"}
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  startIcon={<SaveIcon />}
+                  disabled={creating || updating}
+                >
+                  {creating || updating
+                    ? "Saving…"
+                    : isEditMode
+                      ? "Save changes"
+                      : "Create project"}
                 </Button>
               </Box>
             </Stack>
 
             {showPreview && (
-              <Box sx={{ position: { lg: "sticky" }, top: { lg: 24 }, alignSelf: "start" }}>
+              <Box
+                sx={{
+                  position: { lg: "sticky" },
+                  top: { lg: 24 },
+                  alignSelf: "start",
+                }}
+              >
                 <ProjectPreview
                   values={watchedValues}
                   category={selectedCategory}
@@ -824,7 +1073,7 @@ export default function ProjectEditor() {
           </Box>
         </Box>
       </FormProvider>
-      
+
       {isEditMode && (
         <PreviewDrawer
           open={previewDrawerOpen}
