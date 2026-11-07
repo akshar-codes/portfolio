@@ -17,11 +17,34 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <main className="error-page" role="alert">
-          <h1>500</h1>
-          <h2>Something went wrong</h2>
-          <p>An unexpected error occurred. Please refresh the page.</p>
-          <a href="/">Go Home</a>
+        <main className="error-page" role="alert" aria-labelledby="error-title">
+          <section className="error-page__card">
+            <p className="error-page__eyebrow">
+              <span aria-hidden="true" /> APPLICATION ERROR
+            </p>
+            <p className="error-page__code" aria-hidden="true">
+              500
+            </p>
+            <h1 id="error-title">Something went wrong</h1>
+            <p className="error-page__message">
+              An unexpected error occurred. Please refresh the page.
+            </p>
+            <div className="error-page__actions">
+              <button
+                className="error-page__button error-page__button--primary"
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                Try again <span aria-hidden="true">↻</span>
+              </button>
+              <a
+                className="error-page__button error-page__button--secondary"
+                href="/"
+              >
+                Go home <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </section>
         </main>
       );
     }

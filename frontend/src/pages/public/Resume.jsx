@@ -19,36 +19,84 @@ function sortByOrder(arr = []) {
 }
 
 function ItemCard({ dateRange, title, subtitle, description, logo }) {
+  const descriptionLines =
+    typeof description === "string" && !/<[a-z][\s\S]*>/i.test(description)
+      ? description
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+      : null;
   return (
     <div
       className="rounded-xl p-7 flex flex-col gap-3 transition-all duration-200"
-      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(0,255,136,0.3)")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border)",
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.borderColor = "rgba(0,255,136,0.3)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.borderColor = "var(--border)")
+      }
     >
       <div className="flex items-center justify-between gap-3">
         {dateRange && (
-          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+          <span
+            className="font-mono text-sm"
+            style={{ color: "var(--accent)" }}
+          >
             {dateRange}
           </span>
         )}
-        {logo && <img src={getThumbnailUrl(logo, 128)} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />}
+        {logo && (
+          <img
+            src={getThumbnailUrl(logo, 128)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-8 h-8 rounded object-cover"
+          />
+        )}
       </div>
-      <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+      <h3
+        className="font-mono text-lg font-bold"
+        style={{ color: "var(--text-primary)" }}
+      >
         {title}
       </h3>
       {subtitle && (
-        <p className="font-mono text-xs" style={{ color: "var(--text-secondary)" }}>
+        <p
+          className="font-mono text-sm"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          <span style={{ color: "var(--accent)", marginRight: 8 }}>•</span>
           {subtitle}
         </p>
       )}
-      {description && (
-        <p
-          className="font-mono text-sm leading-relaxed"
-          style={{ color: "var(--text-secondary)" }}
-          dangerouslySetInnerHTML={{ __html: description }}
-        />
-      )}
+      {description &&
+        (descriptionLines ? (
+          <ul
+            className="font-mono text-sm leading-relaxed"
+            style={{
+              color: "var(--text-secondary)",
+              margin: 0,
+              paddingLeft: 20,
+            }}
+          >
+            {descriptionLines.map((line) => (
+              <li key={line} style={{ paddingLeft: 2, marginTop: 4 }}>
+                {line}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p
+            className="font-mono text-sm leading-relaxed"
+            style={{ color: "var(--text-secondary)" }}
+            dangerouslySetInnerHTML={{ __html: description }}
+          />
+        ))}
     </div>
   );
 }
@@ -56,7 +104,13 @@ function ItemCard({ dateRange, title, subtitle, description, logo }) {
 export default function Resume() {
   const [activeTab, setActiveTab] = useState("Experience");
   const { isPreview } = usePreviewMode();
-  const { data: resume, isLoading, isError, error, refetch } = useResume({ preview: isPreview });
+  const {
+    data: resume,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useResume({ preview: isPreview });
   const { data: profile } = useProfile({ preview: isPreview });
   const { data: seo } = usePublicSeo({ preview: isPreview });
 
@@ -64,7 +118,9 @@ export default function Resume() {
     ? excerptFromHtml(resume.hero.summary)
     : seo?.defaultMetaDescription;
 
-  const canonical = seo?.canonicalBaseUrl ? `${seo.canonicalBaseUrl}/resume` : "";
+  const canonical = seo?.canonicalBaseUrl
+    ? `${seo.canonicalBaseUrl}/resume`
+    : "";
 
   const resumeTitle = profile?.name
     ? `${profile.name} — Resume`
@@ -140,20 +196,40 @@ export default function Resume() {
     Skills: "My skills",
     "About me": "About me",
   }[activeTab];
-  const panelSummary = resume?.hero?.summary || resume?.aboutMe?.summary || "";
+  const panelSummary =
+    {
+      Experience:
+        "Demonstrated expertise through impactful projects, training, and continuous learning.",
+      Education:
+        "Academic foundation built through rigorous coursework and hands-on learning experiences.",
+      Certification:
+        "Industry-recognised credentials and notable achievements in competitive programming.",
+      Skills: resume?.hero?.summary || "",
+      "About me": resume?.aboutMe?.summary || "",
+    }[activeTab] || "";
   const aboutInfo = [
     ["Name", profile?.name],
     ["Phone", profile?.phone],
     ["Email", profile?.email],
+    [
+      "Freelance",
+      resume?.hero?.availabilityStatus === "available"
+        ? "Available"
+        : resume?.hero?.availabilityStatus === "open_to_offers"
+          ? "Available for offers"
+          : "Unavailable",
+    ],
     ["Languages", languages.map((item) => item.name).join(", ")],
-    ["Interests", interests.map((item) => item.name).join(", ")],
   ].filter(([, value]) => value);
 
   return (
     <div className="page-enter">
       <section className="section-container py-16">
         <div className="flex flex-col md:flex-row gap-12 min-h-[500px]">
-          <aside aria-label="Resume sections" className="flex flex-col gap-3 md:w-72 flex-shrink-0">
+          <aside
+            aria-label="Resume sections"
+            className="flex flex-col gap-3 md:w-72 flex-shrink-0"
+          >
             {TABS.map((tab) => {
               const active = activeTab === tab;
               return (
@@ -163,15 +239,19 @@ export default function Resume() {
                   aria-pressed={active}
                   className="w-full py-4 px-5 rounded-lg text-center text-sm font-semibold cursor-pointer border-0 transition-all duration-200"
                   style={{
-                    backgroundColor: active ? "var(--accent)" : "var(--bg-card)",
+                    backgroundColor: active
+                      ? "var(--accent)"
+                      : "var(--bg-card)",
                     color: active ? "#1c1c1e" : "var(--text-primary)",
                     fontFamily: "Inter, sans-serif",
                   }}
                   onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.backgroundColor = "#333336";
+                    if (!active)
+                      e.currentTarget.style.backgroundColor = "#333336";
                   }}
                   onMouseLeave={(e) => {
-                    if (!active) e.currentTarget.style.backgroundColor = "var(--bg-card)";
+                    if (!active)
+                      e.currentTarget.style.backgroundColor = "var(--bg-card)";
                   }}
                 >
                   {tab}
@@ -181,18 +261,25 @@ export default function Resume() {
           </aside>
 
           <div className="flex-1 min-w-0">
-            <h1 className="font-mono text-3xl md:text-4xl font-bold mb-3" style={{ color: "var(--accent)" }}>
+            <h1
+              className="font-mono text-3xl md:text-4xl font-bold mb-3"
+              style={{ color: "var(--accent)" }}
+            >
               {panelHeading}
             </h1>
             {panelSummary && (
-              <p className="font-mono text-sm leading-relaxed mb-8 max-w-2xl" style={{ color: "var(--text-secondary)" }}>
+              <p
+                className="font-mono text-sm leading-relaxed mb-8 max-w-2xl"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {excerptFromHtml(panelSummary)}
               </p>
             )}
             {isLoading && <SkeletonGrid count={4} cardLines={3} />}
 
-            {!isLoading && activeTab === "Experience" && (
-              experience.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Experience" &&
+              (experience.length === 0 ? (
                 <PublicEmpty icon="💼" title="No experience listed yet" />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -201,17 +288,19 @@ export default function Resume() {
                       key={item._id}
                       dateRange={`${item.startDate} — ${item.current ? "Present" : item.endDate}`}
                       title={item.role}
-                      subtitle={[item.company, item.location].filter(Boolean).join(" · ")}
+                      subtitle={[item.company, item.location]
+                        .filter(Boolean)
+                        .join(" · ")}
                       description={item.description}
                       logo={item.companyLogo}
                     />
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {!isLoading && activeTab === "Education" && (
-              education.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Education" &&
+              (education.length === 0 ? (
                 <PublicEmpty icon="🎓" title="No education listed yet" />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -224,11 +313,11 @@ export default function Resume() {
                     />
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {!isLoading && activeTab === "Certification" && (
-              certifications.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Certification" &&
+              (certifications.length === 0 ? (
                 <PublicEmpty icon="📜" title="No certifications listed yet" />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -236,47 +325,88 @@ export default function Resume() {
                     <div
                       key={item._id}
                       className="rounded-xl p-7 flex flex-col gap-3"
-                      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
+                      style={{
+                        backgroundColor: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                      }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         {item.issueDate && (
-                          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
+                          <span
+                            className="font-mono text-sm"
+                            style={{ color: "var(--accent)" }}
+                          >
                             {item.issueDate}
                           </span>
                         )}
-                        {item.badgeImage && <img src={getThumbnailUrl(item.badgeImage, 128)} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />}
+                        {item.badgeImage && (
+                          <img
+                            src={getThumbnailUrl(item.badgeImage, 128)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="w-8 h-8 rounded object-cover"
+                          />
+                        )}
                       </div>
-                      <h3 className="font-mono text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+                      <h3
+                        className="font-mono text-lg font-bold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {item.title}
                       </h3>
-                      <p className="font-mono text-xs" style={{ color: "var(--text-secondary)" }}>
-                        {item.issuer}
-                      </p>
+                      <ul
+                        className="font-mono text-sm leading-relaxed"
+                        style={{
+                          color: "var(--text-secondary)",
+                          margin: 0,
+                          paddingLeft: 20,
+                        }}
+                      >
+                        {String(item.issuer ?? "")
+                          .split(/\r?\n/)
+                          .filter(Boolean)
+                          .map((line) => (
+                            <li
+                              key={line}
+                              style={{ paddingLeft: 2, marginTop: 4 }}
+                            >
+                              {line}
+                            </li>
+                          ))}
+                      </ul>
                       {item.credentialUrl && (
                         <a
                           href={item.credentialUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 font-mono text-xs no-underline mt-1"
-                          style={{ color: "var(--accent)", textDecoration: "none" }}
+                          style={{
+                            color: "var(--accent)",
+                            textDecoration: "none",
+                          }}
                         >
-                          View credential <OpenInNewIcon sx={{ fontSize: 13 }} />
+                          View credential{" "}
+                          <OpenInNewIcon sx={{ fontSize: 13 }} />
                         </a>
                       )}
                     </div>
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {!isLoading && activeTab === "Skills" && (
-              skills.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Skills" &&
+              (skills.length === 0 ? (
                 <PublicEmpty icon="🛠️" title="No skills listed yet" />
               ) : (
                 <div className="flex flex-col gap-6">
                   {skills.map((cat) => (
                     <div key={cat._id}>
-                      <p className="font-mono text-xs font-semibold mb-3 tracking-widest uppercase" style={{ color: "var(--accent)" }}>
+                      <p
+                        className="font-mono text-xs font-semibold mb-3 tracking-widest uppercase"
+                        style={{ color: "var(--accent)" }}
+                      >
                         {cat.category}
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -284,7 +414,11 @@ export default function Resume() {
                           <span
                             key={skill}
                             className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
-                            style={{ backgroundColor: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                            style={{
+                              backgroundColor: "var(--bg-card)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border)",
+                            }}
                           >
                             {skill}
                           </span>
@@ -293,11 +427,11 @@ export default function Resume() {
                     </div>
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {!isLoading && activeTab === "Languages" && (
-              languages.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Languages" &&
+              (languages.length === 0 ? (
                 <PublicEmpty icon="🌐" title="No languages listed yet" />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -305,25 +439,34 @@ export default function Resume() {
                     <div
                       key={lang._id}
                       className="rounded-xl p-5 flex items-center justify-between"
-                      style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}
+                      style={{
+                        backgroundColor: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                      }}
                     >
-                      <span className="font-mono text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+                      <span
+                        className="font-mono text-base font-semibold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {lang.name}
                       </span>
                       <span
                         className="font-mono text-xs px-3 py-1 rounded-full capitalize"
-                        style={{ backgroundColor: "rgba(0,255,136,0.1)", color: "var(--accent)" }}
+                        style={{
+                          backgroundColor: "rgba(0,255,136,0.1)",
+                          color: "var(--accent)",
+                        }}
                       >
                         {lang.proficiency}
                       </span>
                     </div>
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {!isLoading && activeTab === "Interests" && (
-              interests.length === 0 ? (
+            {!isLoading &&
+              activeTab === "Interests" &&
+              (interests.length === 0 ? (
                 <PublicEmpty icon="✨" title="No interests listed yet" />
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -331,14 +474,17 @@ export default function Resume() {
                     <span
                       key={interest._id}
                       className="px-4 py-1.5 rounded-full font-mono text-xs font-medium"
-                      style={{ backgroundColor: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                      style={{
+                        backgroundColor: "var(--bg-card)",
+                        color: "var(--text-primary)",
+                        border: "1px solid var(--border)",
+                      }}
                     >
                       {interest.name}
                     </span>
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
             {!isLoading && activeTab === "About me" && (
               <div className="flex flex-col gap-8">
@@ -355,15 +501,21 @@ export default function Resume() {
                 {aboutInfo.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 max-w-2xl">
                     {aboutInfo.map(([label, value]) => (
-                        <div key={label} className="flex items-baseline gap-3">
-                          <span className="font-mono text-sm" style={{ color: "var(--accent)" }}>
-                            {label}
-                          </span>
-                          <span className="font-mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                            {value}
-                          </span>
-                        </div>
-                      ))}
+                      <div key={label} className="flex items-baseline gap-3">
+                        <span
+                          className="font-mono text-sm"
+                          style={{ color: "var(--accent)" }}
+                        >
+                          {label}
+                        </span>
+                        <span
+                          className="font-mono text-sm font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {value}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

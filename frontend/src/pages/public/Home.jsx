@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 import { Download as DownloadIcon } from "@mui/icons-material";
 
 import { useProfile } from "../../hooks/useProfile";
@@ -74,7 +74,9 @@ const CTA_STYLE = {
 };
 
 function CtaButton({ button }) {
-  const isDownload = /\.(pdf|docx?|zip)$/i.test(button.url);
+  const isDownload = /\.(pdf|docx?|zip)(?:$|[?#])/i.test(button.url);
+  const showDownloadIcon =
+    isDownload || /\bdownload\b/i.test(String(button.label ?? ""));
   return (
     <a
       href={button.url}
@@ -102,7 +104,7 @@ function CtaButton({ button }) {
         }}
       >
         {button.label.toUpperCase()}
-        {isDownload && <DownloadIcon fontSize="small" />}
+        {showDownloadIcon && <DownloadIcon fontSize="small" />}
       </button>
     </a>
   );
@@ -127,9 +129,53 @@ export default function Home() {
   const [deleting, setDeleting] = useState(false);
   const statsRef = useRef(null);
 
-  const typingStrings = profile
-    ? [...new Set([profile.name, profile.title].filter(Boolean))]
-    : [];
+  const typingStrings = useMemo(
+    () =>
+      profile
+        ? [...new Set([profile.name, profile.title].filter(Boolean))]
+        : [],
+    [profile],
+  );
+  const currentTypingString =
+    typingStrings[stringIndex % typingStrings.length] ?? "";
+  const typedHeadingRef = useRef(null);
+  const [lineBreakAt, setLineBreakAt] = useState(null);
+
+  useLayoutEffect(() => {
+    const heading = typedHeadingRef.current;
+    if (!heading || !currentTypingString) {
+      setLineBreakAt(null);
+      return undefined;
+    }
+
+    let disposed = false;
+    const measure = () => {
+      if (disposed) return;
+      const style = window.getComputedStyle(heading);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const letterSpacing = Number.parseFloat(style.letterSpacing) || 0;
+      const textWidth =
+        context.measureText(currentTypingString).width +
+        Math.max(0, currentTypingString.length - 1) * letterSpacing +
+        6;
+      const firstSpace = currentTypingString.search(/\s/);
+      setLineBreakAt(
+        textWidth > heading.clientWidth && firstSpace >= 0 ? firstSpace : null,
+      );
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(heading);
+    document.fonts?.ready.then(measure);
+    return () => {
+      disposed = true;
+      observer.disconnect();
+    };
+  }, [currentTypingString]);
 
   useEffect(() => {
     if (typingStrings.length === 0) return;
@@ -239,7 +285,7 @@ export default function Home() {
     <div className="page-enter md:h-[calc(100vh-80px)] md:overflow-hidden">
       <section className="section-container h-auto md:h-full flex flex-col justify-center py-8">
         <div className="flex flex-col gap-16">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+          <div className="home-hero-row flex flex-col md:flex-row items-center md:items-start justify-between gap-12 md:h-[26rem]">
             <div className="flex-1 max-w-xl">
               <div
                 className="font-mono text-sm tracking-widest mb-3"
@@ -260,6 +306,7 @@ export default function Home() {
               </h1>
 
               <h2
+                ref={typedHeadingRef}
                 className="font-mono text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
                 style={{ color: "var(--accent)", minHeight: "1.2em" }}
               >
@@ -267,7 +314,16 @@ export default function Home() {
                   <SkeletonBlock className="h-10 w-64" />
                 ) : (
                   <>
-                    {typedText}
+                    {lineBreakAt !== null &&
+                    typedText.length > lineBreakAt + 1 ? (
+                      <>
+                        {typedText.slice(0, lineBreakAt)}
+                        <br />
+                        {typedText.slice(lineBreakAt + 1)}
+                      </>
+                    ) : (
+                      typedText
+                    )}
                     <span
                       className="inline-block w-0.5 h-10 ml-1 align-middle"
                       style={{
@@ -404,34 +460,62 @@ export default function Home() {
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
+                    <defs>
+                      <mask id="home-profile-ring-mask">
+                        <circle
+                          cx="150"
+                          cy="150"
+                          r="146"
+                          stroke="white"
+                          strokeWidth="10"
+                          strokeDasharray="918"
+                          strokeDashoffset="918"
+                          strokeLinecap="round"
+                          transform="rotate(-90 150 150)"
+                          className="animate-draw-circle"
+                        />
+                      </mask>
+                    </defs>
                     <circle
                       cx="150"
                       cy="150"
                       r="146"
                       stroke="var(--accent)"
-                      strokeWidth="2.5"
-                      strokeDasharray="24 10"
+                      strokeWidth="3"
+                      strokeDasharray="12 8 24 8"
                       strokeLinecap="round"
-                      opacity="0.9"
+                      opacity="0.7"
+                      mask="url(#home-profile-ring-mask)"
                     />
                   </svg>
 
-                  {profile?.avatar ? (
-                    <img
-                      src={getThumbnailUrl(profile.avatar, 512)}
-                      alt={profile.name}
-                      fetchPriority="high"
-                      decoding="async"
-                      className="profile-portrait absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain"
-                    />
-                  ) : (
+                  <div
+                    className="absolute inset-3 rounded-full overflow-hidden"
+                    style={{
+                      border: "2px solid var(--border)",
+                      background:
+                        "linear-gradient(160deg, #2a2a2d 0%, #1c1c1e 60%, #252527 100%)",
+                    }}
+                  >
+                    {profile?.avatar && (
+                      <img
+                        src={getThumbnailUrl(profile.avatar, 512)}
+                        alt={profile.name}
+                        fetchPriority="high"
+                        decoding="async"
+                        className="h-full w-full object-cover object-top"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
                     <span
                       className="absolute inset-0 flex items-center justify-center font-mono text-5xl font-bold"
-                      style={{ color: "var(--accent)", opacity: 0.35 }}
+                      style={{ color: "var(--accent)", opacity: 0.15 }}
                     >
                       {getInitials(profile?.name ?? "")}
                     </span>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
